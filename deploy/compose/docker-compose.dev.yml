@@ -22,7 +22,7 @@ services:
       - "8080:8080"
     volumes:
       - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic.dev.yml:/etc/traefik/dynamic.dev.yml:ro
     networks:
       - edge
 
@@ -94,8 +94,11 @@ services:
       ENVIRONMENT: dev
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
       REDIS_URL: redis://redis:6379/0
+      # Internal Docker hostnames — server-to-server only (token exchange, profile).
       GGG_OAUTH_BASE_URL: http://mock-ggg:9000
       GGG_API_BASE_URL: http://mock-ggg:9000
+      # Browser-facing authorize redirect — must be reachable from the user's browser.
+      GGG_OAUTH_AUTHORIZE_BASE_URL: http://ggg.localhost
     depends_on:
       postgres:
         condition: service_healthy

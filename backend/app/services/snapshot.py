@@ -97,6 +97,7 @@ async def refresh_user_snapshot(
         )
         outcome.profile = True
     except Exception as exc:  # noqa: BLE001
+        log.error("snapshot.profile_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"profile:{exc}")
 
     try:
@@ -106,6 +107,7 @@ async def refresh_user_snapshot(
         )
         outcome.leagues = True
     except Exception as exc:  # noqa: BLE001
+        log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"leagues:{exc}")
 
     try:
@@ -115,6 +117,7 @@ async def refresh_user_snapshot(
         )
         outcome.characters = True
     except Exception as exc:  # noqa: BLE001
+        log.error("snapshot.characters_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"characters:{exc}")
 
     if include_stashes_for_league:

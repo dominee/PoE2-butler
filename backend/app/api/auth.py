@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient, GGGError
 from app.config import Settings, get_settings
-from app.db.base import get_session
+from app.db.base import get_session, _session_factory
 from app.db.models import User, UserToken
 from app.deps import (
     get_cipher,
@@ -150,9 +150,15 @@ async def callback(
         user_tokens.scope = tokens.scope
         user_tokens.expires_at = expires_at
 
-    # Eagerly refresh snapshots so the SPA has data immediately.
-    await refresh_user_snapshot(session=db, user=user, ggg=ggg, cipher=cipher)
     await db.commit()
+
+    # Snapshot refresh runs in its own transaction so that a GGG API hiccup or
+    # a per-snapshot DB error never rolls back the user/token upsert above.
+    # We merge `user` into the new session so that last_refreshed_at is saved.
+    async with _session_factory()() as snap_db:
+        snap_user = await snap_db.merge(user)
+        await refresh_user_snapshot(session=snap_db, user=snap_user, ggg=ggg, cipher=cipher)
+        await snap_db.commit()
 
     sid, data = await sessions.create(user_id=str(user.id), league=user.preferred_league)
 

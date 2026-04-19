@@ -46,6 +46,11 @@ class Settings(BaseSettings):
 
     ggg_oauth_base_url: str = "http://mock-ggg:9000"
     ggg_api_base_url: str = "http://mock-ggg:9000"
+    # Browser-facing base URL used only in the /login redirect to the IdP's
+    # authorize endpoint.  Defaults to ggg_oauth_base_url (correct for prod
+    # where the IdP is publicly reachable), but must be overridden in dev to
+    # the Traefik-routed hostname so the browser can actually reach mock-ggg.
+    ggg_oauth_authorize_base_url: str = ""
     ggg_client_id: str = "poe2-butler-dev"
     ggg_client_secret: SecretStr = SecretStr("poe2-butler-dev-secret")
     ggg_redirect_uri: str = "http://api.localhost/api/auth/callback"

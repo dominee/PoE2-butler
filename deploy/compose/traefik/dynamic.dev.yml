@@ -1,0 +1,40 @@
+http:
+  routers:
+    app:
+      rule: Host(`app.localhost`)
+      entryPoints:
+        - web
+      service: app
+    api:
+      rule: Host(`api.localhost`)
+      entryPoints:
+        - web
+      service: api
+    admin:
+      rule: Host(`admin.localhost`)
+      entryPoints:
+        - web
+      service: admin
+    mockggg:
+      rule: Host(`ggg.localhost`)
+      entryPoints:
+        - web
+      service: mockggg
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: http://frontend:5173
+    api:
+      loadBalancer:
+        servers:
+          - url: http://backend:8000
+    admin:
+      loadBalancer:
+        servers:
+          - url: http://admin:8001
+    mockggg:
+      loadBalancer:
+        servers:
+          - url: http://mock-ggg:9000

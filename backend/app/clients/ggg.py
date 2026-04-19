@@ -45,6 +45,12 @@ class GGGClient:
         await self._client.aclose()
 
     def authorize_url(self, *, state: str, code_challenge: str) -> str:
+        # Use the browser-facing base URL if explicitly configured (needed in
+        # dev where the IdP internal hostname is unreachable from the browser).
+        base = (
+            self._settings.ggg_oauth_authorize_base_url
+            or self._settings.ggg_oauth_base_url
+        )
         params = {
             "client_id": self._settings.ggg_client_id,
             "response_type": "code",
@@ -54,7 +60,7 @@ class GGGClient:
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
         }
-        return f"{self._settings.ggg_oauth_base_url}/oauth/authorize?{urlencode(params)}"
+        return f"{base}/oauth/authorize?{urlencode(params)}"
 
     async def exchange_code(self, *, code: str, code_verifier: str) -> TokenResponse:
         data = {

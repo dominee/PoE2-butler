@@ -18,17 +18,6 @@ branch_labels = None
 depends_on = None
 
 
-SNAPSHOT_KIND = sa.Enum(
-    "profile",
-    "leagues",
-    "characters",
-    "character",
-    "stash_list",
-    "stash_tab",
-    name="snapshot_kind",
-)
-
-
 def upgrade() -> None:
     op.create_table(
         "users",
@@ -71,39 +60,63 @@ def upgrade() -> None:
         ),
     )
 
-    SNAPSHOT_KIND.create(op.get_bind(), checkfirst=True)
-    op.create_table(
-        "snapshots",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column(
-            "user_id",
-            postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column("kind", SNAPSHOT_KIND, nullable=False),
-        sa.Column("key", sa.String(length=200), nullable=False, server_default=""),
-        sa.Column(
-            "payload",
-            postgresql.JSONB(astext_type=sa.Text()),
-            nullable=False,
-            server_default=sa.text("'{}'::jsonb"),
-        ),
-        sa.Column(
-            "fetched_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.UniqueConstraint("user_id", "kind", "key", name="uq_snapshot_user_kind_key"),
+    # Create the enum type via a PL/pgSQL guard so the migration is idempotent.
+    # Using op.create_table with sa.Enum triggers a SQLAlchemy before_create
+    # event that ignores create_type=False in SQLAlchemy 2.0.x, so we own the
+    # full lifecycle via raw DDL.
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_type WHERE typname = 'snapshot_kind'
+            ) THEN
+                CREATE TYPE snapshot_kind AS ENUM (
+                    'profile', 'leagues', 'characters',
+                    'character', 'stash_list', 'stash_tab'
+                );
+            END IF;
+        END
+        $$;
+        """
     )
-    op.create_index("ix_snapshots_user_id", "snapshots", ["user_id"])
+
+    # Build the snapshots table with raw DDL to avoid SQLAlchemy re-emitting
+    # CREATE TYPE snapshot_kind via the Enum column before_create event.
+    op.execute(
+        """
+        CREATE TABLE snapshots (
+            id          BIGSERIAL PRIMARY KEY,
+            user_id     UUID        NOT NULL
+                            REFERENCES users(id) ON DELETE CASCADE,
+            kind        snapshot_kind NOT NULL,
+            key         VARCHAR(200)  NOT NULL DEFAULT '',
+            payload     JSONB         NOT NULL DEFAULT '{}',
+            fetched_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+            CONSTRAINT  uq_snapshot_user_kind_key
+                UNIQUE (user_id, kind, key)
+        )
+        """
+    )
+    op.execute("CREATE INDEX ix_snapshots_user_id ON snapshots (user_id)")
 
 
 def downgrade() -> None:
-    op.drop_index("ix_snapshots_user_id", table_name="snapshots")
-    op.drop_table("snapshots")
-    SNAPSHOT_KIND.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP INDEX IF EXISTS ix_snapshots_user_id")
+    op.execute("DROP TABLE IF EXISTS snapshots")
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_type WHERE typname = 'snapshot_kind'
+            ) THEN
+                DROP TYPE snapshot_kind;
+            END IF;
+        END
+        $$;
+        """
+    )
     op.drop_table("user_tokens")
     op.drop_index("ix_users_ggg_account_name", table_name="users")
     op.drop_table("users")

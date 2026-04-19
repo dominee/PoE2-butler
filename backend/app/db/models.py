@@ -97,7 +97,15 @@ class Snapshot(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    kind: Mapped[SnapshotKind] = mapped_column(Enum(SnapshotKind, name="snapshot_kind"))
+    kind: Mapped[SnapshotKind] = mapped_column(
+        Enum(
+            SnapshotKind,
+            name="snapshot_kind",
+            # Store the enum's .value ("profile", not the member name "PROFILE").
+            values_callable=lambda e: [m.value for m in e],
+            create_type=False,
+        )
+    )
     key: Mapped[str] = mapped_column(String(200), default="")
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
     fetched_at: Mapped[datetime] = mapped_column(

@@ -7,9 +7,9 @@ entryPoints:
     address: ":80"
 
 providers:
-  docker:
-    exposedByDefault: false
-    network: poe2b_edge
+  file:
+    filename: /etc/traefik/dynamic.dev.yml
+    watch: true
 
 log:
   level: INFO
