@@ -21,7 +21,7 @@ RUN uv sync --no-dev --no-install-project
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
-RUN uv sync --no-dev
+RUN uv sync --no-dev --no-install-project
 
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
     && chown -R app:app /app

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "PoE2 Hideout Butler backend API"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { file = "../LICENSE" }
+license = { text = "Proprietary" }
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
