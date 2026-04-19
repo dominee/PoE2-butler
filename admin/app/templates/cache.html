@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Redis</h2>
+  <table>
+    <tbody>
+      <tr><th>Keys</th><td>{{ redis.keys }}</td></tr>
+      <tr><th>Memory</th><td>{{ redis.used_memory_human }} / {{ redis.maxmemory_human }}</td></tr>
+      <tr><th>Peak</th><td>{{ redis.used_memory_peak_human }}</td></tr>
+      <tr><th>Clients</th><td>{{ redis.connected_clients }}</td></tr>
+    </tbody>
+  </table>
+</section>
+<section>
+  <h2>Price cache</h2>
+  <p>Entries: <strong>{{ price_cache.keys }}</strong></p>
+  {% if price_cache.sample %}
+  <details open>
+    <summary>Sample keys</summary>
+    <ul>
+      {% for key in price_cache.sample %}
+      <li><code>{{ key }}</code></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</section>
+<section>
+  <h2>Queue (arq)</h2>
+  <table>
+    <tbody>
+      <tr><th>Queued</th><td>{{ queue.queued }}</td></tr>
+      <tr><th>In progress</th><td>{{ queue.in_progress }}</td></tr>
+    </tbody>
+  </table>
+</section>
+{% endblock %}

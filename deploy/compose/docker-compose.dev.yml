@@ -1,0 +1,161 @@
+name: poe2b-dev
+
+networks:
+  edge:
+    name: poe2b_edge
+  internal:
+    internal: true
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: poe2b-traefik
+    restart: unless-stopped
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - edge
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: poe2b-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-poe2b}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-poe2b-dev-password}
+      POSTGRES_DB: ${POSTGRES_DB:-poe2b}
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=8MB
+      -c max_connections=40
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-poe2b}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: poe2b-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-128mb}
+      --maxmemory-policy allkeys-lru
+      --appendonly no
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mock-ggg:
+    build:
+      context: ../../mock-ggg
+    container_name: poe2b-mock-ggg
+    restart: unless-stopped
+    networks:
+      - edge
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.mockggg.rule=Host(`ggg.localhost`)"
+      - "traefik.http.routers.mockggg.entrypoints=web"
+      - "traefik.http.services.mockggg.loadbalancer.server.port=9000"
+
+  backend:
+    build:
+      context: ../../backend
+    container_name: poe2b-backend
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/env/.env.dev
+    environment:
+      ENVIRONMENT: dev
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
+      REDIS_URL: redis://redis:6379/0
+      GGG_OAUTH_BASE_URL: http://mock-ggg:9000
+      GGG_API_BASE_URL: http://mock-ggg:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-ggg:
+        condition: service_started
+    networks:
+      - edge
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.api.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile.dev
+    container_name: poe2b-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+    networks:
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.app.rule=Host(`app.localhost`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.services.app.loadbalancer.server.port=5173"
+
+  admin:
+    build:
+      context: ../../admin
+    container_name: poe2b-admin
+    restart: unless-stopped
+    environment:
+      ADMIN_ENVIRONMENT: dev
+      ADMIN_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
+      ADMIN_REDIS_URL: redis://redis:6379/0
+      ADMIN_BACKEND_BASE_URL: http://backend:8000
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-dev-session-secret-change-me}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-$$2b$$12$$kf1Sh4imysin12trFxWc6uhSuXCR4JUySGOwKgYR9Kn8y4obxEiYu}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edge
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.admin.rule=Host(`admin.localhost`)"
+      - "traefik.http.routers.admin.entrypoints=web"
+      - "traefik.http.services.admin.loadbalancer.server.port=8001"

@@ -1,0 +1,217 @@
+name: poe2b-prod
+
+# Production stack for PoE2 Hideout Butler, sized for a single 1 vCPU / 1 GB
+# VM. All public services are routed through Traefik with Let's Encrypt; the
+# database + redis are bound to the internal network only. Resource limits
+# are conservative on purpose so a runaway worker cannot OOM the host.
+
+networks:
+  edge:
+    name: poe2b_edge
+  internal:
+    internal: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  letsencrypt_data:
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: poe2b-traefik
+    restart: unless-stopped
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TRAEFIK_ACME_EMAIL: ${TRAEFIK_ACME_EMAIL}
+    volumes:
+      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      - letsencrypt_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - edge
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: poe2b-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=8MB
+      -c max_connections=40
+      -c effective_cache_size=256MB
+      -c maintenance_work_mem=32MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+
+  redis:
+    image: redis:7-alpine
+    container_name: poe2b-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --appendonly no
+      --save ""
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 160M
+
+  backend:
+    build:
+      context: ../../backend
+    image: ghcr.io/${GITHUB_OWNER:-local}/poe2b-backend:${IMAGE_TAG:-latest}
+    container_name: poe2b-backend
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/env/.env.prod
+    environment:
+      ENVIRONMENT: prod
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      UVICORN_WORKERS: "2"
+    command:
+      - uvicorn
+      - app.main:app
+      - --host=0.0.0.0
+      - --port=8000
+      - --workers=2
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edge
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  worker:
+    build:
+      context: ../../backend
+    image: ghcr.io/${GITHUB_OWNER:-local}/poe2b-backend:${IMAGE_TAG:-latest}
+    container_name: poe2b-worker
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/env/.env.prod
+    environment:
+      ENVIRONMENT: prod
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+    command:
+      - arq
+      - app.workers.arq_worker.WorkerSettings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  frontend:
+    build:
+      context: ../../frontend
+    image: ghcr.io/${GITHUB_OWNER:-local}/poe2b-frontend:${IMAGE_TAG:-latest}
+    container_name: poe2b-frontend
+    restart: unless-stopped
+    networks:
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.app.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.app.loadbalancer.server.port=80"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  admin:
+    build:
+      context: ../../admin
+    image: ghcr.io/${GITHUB_OWNER:-local}/poe2b-admin:${IMAGE_TAG:-latest}
+    container_name: poe2b-admin
+    restart: unless-stopped
+    environment:
+      ADMIN_ENVIRONMENT: prod
+      ADMIN_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ADMIN_REDIS_URL: redis://redis:6379/0
+      ADMIN_BACKEND_BASE_URL: http://backend:8000
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      ADMIN_TOTP_SECRET: ${ADMIN_TOTP_SECRET}
+      ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-[]}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edge
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=poe2b_edge"
+      - "traefik.http.routers.admin.rule=Host(`${ADMIN_DOMAIN}`)"
+      - "traefik.http.routers.admin.entrypoints=websecure"
+      - "traefik.http.routers.admin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin.loadbalancer.server.port=8001"
+    deploy:
+      resources:
+        limits:
+          memory: 64M

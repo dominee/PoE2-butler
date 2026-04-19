@@ -1,0 +1,1848 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PoE2 Hideout Butler API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness probe",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness probe",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Readyz Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Begin OAuth2 login",
+        "operationId": "login_api_auth_login_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "OAuth2 callback",
+        "operationId": "callback_api_auth_callback_get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout and revoke session",
+        "operationId": "logout_api_auth_logout_post",
+        "parameters": [
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Logout Api Auth Logout Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Current user",
+        "operationId": "me_api_me_get",
+        "parameters": [
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leagues": {
+      "get": {
+        "tags": [
+          "leagues"
+        ],
+        "summary": "Leagues known to this user",
+        "operationId": "leagues_api_leagues_get",
+        "parameters": [
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaguesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/characters": {
+      "get": {
+        "tags": [
+          "characters"
+        ],
+        "summary": "List characters for a league",
+        "operationId": "list_characters_api_characters_get",
+        "parameters": [
+          {
+            "name": "league",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "League"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharactersResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/characters/{name}": {
+      "get": {
+        "tags": [
+          "characters"
+        ],
+        "summary": "Character detail with equipped items",
+        "operationId": "get_character_api_characters__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/refresh": {
+      "post": {
+        "tags": [
+          "refresh"
+        ],
+        "summary": "Refresh snapshot data",
+        "operationId": "refresh_api_refresh_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trade/search": {
+      "post": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Build a trade search payload + URL",
+        "operationId": "trade_search_api_trade_search_post",
+        "parameters": [
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prefs": {
+      "get": {
+        "tags": [
+          "prefs"
+        ],
+        "summary": "Current user preferences",
+        "operationId": "get_prefs_api_prefs_get",
+        "parameters": [
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrefsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "prefs"
+        ],
+        "summary": "Update user preferences",
+        "operationId": "patch_prefs_api_prefs_patch",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrefsPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrefsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stashes": {
+      "get": {
+        "tags": [
+          "stashes"
+        ],
+        "summary": "List stash tabs for a league",
+        "operationId": "list_stashes_api_stashes_get",
+        "parameters": [
+          {
+            "name": "league",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "League"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StashListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stashes/{tab_id}": {
+      "get": {
+        "tags": [
+          "stashes"
+        ],
+        "summary": "Stash tab contents",
+        "operationId": "get_stash_tab_api_stashes__tab_id__get",
+        "parameters": [
+          {
+            "name": "tab_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tab Id"
+            }
+          },
+          {
+            "name": "league",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "League"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StashTab"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stashes/refresh": {
+      "post": {
+        "tags": [
+          "stashes"
+        ],
+        "summary": "Refresh stash snapshot for a league",
+        "operationId": "refresh_stash_tabs_api_stashes_refresh_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshStashesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Refresh Stash Tabs Api Stashes Refresh Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pricing/lookup": {
+      "post": {
+        "tags": [
+          "pricing"
+        ],
+        "summary": "Bulk price estimate for items",
+        "operationId": "lookup_prices_api_pricing_lookup_post",
+        "parameters": [
+          {
+            "name": "poe2b_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Poe2B Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PricingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CharacterDetail": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/CharacterSummary"
+          },
+          "equipped": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Equipped"
+          },
+          "inventory": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Inventory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "CharacterDetail"
+      },
+      "CharacterSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "realm": {
+            "type": "string",
+            "title": "Realm",
+            "default": "pc"
+          },
+          "class": {
+            "type": "string",
+            "title": "Class"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level",
+            "default": 0
+          },
+          "league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "League"
+          },
+          "experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "class"
+        ],
+        "title": "CharacterSummary"
+      },
+      "CharactersResponse": {
+        "properties": {
+          "league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "League"
+          },
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/CharacterSummary"
+            },
+            "type": "array",
+            "title": "Characters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "league",
+          "characters"
+        ],
+        "title": "CharactersResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Item": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "inventory_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Id"
+          },
+          "w": {
+            "type": "integer",
+            "title": "W",
+            "default": 1
+          },
+          "h": {
+            "type": "integer",
+            "title": "H",
+            "default": 1
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "type_line": {
+            "type": "string",
+            "title": "Type Line",
+            "default": ""
+          },
+          "base_type": {
+            "type": "string",
+            "title": "Base Type",
+            "default": ""
+          },
+          "rarity": {
+            "type": "string",
+            "title": "Rarity",
+            "default": "Normal"
+          },
+          "ilvl": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ilvl"
+          },
+          "identified": {
+            "type": "boolean",
+            "title": "Identified",
+            "default": true
+          },
+          "corrupted": {
+            "type": "boolean",
+            "title": "Corrupted",
+            "default": false
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/ItemProperty"
+            },
+            "type": "array",
+            "title": "Properties"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/ItemProperty"
+            },
+            "type": "array",
+            "title": "Requirements"
+          },
+          "implicit_mods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Implicit Mods"
+          },
+          "explicit_mods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Explicit Mods"
+          },
+          "rune_mods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rune Mods"
+          },
+          "enchant_mods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Enchant Mods"
+          },
+          "crafted_mods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Crafted Mods"
+          },
+          "sockets": {
+            "items": {
+              "$ref": "#/components/schemas/Socket"
+            },
+            "type": "array",
+            "title": "Sockets"
+          },
+          "stack_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack Size"
+          },
+          "max_stack_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Stack Size"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Item"
+      },
+      "ItemProperty": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ItemProperty"
+      },
+      "League": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "realm": {
+            "type": "string",
+            "title": "Realm",
+            "default": "pc"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "League"
+      },
+      "LeaguesResponse": {
+        "properties": {
+          "leagues": {
+            "items": {
+              "$ref": "#/components/schemas/League"
+            },
+            "type": "array",
+            "title": "Leagues"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "preferred": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred"
+          }
+        },
+        "type": "object",
+        "required": [
+          "leagues",
+          "current",
+          "preferred"
+        ],
+        "title": "LeaguesResponse"
+      },
+      "MeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "realm": {
+            "type": "string",
+            "title": "Realm"
+          },
+          "preferred_league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred League"
+          },
+          "trade_tolerance_pct": {
+            "type": "integer",
+            "title": "Trade Tolerance Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "account_name",
+          "realm",
+          "preferred_league",
+          "trade_tolerance_pct"
+        ],
+        "title": "MeResponse"
+      },
+      "PrefsPatch": {
+        "properties": {
+          "trade_tolerance_pct": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 500.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Tolerance Pct"
+          },
+          "preferred_league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred League"
+          },
+          "valuable_threshold_chaos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuable Threshold Chaos"
+          }
+        },
+        "type": "object",
+        "title": "PrefsPatch"
+      },
+      "PrefsResponse": {
+        "properties": {
+          "trade_tolerance_pct": {
+            "type": "integer",
+            "title": "Trade Tolerance Pct"
+          },
+          "preferred_league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred League"
+          },
+          "valuable_threshold_chaos": {
+            "type": "integer",
+            "title": "Valuable Threshold Chaos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_tolerance_pct",
+          "preferred_league",
+          "valuable_threshold_chaos"
+        ],
+        "title": "PrefsResponse"
+      },
+      "PriceEstimate": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/PriceUnit",
+            "default": "chaos"
+          },
+          "chaos_equiv": {
+            "type": "number",
+            "title": "Chaos Equiv"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 1.0
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "chaos_equiv",
+          "source"
+        ],
+        "title": "PriceEstimate"
+      },
+      "PriceUnit": {
+        "type": "string",
+        "enum": [
+          "chaos",
+          "divine",
+          "exalted"
+        ],
+        "title": "PriceUnit"
+      },
+      "PricingRequest": {
+        "properties": {
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "league",
+          "items"
+        ],
+        "title": "PricingRequest"
+      },
+      "PricingResponse": {
+        "properties": {
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "prices": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PriceEstimate"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Prices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "league",
+          "prices"
+        ],
+        "title": "PricingResponse"
+      },
+      "RefreshResponse": {
+        "properties": {
+          "profile": {
+            "type": "boolean",
+            "title": "Profile"
+          },
+          "leagues": {
+            "type": "boolean",
+            "title": "Leagues"
+          },
+          "characters": {
+            "type": "boolean",
+            "title": "Characters"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "leagues",
+          "characters"
+        ],
+        "title": "RefreshResponse"
+      },
+      "RefreshStashesRequest": {
+        "properties": {
+          "league": {
+            "type": "string",
+            "title": "League"
+          }
+        },
+        "type": "object",
+        "required": [
+          "league"
+        ],
+        "title": "RefreshStashesRequest"
+      },
+      "Socket": {
+        "properties": {
+          "group": {
+            "type": "integer",
+            "title": "Group",
+            "default": 0
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "Socket"
+      },
+      "StashColour": {
+        "properties": {
+          "r": {
+            "type": "integer",
+            "title": "R",
+            "default": 0
+          },
+          "g": {
+            "type": "integer",
+            "title": "G",
+            "default": 0
+          },
+          "b": {
+            "type": "integer",
+            "title": "B",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "StashColour"
+      },
+      "StashListResponse": {
+        "properties": {
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/StashTabSummary"
+            },
+            "type": "array",
+            "title": "Tabs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "league",
+          "tabs"
+        ],
+        "title": "StashListResponse"
+      },
+      "StashTab": {
+        "properties": {
+          "tab": {
+            "$ref": "#/components/schemas/StashTabSummary"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tab"
+        ],
+        "title": "StashTab"
+      },
+      "StashTabSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "NormalStash"
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "default": 0
+          },
+          "colour": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StashColour"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "StashTabSummary"
+      },
+      "TradeSearchRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "upgrade"
+            ],
+            "title": "Mode"
+          },
+          "item": {
+            "$ref": "#/components/schemas/Item"
+          },
+          "league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "League"
+          },
+          "tolerance_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 500.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tolerance Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "item"
+        ],
+        "title": "TradeSearchRequest"
+      },
+      "TradeSearchResponse": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "upgrade"
+            ],
+            "title": "Mode"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "tolerance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tolerance Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "league",
+          "url",
+          "payload"
+        ],
+        "title": "TradeSearchResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

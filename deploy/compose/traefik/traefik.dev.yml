@@ -1,0 +1,19 @@
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: poe2b_edge
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json

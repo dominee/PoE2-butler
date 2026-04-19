@@ -1,0 +1,106 @@
+{
+  "Pewpewer": {
+    "character": {
+      "id": "char-ranger-01",
+      "name": "Pewpewer",
+      "realm": "pc",
+      "class": "Ranger",
+      "level": 92,
+      "league": "Dawn of the Hunt",
+      "experience": 1234567890
+    },
+    "items": [
+      {
+        "id": "item-bow-001",
+        "verified": true,
+        "w": 2,
+        "h": 4,
+        "ilvl": 82,
+        "name": "Doom Horn",
+        "typeLine": "Spine Bow",
+        "baseType": "Spine Bow",
+        "rarity": "Rare",
+        "identified": true,
+        "corrupted": false,
+        "inventoryId": "Weapon",
+        "properties": [
+          { "name": "Physical Damage", "values": [["120-280", 1]], "displayMode": 0 },
+          { "name": "Critical Hit Chance", "values": [["6.50%", 0]], "displayMode": 0 },
+          { "name": "Attacks per Second", "values": [["1.35", 0]], "displayMode": 0 }
+        ],
+        "requirements": [
+          { "name": "Level", "values": [["72", 0]], "displayMode": 0 },
+          { "name": "Dex", "values": [["212", 0]], "displayMode": 1 }
+        ],
+        "implicitMods": ["30% increased Physical Damage"],
+        "explicitMods": [
+          "Adds 18 to 32 Physical Damage",
+          "60% increased Physical Damage",
+          "+32% to Global Critical Hit Chance",
+          "20% increased Attack Speed",
+          "+45 to maximum Life"
+        ],
+        "sockets": [
+          { "group": 0, "type": "rune" },
+          { "group": 1, "type": "rune" }
+        ]
+      },
+      {
+        "id": "item-helm-001",
+        "verified": true,
+        "w": 2,
+        "h": 2,
+        "ilvl": 78,
+        "name": "Brood Pelt",
+        "typeLine": "Iron Hat",
+        "baseType": "Iron Hat",
+        "rarity": "Rare",
+        "identified": true,
+        "corrupted": false,
+        "inventoryId": "Helm",
+        "properties": [
+          { "name": "Armour", "values": [["124", 1]], "displayMode": 0 },
+          { "name": "Evasion Rating", "values": [["55", 1]], "displayMode": 0 }
+        ],
+        "explicitMods": [
+          "+62 to maximum Life",
+          "+38 to all Attributes",
+          "18% increased Rarity of Items found",
+          "+24% to Fire Resistance"
+        ]
+      }
+    ]
+  },
+  "Necroqueen": {
+    "character": {
+      "id": "char-witch-01",
+      "name": "Necroqueen",
+      "realm": "pc",
+      "class": "Witch",
+      "level": 87,
+      "league": "Dawn of the Hunt"
+    },
+    "items": [
+      {
+        "id": "item-wand-001",
+        "verified": true,
+        "w": 1,
+        "h": 3,
+        "ilvl": 80,
+        "name": "Bone Charm",
+        "typeLine": "Rattling Sceptre",
+        "baseType": "Rattling Sceptre",
+        "rarity": "Rare",
+        "identified": true,
+        "corrupted": false,
+        "inventoryId": "Weapon",
+        "explicitMods": [
+          "58% increased Spell Damage",
+          "Adds 12 to 18 Cold Damage to Spells",
+          "+90 to maximum Mana",
+          "+1 to Level of all Minion Skills"
+        ]
+      }
+    ]
+  }
+}

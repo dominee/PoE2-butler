@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Overview</h2>
+  <table>
+    <tbody>
+      <tr><th>Users</th><td>{{ totals.users }}</td></tr>
+      <tr><th>Snapshots</th><td>{{ totals.snapshots }}</td></tr>
+      <tr><th>Redis keys</th><td>{{ redis.keys }}</td></tr>
+      <tr><th>Redis memory</th><td>{{ redis.used_memory_human }} / {{ redis.maxmemory_human }}</td></tr>
+      <tr><th>Price cache entries</th><td>{{ price_cache.keys }}</td></tr>
+      <tr><th>Queue length</th><td>{{ queue.queued }} (in-progress: {{ queue.in_progress }})</td></tr>
+    </tbody>
+  </table>
+</section>
+<section>
+  <h2>Snapshots by kind</h2>
+  <table>
+    <thead><tr><th>Kind</th><th>Count</th></tr></thead>
+    <tbody>
+      {% for row in snapshots_by_kind %}
+      <tr><td>{{ row.kind }}</td><td>{{ row.n }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

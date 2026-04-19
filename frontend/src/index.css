@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-950 text-parchment-50;
+    background-image: radial-gradient(
+        ellipse at top,
+        rgba(200, 160, 64, 0.08),
+        transparent 60%
+      ),
+      radial-gradient(ellipse at bottom, rgba(70, 50, 110, 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md
+      bg-ember-500 px-4 py-2 font-display text-ink-950
+      transition hover:bg-ember-400
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md
+      border border-ink-600 bg-ink-800 px-3 py-1.5 text-parchment-100
+      transition hover:border-ember-500 hover:text-ember-400;
+  }
+  .panel {
+    @apply rounded-md border border-ink-700 bg-ink-900/80 shadow-pane backdrop-blur;
+  }
+}

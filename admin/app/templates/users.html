@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Users · most recent {{ users|length }}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Account</th><th>Realm</th><th>Preferred league</th>
+        <th>Tolerance</th><th>Threshold</th>
+        <th>Last login</th><th>Last refresh</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td><code>{{ u.ggg_account_name }}</code></td>
+        <td>{{ u.realm }}</td>
+        <td>{{ u.preferred_league or "—" }}</td>
+        <td>{{ u.trade_tolerance_pct }}%</td>
+        <td>{{ u.valuable_threshold_chaos }}c</td>
+        <td>{{ u.last_login_at or "—" }}</td>
+        <td>{{ u.last_refreshed_at or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

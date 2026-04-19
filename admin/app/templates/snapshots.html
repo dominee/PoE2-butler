@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Most recent snapshots</h2>
+  <table>
+    <thead>
+      <tr><th>Account</th><th>Kind</th><th>Key</th><th>Fetched at</th></tr>
+    </thead>
+    <tbody>
+      {% for s in snapshots %}
+      <tr>
+        <td><code>{{ s.ggg_account_name }}</code></td>
+        <td>{{ s.kind }}</td>
+        <td>{{ s.key or "—" }}</td>
+        <td>{{ s.fetched_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

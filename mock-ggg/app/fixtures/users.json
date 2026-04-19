@@ -1,0 +1,35 @@
+{
+  "exile_one": {
+    "profile": {
+      "name": "ExileOne#1234",
+      "uuid": "11111111-1111-1111-1111-111111111111",
+      "realm": "pc",
+      "guild": null
+    },
+    "leagues": [
+      { "id": "Standard", "realm": "pc", "description": "Standard", "current": false },
+      { "id": "Dawn of the Hunt", "realm": "pc", "description": "Current temp league", "current": true },
+      { "id": "Hardcore Dawn of the Hunt", "realm": "pc", "description": "Hardcore temp league", "current": false }
+    ],
+    "characters": [
+      {
+        "id": "char-ranger-01",
+        "name": "Pewpewer",
+        "realm": "pc",
+        "class": "Ranger",
+        "level": 92,
+        "league": "Dawn of the Hunt",
+        "experience": 1234567890
+      },
+      {
+        "id": "char-witch-01",
+        "name": "Necroqueen",
+        "realm": "pc",
+        "class": "Witch",
+        "level": 87,
+        "league": "Dawn of the Hunt",
+        "experience": 987654321
+      }
+    ]
+  }
+}

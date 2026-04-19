@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: backend lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: Sync deps
+        run: uv sync --frozen || uv sync
+      - name: Ruff
+        run: uv run ruff check .
+      - name: Pytest
+        run: uv run pytest -ra
+
+  admin:
+    name: admin lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - run: uv sync --frozen || uv sync
+      - run: uv run ruff check .
+      - run: uv run pytest -ra
+
+  mock-ggg:
+    name: mock-ggg lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mock-ggg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - run: uv sync --frozen || uv sync
+      - run: uv run ruff check .
+
+  frontend:
+    name: frontend lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm install
+      - run: npm run lint || true
+      - run: npx tsc -b
+      - run: npm test
+
+  audit:
+    name: dependency audits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: pip-audit (backend)
+        working-directory: backend
+        run: |
+          uv sync --frozen || uv sync
+          uv run pip-audit --strict || true
+      - name: pip-audit (admin)
+        working-directory: admin
+        run: |
+          uv sync --frozen || uv sync
+          uv run pip-audit --strict || true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (frontend)
+        working-directory: frontend
+        run: |
+          npm install --package-lock-only
+          npm audit --omit=dev --audit-level=high || true

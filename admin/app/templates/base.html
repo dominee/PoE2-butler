@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{% block title %}Admin · PoE2 Butler{% endblock %}</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #141316;
+        --panel: #1d1b21;
+        --ink: #e9d8bd;
+        --ember: #e08a3c;
+        --rule: #2b2830;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      header {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem 1.25rem;
+        background: var(--panel);
+        border-bottom: 1px solid var(--rule);
+      }
+      header h1 { font-size: 1.125rem; color: var(--ember); margin: 0; }
+      nav a {
+        color: var(--ink);
+        margin-right: 0.75rem;
+        text-decoration: none;
+        padding-bottom: 2px;
+        border-bottom: 2px solid transparent;
+      }
+      nav a.active, nav a:hover { border-color: var(--ember); }
+      main { padding: 1.25rem; max-width: 72rem; }
+      section { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+      h2 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--ember); }
+      table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+      th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--rule); }
+      th { color: #b7a98b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; }
+      code { background: rgba(255,255,255,0.04); padding: 1px 4px; border-radius: 3px; }
+      form { display: grid; gap: 0.75rem; max-width: 20rem; }
+      input, button { padding: 0.4rem 0.6rem; background: #25222b; border: 1px solid var(--rule); color: var(--ink); border-radius: 4px; }
+      button { background: var(--ember); color: #221508; border: none; cursor: pointer; }
+      .muted { color: #9c8e73; font-size: 0.8rem; }
+      .logout { margin-left: auto; color: #cc8b44; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>PoE2 Butler · Admin</h1>
+      {% if session %}
+      <nav>
+        <a href="/admin/" class="{% if active=='home' %}active{% endif %}">Overview</a>
+        <a href="/admin/users" class="{% if active=='users' %}active{% endif %}">Users</a>
+        <a href="/admin/snapshots" class="{% if active=='snapshots' %}active{% endif %}">Snapshots</a>
+        <a href="/admin/cache" class="{% if active=='cache' %}active{% endif %}">Cache / Queue</a>
+        <a href="/admin/upstream" class="{% if active=='upstream' %}active{% endif %}">Upstream</a>
+      </nav>
+      <a class="logout" href="/admin/logout">sign out</a>
+      {% endif %}
+    </header>
+    <main>{% block content %}{% endblock %}</main>
+  </body>
+</html>

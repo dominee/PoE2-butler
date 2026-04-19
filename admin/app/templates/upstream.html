@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Backend probes</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Result</th></tr></thead>
+    <tbody>
+      {% for path, result in health.items() %}
+      <tr><td><code>{{ path }}</code></td><td>{{ result }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

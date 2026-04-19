@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Admin{% endblock %}
+{% block content %}
+<section>
+  <h2>Sign in</h2>
+  {% if error %}<p style="color:#f38b8b">{{ error }}</p>{% endif %}
+  <form method="post" action="/admin/login">
+    <label>
+      Username
+      <input name="username" autocomplete="username" required autofocus />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" autocomplete="current-password" required />
+    </label>
+    {% if requires_totp %}
+    <label>
+      TOTP code
+      <input name="totp" inputmode="numeric" pattern="[0-9]{6}" required />
+    </label>
+    {% endif %}
+    <button type="submit">Sign in</button>
+    <p class="muted">Access is restricted to operators.</p>
+  </form>
+</section>
+{% endblock %}

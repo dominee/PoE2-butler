@@ -1,0 +1,73 @@
+{
+  "Dawn of the Hunt": {
+    "tabs": [
+      { "id": "tab-1", "name": "Loot Dump", "type": "PremiumStash", "index": 0, "colour": { "r": 80, "g": 120, "b": 200 } },
+      { "id": "tab-2", "name": "Currency", "type": "CurrencyStash", "index": 1, "colour": { "r": 200, "g": 160, "b": 60 } },
+      { "id": "tab-3", "name": "Maps", "type": "MapStash", "index": 2, "colour": { "r": 120, "g": 200, "b": 120 } }
+    ],
+    "contents": {
+      "tab-1": {
+        "items": [
+          {
+            "id": "stash-item-001",
+            "verified": true,
+            "w": 2,
+            "h": 3,
+            "x": 0,
+            "y": 0,
+            "ilvl": 81,
+            "name": "Brood Grip",
+            "typeLine": "Iron Gauntlets",
+            "baseType": "Iron Gauntlets",
+            "rarity": "Rare",
+            "identified": true,
+            "inventoryId": "Stash1",
+            "explicitMods": [
+              "+48 to maximum Life",
+              "+22% to Fire Resistance",
+              "+28% to Lightning Resistance",
+              "12% increased Attack Speed"
+            ]
+          }
+        ]
+      },
+      "tab-2": {
+        "items": [
+          {
+            "id": "stash-item-currency-001",
+            "verified": true,
+            "w": 1,
+            "h": 1,
+            "x": 0,
+            "y": 0,
+            "stackSize": 12,
+            "maxStackSize": 40,
+            "typeLine": "Divine Orb",
+            "baseType": "Divine Orb",
+            "rarity": "Currency",
+            "identified": true,
+            "inventoryId": "Stash2"
+          },
+          {
+            "id": "stash-item-currency-002",
+            "verified": true,
+            "w": 1,
+            "h": 1,
+            "x": 1,
+            "y": 0,
+            "stackSize": 345,
+            "maxStackSize": 5000,
+            "typeLine": "Chaos Orb",
+            "baseType": "Chaos Orb",
+            "rarity": "Currency",
+            "identified": true,
+            "inventoryId": "Stash2"
+          }
+        ]
+      },
+      "tab-3": {
+        "items": []
+      }
+    }
+  }
+}

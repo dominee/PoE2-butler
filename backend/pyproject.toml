@@ -1,0 +1,64 @@
+[project]
+name = "poe2-butler-backend"
+version = "0.1.0"
+description = "PoE2 Hideout Butler backend API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "../LICENSE" }
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "httpx>=0.28",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "redis>=5.2",
+    "arq>=0.26",
+    "cryptography>=44.0",
+    "itsdangerous>=2.2",
+    "argon2-cffi>=23.1",
+    "structlog>=24.4",
+    "orjson>=3.10",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "httpx>=0.28",
+    "ruff>=0.8",
+    "pip-audit>=2.7",
+    "asgi-lifespan>=2.1",
+    "fakeredis>=2.26",
+    "aiosqlite>=0.20",
+    "python-multipart>=0.0.20",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RET"]
+ignore = [
+    "S101",  # assert is fine in tests
+    "B008",  # FastAPI uses Depends() in defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
