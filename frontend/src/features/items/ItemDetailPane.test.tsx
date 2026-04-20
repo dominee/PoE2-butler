@@ -24,6 +24,7 @@ const testItem: Item = {
   requirements: [{ name: "Level", value: "72" }],
   implicit_mods: [],
   explicit_mods: ["+100 to maximum Life"],
+  explicit_mod_details: [],
   rune_mods: [],
   enchant_mods: [],
   crafted_mods: [],
@@ -33,7 +34,7 @@ const testItem: Item = {
   icon: null,
 };
 
-const prefs: Prefs = { trade_tolerance_pct: 15, preferred_league: null };
+const prefs: Prefs = { trade_tolerance_pct: 15, preferred_league: null, valuable_threshold_chaos: 10 };
 
 function renderPane(item: Item | null) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

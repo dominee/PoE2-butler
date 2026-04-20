@@ -1,7 +1,8 @@
 import { useState } from "react";
 
 import { usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
-import type { Item, ItemProperty, Prefs } from "@/api/types";
+import type { Item, ItemProperty, ItemRarity, ModDetail, Prefs } from "@/api/types";
+import { parseModParts, stripTags } from "@/utils/modText";
 
 import { PriceBadge } from "./PriceBadge";
 
@@ -12,20 +13,102 @@ export interface ItemDetailPaneProps {
   onClose?: () => void;
 }
 
-// --- sub-components --------------------------------------------------------
+// ─── rarity colour maps ──────────────────────────────────────────────────────
 
-function ModList({ mods, tone }: { mods: string[]; tone: string }) {
+/** Inline border colour for the detail pane (overrides the panel base). */
+const RARITY_BORDER: Partial<Record<ItemRarity, string>> = {
+  Magic: "rgba(136,136,255,0.45)",
+  Rare: "rgba(255,255,119,0.35)",
+  Unique: "rgba(175,96,37,0.9)",
+  Currency: "rgba(170,158,130,0.5)",
+  Gem: "rgba(27,162,155,0.55)",
+  DivinationCard: "rgba(100,100,100,0.4)",
+};
+
+/** Tailwind text class for the item name in the header. */
+const RARITY_NAME_CLASS: Partial<Record<ItemRarity, string>> = {
+  Magic: "text-rarity-magic",
+  Rare: "text-rarity-rare",
+  Unique: "text-rarity-unique",
+  Gem: "text-rarity-gem",
+  Currency: "text-rarity-currency",
+};
+
+// ─── tier badge ──────────────────────────────────────────────────────────────
+
+function tierBadgeClass(tier: number): string {
+  if (tier === 1) return "bg-amber-500/25 text-amber-300 border-amber-500/50";
+  if (tier === 2) return "bg-yellow-600/20 text-yellow-300 border-yellow-500/40";
+  if (tier <= 4) return "bg-lime-900/25 text-lime-400/80 border-lime-700/40";
+  if (tier <= 6) return "bg-ink-600/60 text-ink-300 border-ink-500";
+  return "bg-ink-700/60 text-ink-500 border-ink-600";
+}
+
+function TierBadge({ tier }: { tier: number }) {
   return (
-    <ul className={`mt-1 space-y-0.5 text-sm ${tone}`}>
-      {mods.map((mod, idx) => (
-        // eslint-disable-next-line react/no-array-index-key
-        <li key={idx} className="break-words leading-snug">
-          {mod}
-        </li>
-      ))}
-    </ul>
+    <span
+      className={`inline-flex shrink-0 items-center rounded border px-1 py-px text-[9px] font-bold leading-none ${tierBadgeClass(tier)}`}
+      title={`Tier ${tier}`}
+    >
+      T{tier}
+    </span>
   );
 }
+
+// ─── mod text components ─────────────────────────────────────────────────────
+
+/** Render a mod string with numeric values highlighted in parchment-50. */
+function ModText({ raw }: { raw: string }) {
+  const parts = parseModParts(raw);
+  return (
+    <span>
+      {parts.map((part, i) =>
+        part.isNum ? (
+          // eslint-disable-next-line react/no-array-index-key
+          <strong key={i} className="font-semibold text-parchment-50">
+            {part.text}
+          </strong>
+        ) : (
+          // eslint-disable-next-line react/no-array-index-key
+          <span key={i}>{part.text}</span>
+        ),
+      )}
+    </span>
+  );
+}
+
+/**
+ * Renders one explicit mod line with an optional tier badge and roll range.
+ * `detail` comes from `item.explicit_mod_details[idx]` — may be undefined
+ * when the GGG API didn't return extended mod data.
+ */
+function ExplicitModLine({
+  mod,
+  detail,
+}: {
+  mod: string;
+  detail: ModDetail | undefined;
+}) {
+  const tier = detail?.tier ?? null;
+  const mag = detail?.magnitudes?.[0];
+  const hasRange = mag?.min != null && mag?.max != null && mag.min !== mag.max;
+
+  return (
+    <li className="flex items-start gap-1.5 break-words leading-snug">
+      {tier != null && <TierBadge tier={tier} />}
+      <span className="min-w-0 flex-1">
+        <ModText raw={mod} />
+        {hasRange && (
+          <span className="ml-1 text-[10px] text-ink-500">
+            [{mag!.min}–{mag!.max}]
+          </span>
+        )}
+      </span>
+    </li>
+  );
+}
+
+// ─── section helpers ─────────────────────────────────────────────────────────
 
 function ModSection({ title, mods, tone }: { title: string; mods: string[]; tone: string }) {
   if (mods.length === 0) return null;
@@ -34,45 +117,47 @@ function ModSection({ title, mods, tone }: { title: string; mods: string[]; tone
       <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
         {title}
       </h4>
-      <ModList mods={mods} tone={tone} />
+      <ul className={`mt-1 space-y-0.5 text-sm ${tone}`}>
+        {mods.map((mod, idx) => (
+          // eslint-disable-next-line react/no-array-index-key
+          <li key={idx} className="break-words leading-snug">
+            <ModText raw={mod} />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-/** Divider styled like the in-game item tooltip separator. */
 function ModDivider() {
-  return <div className="my-0.5 border-t border-ink-600/60" />;
+  return <div className="my-0.5 border-t border-ink-600/50" />;
 }
 
 /**
- * For Rare items the GGG API orders mods: prefixes first (≤3), suffixes last
- * (≤3).  For Magic items there is at most 1 prefix + 1 suffix.  We use the
- * positional convention to split visually; no mod-database lookup is required.
+ * PoE2 mod ordering: prefixes come first (≤3), suffixes follow (≤3).
+ * We split at position 3 for Rare, at 1 for Magic.
  */
 function splitExplicitMods(
   mods: string[],
   rarity: string,
 ): { prefixes: string[]; suffixes: string[] } {
   if (mods.length === 0) return { prefixes: [], suffixes: [] };
-
   if (rarity === "Rare") {
-    const boundary = Math.min(3, mods.length);
-    return { prefixes: mods.slice(0, boundary), suffixes: mods.slice(boundary) };
+    const cut = Math.min(3, mods.length);
+    return { prefixes: mods.slice(0, cut), suffixes: mods.slice(cut) };
   }
   if (rarity === "Magic" && mods.length >= 2) {
     return { prefixes: [mods[0]], suffixes: mods.slice(1) };
   }
-  // Normal / Unique / Currency / Gem — show all together under "Mods"
   return { prefixes: mods, suffixes: [] };
 }
 
-/** Properties whose `values` array is empty are category headers (e.g. "Amulet",
- *  "Bow").  We skip them — the item header already shows the type. */
+/** Drop category-header properties (those with empty values, e.g. "Amulet"). */
 function usefulProperties(props: ItemProperty[]): ItemProperty[] {
   return props.filter((p) => p.value != null && p.value !== "");
 }
 
-// --- main component --------------------------------------------------------
+// ─── main component ───────────────────────────────────────────────────────────
 
 export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneProps) {
   const tradeSearch = useTradeSearch();
@@ -97,6 +182,9 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
   const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
   const showPrefixSuffix =
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
+  const hasTierData = item.explicit_mod_details.some((d) => d.tier != null);
+
+  const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
   const onSearch = async (mode: "exact" | "upgrade") => {
     const result = await tradeSearch.mutateAsync({
@@ -124,13 +212,16 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
   return (
     <aside
       className="panel flex h-full flex-col gap-3 overflow-y-auto p-4 text-sm"
+      style={{ borderColor: RARITY_BORDER[item.rarity as ItemRarity] }}
       aria-label="Item details"
     >
       {/* ── Header ── */}
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {item.name && (
-            <div className="break-words font-display text-base leading-snug">{item.name}</div>
+            <div className={`break-words font-display text-base leading-snug ${nameClass}`}>
+              {item.name}
+            </div>
           )}
           <div className="break-words text-parchment-100/80">{item.type_line}</div>
         </div>
@@ -160,7 +251,9 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
               // eslint-disable-next-line react/no-array-index-key
               <li key={idx} className="flex justify-between gap-2">
                 <span className="text-ink-500">{p.name}</span>
-                <span className="text-right">{p.value}</span>
+                <span className="text-right font-semibold text-parchment-50">
+                  <ModText raw={p.value!} />
+                </span>
               </li>
             ))}
           </ul>
@@ -170,8 +263,7 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       {/* ── Requirements ── */}
       {visibleReqs.length > 0 && (
         <div className="text-xs text-ink-500">
-          Requires{" "}
-          {visibleReqs.map((r) => `${r.value} ${r.name}`).join(", ")}
+          Requires {visibleReqs.map((r) => `${r.value} ${r.name}`).join(", ")}
         </div>
       )}
 
@@ -197,21 +289,71 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       <ModSection title="Implicit" mods={item.implicit_mods} tone="text-rarity-magic" />
       <ModSection title="Rune" mods={item.rune_mods} tone="text-rarity-gem" />
 
-      {/* ── Explicit mods: prefix / suffix split ── */}
+      {/* ── Explicit mods: prefix / suffix split with optional tier badges ── */}
       {item.explicit_mods.length > 0 && (
         <div className="space-y-1">
           {showPrefixSuffix ? (
             <>
-              <ModSection title="Prefixes" mods={prefixes} tone="text-rarity-magic" />
+              {prefixes.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+                    Prefixes
+                  </h4>
+                  <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
+                    {prefixes.map((mod, idx) => (
+                      <ExplicitModLine
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={idx}
+                        mod={mod}
+                        detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
               {prefixes.length > 0 && suffixes.length > 0 && <ModDivider />}
-              <ModSection title="Suffixes" mods={suffixes} tone="text-rarity-magic" />
+              {suffixes.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+                    Suffixes
+                  </h4>
+                  <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
+                    {suffixes.map((mod, idx) => (
+                      <ExplicitModLine
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={idx}
+                        mod={mod}
+                        detail={
+                          hasTierData
+                            ? item.explicit_mod_details[prefixes.length + idx]
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
             </>
           ) : (
-            <ModSection
-              title={item.rarity === "Unique" ? "Unique mods" : "Mods"}
-              mods={item.explicit_mods}
-              tone={item.rarity === "Unique" ? "text-rarity-unique" : "text-rarity-magic"}
-            />
+            <div>
+              <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+                {item.rarity === "Unique" ? "Unique mods" : "Mods"}
+              </h4>
+              <ul
+                className={`mt-1 space-y-0.5 text-sm ${
+                  item.rarity === "Unique" ? "text-rarity-unique" : "text-rarity-magic"
+                }`}
+              >
+                {item.explicit_mods.map((mod, idx) => (
+                  <ExplicitModLine
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={idx}
+                    mod={mod}
+                    detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                  />
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}

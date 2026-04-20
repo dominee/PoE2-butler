@@ -18,6 +18,21 @@ export interface Socket {
   type: string;
 }
 
+export interface ModMagnitude {
+  hash: string;
+  min: number | null;
+  max: number | null;
+}
+
+/** Per-modifier metadata from GGG ``extended.mods``.  Present only when the
+ *  GGG API returns the extended object; otherwise the array is empty. */
+export interface ModDetail {
+  name: string;
+  tier: number | null; // 1 = T1 (best)
+  level: number | null;
+  magnitudes: ModMagnitude[];
+}
+
 export interface Item {
   id: string;
   inventory_id: string | null;
@@ -36,6 +51,7 @@ export interface Item {
   requirements: ItemProperty[];
   implicit_mods: string[];
   explicit_mods: string[];
+  explicit_mod_details: ModDetail[];
   rune_mods: string[];
   enchant_mods: string[];
   crafted_mods: string[];

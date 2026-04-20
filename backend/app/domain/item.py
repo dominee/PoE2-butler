@@ -1,12 +1,11 @@
 """Normalized item model.
 
 Produced from the raw GGG item JSON.  Kept compact and frontend-friendly.
-More precise mod typing (implicit / rune / enchant) arrives in M2 together
-with the trade URL builder; M1 only needs the shape to render an item card.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -31,6 +30,24 @@ class Socket(BaseModel):
     type: str = ""
 
 
+class ModMagnitude(BaseModel):
+    """Single stat range entry from GGG extended mod data."""
+
+    hash: str = ""
+    min: float | None = None
+    max: float | None = None
+
+
+class ModDetail(BaseModel):
+    """Per-modifier metadata from GGG ``extended.mods`` — present only when
+    the GGG API returns the *extended* object (not all endpoints do)."""
+
+    name: str = ""
+    tier: int | None = None  # 1 = T1 (best), None when unknown
+    level: int | None = None
+    magnitudes: list[ModMagnitude] = Field(default_factory=list)
+
+
 class Item(BaseModel):
     id: str
     inventory_id: str | None = None
@@ -49,6 +66,7 @@ class Item(BaseModel):
     requirements: list[ItemProperty] = Field(default_factory=list)
     implicit_mods: list[str] = Field(default_factory=list)
     explicit_mods: list[str] = Field(default_factory=list)
+    explicit_mod_details: list[ModDetail] = Field(default_factory=list)
     rune_mods: list[str] = Field(default_factory=list)
     enchant_mods: list[str] = Field(default_factory=list)
     crafted_mods: list[str] = Field(default_factory=list)
@@ -57,6 +75,48 @@ class Item(BaseModel):
     max_stack_size: int | None = None
     icon: str | None = None
     raw: dict[str, Any] | None = None
+
+
+_TIER_RE = re.compile(r"\d+")
+
+
+def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:
+    if not isinstance(extended, dict):
+        return []
+    mods = extended.get("mods")
+    if not isinstance(mods, dict):
+        return []
+    details = []
+    for raw_mod in mods.get("explicit") or []:
+        if not isinstance(raw_mod, dict):
+            continue
+        tier: int | None = None
+        tier_raw = raw_mod.get("tier")
+        if tier_raw is not None:
+            try:
+                tier = int(tier_raw)
+            except (ValueError, TypeError):
+                m = _TIER_RE.search(str(tier_raw))
+                if m:
+                    tier = int(m.group())
+        magnitudes = [
+            ModMagnitude(
+                hash=str(mag.get("hash", "")),
+                min=mag.get("min"),
+                max=mag.get("max"),
+            )
+            for mag in (raw_mod.get("magnitudes") or [])
+            if isinstance(mag, dict)
+        ]
+        details.append(
+            ModDetail(
+                name=str(raw_mod.get("name", "")),
+                tier=tier,
+                level=raw_mod.get("level"),
+                magnitudes=magnitudes,
+            )
+        )
+    return details
 
 
 def parse_item(raw: dict[str, Any]) -> Item:
@@ -68,6 +128,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         for s in raw.get("sockets", []) or []
         if isinstance(s, dict)
     ]
+    explicit_mod_details = _parse_mod_details(raw.get("extended"))
 
     return Item(
         id=str(raw.get("id", "")) or str(raw.get("name", "")),
@@ -87,6 +148,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         requirements=reqs,
         implicit_mods=list(raw.get("implicitMods") or []),
         explicit_mods=list(raw.get("explicitMods") or []),
+        explicit_mod_details=explicit_mod_details,
         rune_mods=list(raw.get("runeMods") or []),
         enchant_mods=list(raw.get("enchantMods") or []),
         crafted_mods=list(raw.get("craftedMods") or []),

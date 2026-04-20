@@ -23,6 +23,7 @@ const baseItem: Item = {
   requirements: [],
   implicit_mods: [],
   explicit_mods: ["+45 to maximum Life", "60% increased Physical Damage"],
+  explicit_mod_details: [],
   rune_mods: [],
   enchant_mods: [],
   crafted_mods: [],
