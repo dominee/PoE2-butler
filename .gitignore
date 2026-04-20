@@ -37,3 +37,6 @@ deploy/compose/data/
 # Playwright
 playwright-report/
 test-results/
+
+# Documentation
+INSTRUCTIONS.md
