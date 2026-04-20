@@ -32,6 +32,9 @@ The colour scheme and visual theme should be derived from [Path of Exile 2 Websi
 Design should be flat and minimal, minimalizing menu sizes to provide maximum space for the application content itself.
 Keep page load speed in mind.
 The item details pane should be on the right side fo the screen and provide as much information as possible.
+There should be  vertical column pane (collapsable) serving as an activity log, showing new or changed items added since last snapshot. New items (marked green) represent a new item added to stash or inventory, a changed item (marked red) represents a an existing item which has been modified (list os stats values, or implicits hav been changed for example). New/changed indication should be visible also on the grid list or table view.
+Items in the grid view shoul be displayed as their base items images, with a stat sumamry overlay.
+The detail pane should show show the stat range in current tier, but also the difference between the current attribute value and the maximal possible value on a T1 stat. A percentual value for each stat , and for the item itself is than calculated as percentage fromt he max possible value. The value can go over 100% (like 110%) as the natural values can be exceeded using specific currency (divine orb, chaos orb). 
 
 ## Technical description
 

@@ -160,6 +160,10 @@ async def callback(
         await refresh_user_snapshot(session=snap_db, user=snap_user, ggg=ggg, cipher=cipher)
         await snap_db.commit()
 
+    # Reload user so preferred_league written by refresh_user_snapshot is visible
+    # (it lives in snap_db which is a separate SQLAlchemy session).
+    await db.refresh(user)
+
     sid, data = await sessions.create(user_id=str(user.id), league=user.preferred_league)
 
     response = RedirectResponse(

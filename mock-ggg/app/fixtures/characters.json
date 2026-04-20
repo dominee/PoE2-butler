@@ -24,15 +24,62 @@
         "corrupted": false,
         "inventoryId": "Weapon",
         "properties": [
-          { "name": "Physical Damage", "values": [["120-280", 1]], "displayMode": 0 },
-          { "name": "Critical Hit Chance", "values": [["6.50%", 0]], "displayMode": 0 },
-          { "name": "Attacks per Second", "values": [["1.35", 0]], "displayMode": 0 }
+          {
+            "name": "Physical Damage",
+            "values": [
+              [
+                "120-280",
+                1
+              ]
+            ],
+            "displayMode": 0
+          },
+          {
+            "name": "Critical Hit Chance",
+            "values": [
+              [
+                "6.50%",
+                0
+              ]
+            ],
+            "displayMode": 0
+          },
+          {
+            "name": "Attacks per Second",
+            "values": [
+              [
+                "1.35",
+                0
+              ]
+            ],
+            "displayMode": 0
+          }
         ],
         "requirements": [
-          { "name": "Level", "values": [["72", 0]], "displayMode": 0 },
-          { "name": "Dex", "values": [["212", 0]], "displayMode": 1 }
+          {
+            "name": "Level",
+            "values": [
+              [
+                "72",
+                0
+              ]
+            ],
+            "displayMode": 0
+          },
+          {
+            "name": "Dex",
+            "values": [
+              [
+                "212",
+                0
+              ]
+            ],
+            "displayMode": 1
+          }
         ],
-        "implicitMods": ["30% increased Physical Damage"],
+        "implicitMods": [
+          "30% increased Physical Damage"
+        ],
         "explicitMods": [
           "Adds 18 to 32 Physical Damage",
           "60% increased Physical Damage",
@@ -41,8 +88,14 @@
           "+45 to maximum Life"
         ],
         "sockets": [
-          { "group": 0, "type": "rune" },
-          { "group": 1, "type": "rune" }
+          {
+            "group": 0,
+            "type": "rune"
+          },
+          {
+            "group": 1,
+            "type": "rune"
+          }
         ]
       },
       {
@@ -59,8 +112,26 @@
         "corrupted": false,
         "inventoryId": "Helm",
         "properties": [
-          { "name": "Armour", "values": [["124", 1]], "displayMode": 0 },
-          { "name": "Evasion Rating", "values": [["55", 1]], "displayMode": 0 }
+          {
+            "name": "Armour",
+            "values": [
+              [
+                "124",
+                1
+              ]
+            ],
+            "displayMode": 0
+          },
+          {
+            "name": "Evasion Rating",
+            "values": [
+              [
+                "55",
+                1
+              ]
+            ],
+            "displayMode": 0
+          }
         ],
         "explicitMods": [
           "+62 to maximum Life",
@@ -100,6 +171,2887 @@
           "+90 to maximum Mana",
           "+1 to Level of all Minion Skills"
         ]
+      }
+    ]
+  },
+  "Catticiaan": {
+    "character": {
+      "id": "153614a9-0105-2b7f-1a4e-1f8fa9fb8f21",
+      "name": "Catticiaan",
+      "realm": "pc",
+      "class": "Tactician",
+      "level": 96,
+      "league": "Fate of the Vaal",
+      "experience": 0
+    },
+    "items": [
+      {
+        "sockets": [],
+        "id": "e00b14061e35e729bcbcbc769c9baf4f0d35594f3d84729be744034d1f49fb85",
+        "inventoryId": "Amulet",
+        "name": "Agony Beads",
+        "frameType": 2,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQW11bGV0cy9CYXNldHlwZXMvU3RlbGxhckFtdWxldCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/a44db4cd4a/StellarAmulet.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Stellar Amulet",
+        "baseType": "Stellar Amulet",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+7 to all [Attributes|Attributes]"
+        ],
+        "explicitMods": [
+          "+171 to [Accuracy|Accuracy] Rating",
+          "+14 to maximum Mana",
+          "+49 to [Spirit|Spirit]",
+          "+3 to Level of all [Projectile] Skills",
+          "+30 to [Intelligence|Intelligence]",
+          "24% of Damage taken [Recoup|Recouped] as Life"
+        ],
+        "properties": [
+          {
+            "name": "Amulet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "63",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "8a207df8514b90ed58e86d71c0ed39a932107d0d4dc3ca79cff6c1782b5cb3d9",
+        "inventoryId": "Boots",
+        "name": "Spirit League",
+        "frameType": 2,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb290cy9CYXNldHlwZXMvQm9vdHNTdHJEZXgwMyIsInciOjIsImgiOjIsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/b0dd26050c/BootsStrDex03.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Fortress Sabatons",
+        "baseType": "Fortress Sabatons",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "35% increased Movement Speed",
+          "+57 to [Armour|Armour]",
+          "+57 to [Evasion] Rating",
+          "+42% to [Resistances|Fire Resistance]",
+          "+41% to [Resistances|Cold Resistance]",
+          "+25% to [Resistances|Chaos Resistance]"
+        ],
+        "properties": [
+          {
+            "name": "Boots",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "406",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Evasion|Evasion Rating]",
+            "values": [
+              [
+                "383",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 17,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "75",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "56",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Dexterity|Dex]",
+            "values": [
+              [
+                "56",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 64,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          },
+          {
+            "group": 2,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "6ccf44f0f2deafb33c1fb6e028cba26714c7e0110794ae6cea6ceb96cd01283b",
+        "inventoryId": "Weapon",
+        "name": "Kraken Core",
+        "frameType": 2,
+        "ilvl": 79,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9Dcm9zc2Jvd3MvMkhDcm9zc2JvdzA4IiwidyI6MiwiaCI6NCwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/4d19c2367c/2HCrossbow08.png",
+        "w": 2,
+        "h": 4,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Desolate Crossbow",
+        "baseType": "Desolate Crossbow",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [],
+        "explicitMods": [
+          "163% increased [Physical] Damage",
+          "Adds 31 to 44 [Physical|Physical] Damage",
+          "+5 to Level of all [Attack] Skills",
+          "[LifeLeech|Leeches] 7.48% of [Physical|Physical] Damage as Life",
+          "25% chance to gain [Onslaught|Onslaught] on Killing [HitDamage|Hits] with this Weapon"
+        ],
+        "properties": [
+          {
+            "name": "[Crossbow]",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Physical] Damage",
+            "values": [
+              [
+                "216-593",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 9,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Cold Damage",
+            "values": [
+              [
+                "56-78",
+                5
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 10,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Critical|Critical Hit] Chance",
+            "values": [
+              [
+                "5.00%",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 12,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Attacks per Second",
+            "values": [
+              [
+                "1.60",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 13,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Reload Time",
+            "values": [
+              [
+                "0.80",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 97,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "77",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "89",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Dexterity|Dex]",
+            "values": [
+              [
+                "89",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 64,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "2b3678acb0bcd18f02612cc3c3669ae6d6de24c2a5724ea10c1a6c2cda151139",
+        "inventoryId": "Gloves",
+        "name": "Painter's Servant",
+        "frameType": 3,
+        "ilvl": 69,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9HbG92ZXMvVW5pcXVlcy9QYWludGVyc1NlcnZhbnQiLCJ3IjoyLCJoIjoyLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/b0ab8bb2b3/PaintersServant.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Torn Gloves",
+        "baseType": "Torn Gloves",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [],
+        "explicitMods": [
+          "[Gain] 10% of [ElementalDamage|Elemental Damage] as Extra [Cold] Damage",
+          "[Gain] 10% of [ElementalDamage|Elemental Damage] as Extra [Fire] Damage",
+          "[Gain] 10% of [ElementalDamage|Elemental Damage] as Extra [Lightning] Damage",
+          "33% of [ElementalDamage|Elemental Damage] [Conversion|Converted] to [Cold] Damage",
+          "33% of [ElementalDamage|Elemental Damage] [Conversion|Converted] to [Fire] Damage",
+          "33% of [ElementalDamage|Elemental Damage] [Conversion|Converted] to [Lightning] Damage"
+        ],
+        "properties": [
+          {
+            "name": "Gloves",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "11",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "50",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "0e29a2c0138beb80b43bd947223068e39db24dc617e7c35aceda3a732fd87d1f",
+        "inventoryId": "Ring",
+        "name": "Pain Eye",
+        "frameType": 2,
+        "ilvl": 80,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvQmFzZXR5cGVzL1RvcGF6UmluZyIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/83315d9397/TopazRing.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Topaz Ring",
+        "baseType": "Topaz Ring",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+23% to [Resistances|Lightning Resistance]"
+        ],
+        "explicitMods": [
+          "Adds 19 to 22 [Physical|Physical] Damage to [Attack|Attacks]",
+          "Adds 23 to 37 [Cold] damage to [Attack|Attacks]",
+          "Adds 1 to 41 [Lightning] damage to [Attack|Attacks]",
+          "+28 to [Strength|Strength]",
+          "+33 to [Dexterity|Dexterity]",
+          "+22 to [Intelligence|Intelligence]"
+        ],
+        "properties": [
+          {
+            "name": "Ring",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "60",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [],
+        "id": "02871d99def7df58dde26b21212d78e09f7aa9ccea8ae4ab758ceab7086f2db5",
+        "inventoryId": "Ring2",
+        "name": "Woe Knot",
+        "frameType": 2,
+        "ilvl": 79,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvQmFzZXR5cGVzL1J1YnlSaW5nIiwidyI6MSwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/4f0e6f99c1/RubyRing.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Ruby Ring",
+        "baseType": "Ruby Ring",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+27% to [Resistances|Fire Resistance]"
+        ],
+        "explicitMods": [
+          "Adds 18 to 24 [Physical|Physical] Damage to [Attack|Attacks]",
+          "Adds 21 to 33 [Fire] damage to [Attack|Attacks]",
+          "+39% to [Resistances|Cold Resistance]",
+          "+31% to [Resistances|Lightning Resistance]",
+          "10.8 Life Regeneration per second"
+        ],
+        "properties": [
+          {
+            "name": "Ring",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "60",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          }
+        ],
+        "id": "669906aa00ab7e936d733e37022aed74dc8212e59fcf4384cc7ce99d1daa6b3a",
+        "inventoryId": "Helm",
+        "name": "Mind Glance",
+        "frameType": 2,
+        "ilvl": 81,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9IZWxtZXRzL0Jhc2V0eXBlcy9IZWxtZXRTdHJEZXgwNiIsInciOjIsImgiOjIsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/b2bcd2cacb/HelmetStrDex06.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Gladiatorial Helm",
+        "baseType": "Gladiatorial Helm",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "152% increased [Armour|Armour] and [Evasion|Evasion]",
+          "+44 to maximum Life",
+          "+36 to maximum Mana",
+          "+32 to [Strength|Strength]",
+          "+33% to [Resistances|Lightning Resistance]",
+          "+25% to [Resistances|Chaos Resistance]"
+        ],
+        "properties": [
+          {
+            "name": "Helmet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "526",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Evasion|Evasion Rating]",
+            "values": [
+              [
+                "481",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 17,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "80",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "63",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Dexterity|Dex]",
+            "values": [
+              [
+                "63",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 64,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [],
+        "id": "74538585b495c757d8d6930ca75dc6624d521727fe45c5ea1d9566218cbe2329",
+        "inventoryId": "Belt",
+        "name": "Headhunter",
+        "frameType": 3,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQmVsdHMvVW5pcXVlcy9IZWFkaHVudGVyIiwidyI6MiwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/24accb4eec/Headhunter.png",
+        "w": 2,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Heavy Belt",
+        "baseType": "Heavy Belt",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [
+          "26% increased [StunThreshold|Stun Threshold]",
+          "Has 3 [Charm] Slots"
+        ],
+        "explicitMods": [
+          "+53 to maximum Life",
+          "+27 to [Strength|Strength]",
+          "+21 to [Dexterity|Dexterity]",
+          "When you kill a [Rarity|Rare] monster, you gain its [MonsterModifiers|Modifiers] for 60 seconds"
+        ],
+        "properties": [
+          {
+            "name": "Belt",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "50",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          },
+          {
+            "group": 2,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          },
+          {
+            "group": 3,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          },
+          {
+            "group": 4,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "ac92b354b92398972e993c753c8a51a2d92349e05f067bea3fa10847810413b9",
+        "inventoryId": "BodyArmour",
+        "name": "Morior Invictus",
+        "frameType": 3,
+        "ilvl": 84,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb2R5QXJtb3Vycy9VbmlxdWVzL01vcmlvckludmljdHVzX00iLCJ3IjoyLCJoIjozLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/6674aa4ff6/MoriorInvictus_M.png",
+        "w": 2,
+        "h": 3,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Grand Regalia",
+        "baseType": "Grand Regalia",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [],
+        "explicitMods": [
+          "396% increased [Armour|Armour], [Evasion|Evasion] and [EnergyShield|Energy Shield]",
+          "8.2 Life Regeneration per second per Socket filled",
+          "+10% to all [Resistances|Elemental Resistances] per Socket filled",
+          "+14 to [Spirit|Spirit] per Socket filled"
+        ],
+        "properties": [
+          {
+            "name": "Body Armour",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "804",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Evasion|Evasion Rating]",
+            "values": [
+              [
+                "732",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 17,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "274",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "65",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "41",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Dexterity|Dex]",
+            "values": [
+              [
+                "41",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 64,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "41",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      }
+    ]
+  },
+  "NextWizardKing": {
+    "character": {
+      "id": "831739e4-031e-d70d-274e-38253b577505",
+      "name": "NextWizardKing",
+      "realm": "pc",
+      "class": "Chronomancer",
+      "level": 95,
+      "league": "Fate of the Vaal",
+      "experience": 0
+    },
+    "items": [
+      {
+        "sockets": [],
+        "id": "95ac7a1f7aa204284459c2191a03b3ade1df41792ae6573ec846d19cdb3d1bc4",
+        "inventoryId": "Ring2",
+        "name": "Beast Loop",
+        "frameType": 2,
+        "ilvl": 80,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvQmFzZXR5cGVzL1NhcHBoaXJlUmluZyIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/14608c24b1/SapphireRing.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Sapphire Ring",
+        "baseType": "Sapphire Ring",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+24% to [Resistances|Cold Resistance]"
+        ],
+        "explicitMods": [
+          "25% increased [Cold] Damage",
+          "+165 to maximum Mana",
+          "6% increased maximum Mana",
+          "17% increased [ItemRarity|Rarity of Items] found",
+          "+32 to [Intelligence|Intelligence]"
+        ],
+        "properties": [
+          {
+            "name": "Ring",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "60",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "d0581da88eb45bb1b43cda12bb0ac99d17ceee3cb68089f4fa1ec618b7febc56",
+        "inventoryId": "Gloves",
+        "name": "Maligaro's Virtuosity",
+        "frameType": 3,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9HbG92ZXMvVW5pcXVlcy9NYWxpZ2Fyb3NWaXJ0dW9zaXR5IiwidyI6MiwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/08f6808733/MaligarosVirtuosity.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Fine Bracers",
+        "baseType": "Fine Bracers",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [],
+        "explicitMods": [
+          "71% increased [Evasion|Evasion] Rating",
+          "29% increased [Critical|Critical Hit] Chance",
+          "5% increased [Attack] Speed",
+          "+15 to [Dexterity|Dexterity]",
+          "Your [Critical|Critical Hit] Chance cannot be [RerollCrit|Rerolled]",
+          "Your [CriticalDamageBonus|Critical Damage Bonus] is 250%"
+        ],
+        "properties": [
+          {
+            "name": "Gloves",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Evasion|Evasion Rating]",
+            "values": [
+              [
+                "162",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 17,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "45",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Dexterity|Dex]",
+            "values": [
+              [
+                "56",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 64,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "2c7ab6e8240b04a8530dba775084da59fdd1758bf0fe18b531816db0dc83ae49",
+        "inventoryId": "Ring",
+        "name": "Honour Coil",
+        "frameType": 2,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvQmFzZXR5cGVzL1J1YnlSaW5nIiwidyI6MSwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/4f0e6f99c1/RubyRing.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Ruby Ring",
+        "baseType": "Ruby Ring",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+27% to [Resistances|Fire Resistance]"
+        ],
+        "explicitMods": [
+          "18% increased [Cold] Damage",
+          "+171 to maximum Mana",
+          "5% increased maximum Mana",
+          "+26 to [Dexterity|Dexterity]",
+          "+36% to [Resistances|Cold Resistance]",
+          "14.6 Life Regeneration per second"
+        ],
+        "properties": [
+          {
+            "name": "Ring",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "60",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [],
+        "id": "62d6cced0961988c0e49611bfd18aed5e9a550941a5b232b1eb34a05bac00bed",
+        "inventoryId": "Amulet",
+        "name": "Onslaught Scarab",
+        "frameType": 2,
+        "ilvl": 78,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQW11bGV0cy9CYXNldHlwZXMvQXp1cmVBbXVsZXQiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/e49b170ba2/AzureAmulet.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Azure Amulet",
+        "baseType": "Azure Amulet",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "29% increased Mana Regeneration Rate"
+        ],
+        "explicitMods": [
+          "51% increased [Armour]",
+          "+86 to maximum [EnergyShield|Energy Shield]",
+          "+3 to Level of all [Spell|Spell] Skills",
+          "+32% to [Resistances|Lightning Resistance]",
+          "20% of Damage taken [Recoup|Recouped] as Mana"
+        ],
+        "properties": [
+          {
+            "name": "Amulet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Quality (Defence Modifiers)",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "60",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "vividtalisman"
+          }
+        ],
+        "id": "10061ff94220ca277db559538085d8aaaa7653b5d2bc0e7b8fd33d02315670dc",
+        "inventoryId": "Offhand",
+        "name": "Onslaught Star",
+        "frameType": 2,
+        "ilvl": 81,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9PbmVIYW5kV2VhcG9ucy9TY2VwdGVycy9CYXNldHlwZXMvU2NlcHRyZTA0IiwidyI6MiwiaCI6Mywic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/d2cc9f0ac1/Sceptre04.png",
+        "w": 2,
+        "h": 3,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Omen Sceptre",
+        "baseType": "Omen Sceptre",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "51% increased [Spirit|Spirit]",
+          "+160 to maximum Mana",
+          "[Allies|Allies] in your [Presence|Presence] deal 19 to 27 added [Attack|Attack] [Fire|Fire] Damage",
+          "[Allies|Allies] in your [Presence|Presence] have +13% to all [ElementalDamage|Elemental] [Resistances|Resistances]",
+          "+29 to [Intelligence|Intelligence]",
+          "69% increased Mana Regeneration Rate"
+        ],
+        "properties": [
+          {
+            "name": "[Sceptre]",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+10%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Spirit]",
+            "values": [
+              [
+                "151",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 25,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "78",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "42",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "106",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "37bae54dca821af9f4acda4fc1c080476cb98d3ae83b99880ebb941b3ffae326",
+        "inventoryId": "Boots",
+        "name": "Rapture Hoof",
+        "frameType": 2,
+        "ilvl": 80,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb290cy9CYXNldHlwZXMvQm9vdHNJbnQwNiIsInciOjIsImgiOjIsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/0fe23f857a/BootsInt06.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Sekhema Sandals",
+        "baseType": "Sekhema Sandals",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "20% increased Movement Speed",
+          "+32 to maximum [EnergyShield|Energy Shield]",
+          "+84 to maximum Mana",
+          "+40% to [Resistances|Fire Resistance]",
+          "+21% to [Resistances|Cold Resistance]",
+          "+33% to [Resistances|Lightning Resistance]"
+        ],
+        "properties": [
+          {
+            "name": "Boots",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "137",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "80",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "108",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "3056791fc04c3771c19261e701691d812ff99bc348a7181d1725d67be8b8b61b",
+        "inventoryId": "Helm",
+        "name": "The Vertex",
+        "frameType": 3,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9IZWxtZXRzL1VuaXF1ZXMvVGhlVmVydGV4IiwidyI6MiwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/baf0218c37/TheVertex.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Tribal Mask",
+        "baseType": "Tribal Mask",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [],
+        "explicitMods": [
+          "Has no [Attributes|Attribute] Requirements",
+          "103% increased [Evasion] and [EnergyShield|Energy Shield]",
+          "[Equipment] has no [Attributes|Attribute] Requirements"
+        ],
+        "properties": [
+          {
+            "name": "Helmet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Evasion|Evasion Rating]",
+            "values": [
+              [
+                "161",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 17,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "68",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "33",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "b2996d42f964d43f9e91800d822c2a1de3e7ce90e3c5dcfb464b8c0b46bf66d3",
+        "inventoryId": "Weapon2",
+        "name": "Sire of Shards",
+        "frameType": 3,
+        "ilvl": 79,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9TdGF2ZXMvVW5pcXVlcy9TaXJlT2ZTaGFyZHMiLCJ3IjoxLCJoIjo0LCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/4d78611003/SireOfShards.png",
+        "w": 1,
+        "h": 4,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Chiming Staff",
+        "baseType": "Chiming Staff",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "82% increased [Spell] Damage",
+          "16% increased Cast Speed",
+          "+7% to all [ElementalDamage|Elemental] [Resistances]",
+          "20% increased [LightRadius|Light Radius]",
+          "[Spell|Spells] fire 4 additional [Projectile|Projectiles]\n[Spell|Spells] fire [Projectile|Projectiles] in a circle"
+        ],
+        "properties": [
+          {
+            "name": "[Staff]",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "72",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "126",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "0e7baeab8a005fec0ed45aca8eeb94891631e24b35933d55d2e3bb26c97cb64f",
+        "inventoryId": "BodyArmour",
+        "name": "Spirit Coat",
+        "frameType": 2,
+        "ilvl": 79,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb2R5QXJtb3Vycy9CYXNldHlwZXMvQm9keUludDAzIiwidyI6MiwiaCI6Mywic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/72f888e8c2/BodyInt03.png",
+        "w": 2,
+        "h": 3,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Vile Robe",
+        "baseType": "Vile Robe",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "+86 to maximum [EnergyShield|Energy Shield]",
+          "72% increased [EnergyShield|Energy Shield]",
+          "+31 to [Intelligence|Intelligence]",
+          "+80 to [StunThreshold|Stun Threshold]",
+          "56% reduced [Ignite|Ignite] Duration on you"
+        ],
+        "properties": [
+          {
+            "name": "Body Armour",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "847",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "65",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "121",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [],
+        "id": "18ab4af5d2e4eae5a1f836b0f3f557b25ecb22f3e9eb2fe52f7201295bdf26a0",
+        "inventoryId": "Belt",
+        "name": "Midnight Braid",
+        "frameType": 3,
+        "ilvl": 79,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQmVsdHMvVW5pcXVlcy9NaWRuaWdodEJyYWlkIiwidyI6MiwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/191c4a3640/MidnightBraid.png",
+        "w": 2,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Rawhide Belt",
+        "baseType": "Rawhide Belt",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [
+          "22% increased Life Recovery from [Flask|Flasks]",
+          "Has 3 [Charm] Slots"
+        ],
+        "explicitMods": [
+          "+26 to maximum Mana",
+          "+8% to all [ElementalDamage|Elemental] [Resistances]",
+          "59% of Damage taken [Recoup|Recouped] as Mana"
+        ],
+        "properties": [
+          {
+            "name": "Belt",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "27f53c3ad9c486a227efa601c0485826d6ed76a0e75d4db844d8dbe10034fe94",
+        "inventoryId": "Weapon",
+        "name": "Skull Barb",
+        "frameType": 2,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9PbmVIYW5kV2VhcG9ucy9XYW5kcy9CYXNldHlwZXMvV2FuZDA0IiwidyI6MSwiaCI6Mywic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/215ca539ef/Wand04.png",
+        "w": 1,
+        "h": 3,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Siphoning Wand",
+        "baseType": "Siphoning Wand",
+        "identified": true,
+        "corrupted": true,
+        "implicitMods": [],
+        "explicitMods": [
+          "[Gain] 25% of Damage as Extra [Fire] Damage",
+          "[Gain] 26% of Damage as Extra [Cold] Damage",
+          "+65 to maximum Mana",
+          "+5 to Level of all [Cold|Cold] [Spell|Spell] Skills",
+          "24% increased Cast Speed"
+        ],
+        "properties": [
+          {
+            "name": "[Wand]",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "78",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "137",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      }
+    ]
+  },
+  "IamGothmog": {
+    "character": {
+      "id": "f28b8c38-0424-5b05-b624-1e34d7c44fbb",
+      "name": "IamGothmog",
+      "realm": "pc",
+      "class": "Smith of Kitava",
+      "level": 84,
+      "league": "Fate of the Vaal",
+      "experience": 0
+    },
+    "items": [
+      {
+        "sockets": [],
+        "id": "05a1a82bdd9cb541f1c1c2e7213f875eddfc648707f11ee739fb177485cea23a",
+        "inventoryId": "Amulet",
+        "name": "Defiance of Destiny",
+        "frameType": 3,
+        "ilvl": 83,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQW11bGV0cy9VbmlxdWVzL0RlZmlhbmNlT2ZEZXN0aW55IiwidyI6MSwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/713775c874/DefianceOfDestiny.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Jade Amulet",
+        "baseType": "Jade Amulet",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+15 to [Dexterity|Dexterity]"
+        ],
+        "explicitMods": [
+          "10% increased maximum Life",
+          "+16 to [Strength|Strength]",
+          "37% increased Mana Regeneration Rate",
+          "Recover 27% of Missing Life before being [HitDamage|Hit] by an Enemy"
+        ],
+        "properties": [
+          {
+            "name": "Amulet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "56",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "ad5edfaf943e44416ef5bed02a8f7f626295b8e605a227d4bf3154dddb0f8c46",
+        "inventoryId": "Belt",
+        "name": "Goregirdle",
+        "frameType": 3,
+        "ilvl": 79,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQmVsdHMvVW5pcXVlcy9Hb3JlZ2lyZGxlIiwidyI6MiwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/fbe737d02a/Goregirdle.png",
+        "w": 2,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Plate Belt",
+        "baseType": "Plate Belt",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+111 to [Armour]",
+          "Has 2 [Charm] Slots"
+        ],
+        "explicitMods": [
+          "+29 to [Strength|Strength]",
+          "13.5 Life Regeneration per second",
+          "Defend with 200% of [Armour|Armour]",
+          "Maximum [Physical|Physical Damage] Reduction is 50%"
+        ],
+        "properties": [
+          {
+            "name": "Belt",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "24",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "2cfe542bb9be033cd03e4695c512eee6c27010d75b0f3f2da53de629d8597787",
+        "inventoryId": "Ring2",
+        "name": "Blistering Bond",
+        "frameType": 3,
+        "ilvl": 81,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvVW5pcXVlcy9CbGlzdGVyaW5nQm9uZCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/624abc8043/BlisteringBond.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Ruby Ring",
+        "baseType": "Ruby Ring",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+25% to [Resistances|Fire Resistance]"
+        ],
+        "explicitMods": [
+          "+53 to maximum Life",
+          "+30% to [Resistances|Fire Resistance]",
+          "-15% to [Resistances|Cold Resistance]",
+          "You take [Fire] Damage instead of [Physical] Damage from [Bleeding]"
+        ],
+        "properties": [
+          {
+            "name": "Ring",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "8",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune"
+          },
+          {
+            "group": 2,
+            "attr": null,
+            "sColour": null,
+            "type": "rune"
+          }
+        ],
+        "id": "a475d779ca8a9f14b87a9cce6197cac54d2dec60b3a734f44daeb674aae7ad72",
+        "inventoryId": "BodyArmour",
+        "name": "",
+        "frameType": 0,
+        "ilvl": 80,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb2R5QXJtb3Vycy9CYXNldHlwZXMvQm9keUludFN0cjA0IiwidyI6MiwiaCI6Mywic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/3574a91ac4/BodyIntStr04.png",
+        "w": 2,
+        "h": 3,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Exceptional Conjurer Mantle",
+        "baseType": "Conjurer Mantle",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+27 to [Spirit|Spirit]"
+        ],
+        "explicitMods": [],
+        "properties": [
+          {
+            "name": "Body Armour",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "245",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "84",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "70",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "67",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "67",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Normal"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          },
+          {
+            "group": 1,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "soulcore"
+          }
+        ],
+        "id": "cc13183ff0b7345ce447ed390c6d04fd8d80c46eefff49dde148dad726c974ab",
+        "inventoryId": "Weapon",
+        "name": "Fury of the King",
+        "frameType": 3,
+        "ilvl": 80,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvT2ZmaGFuZC9UYWxpc21hbnMvVW5pcXVlcy9WZXNzZWxPZldyYXRoIiwidyI6MiwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/c7bab22377/VesselOfWrath.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Ashbark Talisman",
+        "baseType": "Ashbark Talisman",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "52% increased [Flammability] [BuffMagnitude|Magnitude]"
+        ],
+        "explicitMods": [
+          "Adds 563 to 660 [Fire|Fire] Damage",
+          "20% reduced [Attack] Speed",
+          "+40 to [Strength|Strength]",
+          "[Bear] Skills [Conversion|Convert] 80% of [Physical] Damage to [Fire] Damage",
+          "Skills which require [Glory] generate 5 [Glory] every 2 seconds",
+          "Enemies in your [Presence|Presence] have [Exposure]"
+        ],
+        "properties": [
+          {
+            "name": "[Talisman]",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Quality]",
+            "values": [
+              [
+                "+20%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 6,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Physical] Damage",
+            "values": [
+              [
+                "60-126",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 9,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Fire Damage",
+            "values": [
+              [
+                "584-705",
+                4
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 10,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Critical|Critical Hit] Chance",
+            "values": [
+              [
+                "8.00%",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 12,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Attacks per Second",
+            "values": [
+              [
+                "0.96",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 13,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "78",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "94",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "67",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "ee98dbe7d16cacd24bc7b841f794245500bfe7454f6d9df180e961605b77c652",
+        "inventoryId": "Ring",
+        "name": "The Burrower",
+        "frameType": 3,
+        "ilvl": 73,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvVW5pcXVlcy9UaGVCdXJyb3dlciIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/27fc2ce96e/TheBurrower.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Topaz Ring",
+        "baseType": "Topaz Ring",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+30% to [Resistances|Lightning Resistance]"
+        ],
+        "explicitMods": [
+          "-10% to [Resistances|Cold Resistance]",
+          "+29% to [Resistances|Lightning Resistance]",
+          "33% increased Mana Regeneration Rate",
+          "[Lightning] Damage of Enemies [HitDamage|Hitting] you is [Unlucky]"
+        ],
+        "properties": [
+          {
+            "name": "Ring",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "16",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
+      },
+      {
+        "sockets": [],
+        "id": "bc860950e19096d50a843e57fba93a67276f22a74b30eb7c736f1e2b1b7eff0a",
+        "inventoryId": "Gloves",
+        "name": "Brood Palm",
+        "frameType": 2,
+        "ilvl": 44,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9HbG92ZXMvQmFzZXR5cGVzL0dsb3Zlc0ludFN0cjAzIiwidyI6MiwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/0e34625351/GlovesIntStr03.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Goldcast Cuffs",
+        "baseType": "Goldcast Cuffs",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "Adds 11 to 15 [Fire] damage to [Attack|Attacks]",
+          "+64 to maximum Mana",
+          "+20% to [Resistances|Fire Resistance]",
+          "+15% to [Resistances|Cold Resistance]",
+          "Gain 39 Life per enemy killed"
+        ],
+        "properties": [
+          {
+            "name": "Gloves",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "37",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[EnergyShield|Energy Shield]",
+            "values": [
+              [
+                "14",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 18,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "35",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "24",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Intelligence|Int]",
+            "values": [
+              [
+                "24",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 65,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune",
+            "item": "rune"
+          }
+        ],
+        "id": "5f1cf60a1632f1d086335913f78412b065872d0460c2385ca35fa78b31002707",
+        "inventoryId": "Boots",
+        "name": "Rift Road",
+        "frameType": 2,
+        "ilvl": 32,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb290cy9CYXNldHlwZXMvQm9vdHNTdHIwMyIsInciOjIsImgiOjIsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/eaacac3e43/BootsStr03.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Bronze Greaves",
+        "baseType": "Bronze Greaves",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "10% increased Movement Speed",
+          "+31 to [Armour|Armour]",
+          "21% increased [Armour|Armour]",
+          "+15% to [Resistances|Cold Resistance]",
+          "+19% of [Armour|Armour] also applies to [ElementalDamage|Elemental Damage]",
+          "7.2 Life Regeneration per second"
+        ],
+        "properties": [
+          {
+            "name": "Boots",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "110",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "30",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "23",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [],
+        "id": "1a2f24cf8dbb7d37b9e79e1e0476d66cee143a2a078797a45857abcb9ff18196",
+        "inventoryId": "Helm",
+        "name": "Chimeric Shelter",
+        "frameType": 2,
+        "ilvl": 52,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9IZWxtZXRzL0Jhc2V0eXBlcy9IZWxtZXRTdHIwNyIsInciOjIsImgiOjIsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/a455b9fc43/HelmetStr07.png",
+        "w": 2,
+        "h": 2,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Commander Greathelm",
+        "baseType": "Commander Greathelm",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "29% increased [Armour|Armour]",
+          "+31 to maximum Life",
+          "+20 to [Strength|Strength]",
+          "+5 to [Intelligence|Intelligence]",
+          "+29% to [Resistances|Fire Resistance]"
+        ],
+        "properties": [
+          {
+            "name": "Helmet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Armour]",
+            "values": [
+              [
+                "227",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 16,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "45",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Strength|Str]",
+            "values": [
+              [
+                "64",
+                0
+              ]
+            ],
+            "displayMode": 1,
+            "progress": null,
+            "type": 63,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare"
+      },
+      {
+        "sockets": [
+          {
+            "group": 0,
+            "attr": null,
+            "sColour": null,
+            "type": "rune"
+          }
+        ],
+        "id": "17e4a9bab535424bdbccb43750304c3f7e0009fbbac3c4c5abb779eae951fdbf",
+        "inventoryId": "Weapon2",
+        "name": "Hoghunt",
+        "frameType": 3,
+        "ilvl": 81,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9Ud29IYW5kTWFjZXMvVW5pcXVlcy9Ib2dodW50IiwidyI6MiwiaCI6NCwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/f2611ee9b4/Hoghunt.png",
+        "w": 2,
+        "h": 4,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Felled Greatclub",
+        "baseType": "Felled Greatclub",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [],
+        "explicitMods": [
+          "Adds 18 to 26 [Physical|Physical] Damage",
+          "+15% to [Critical|Critical Hit] Chance",
+          "10% reduced [Attack] Speed",
+          "+10 to [Strength|Strength]",
+          "[Maim] on [Critical|Critical Hit]"
+        ],
+        "properties": [
+          {
+            "name": "[Mace|Two Hand Mace]",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Physical] Damage",
+            "values": [
+              [
+                "31-44",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 9,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "[Critical|Critical Hit] Chance",
+            "values": [
+              [
+                "20.00%",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 12,
+            "suffix": null,
+            "icon": null
+          },
+          {
+            "name": "Attacks per Second",
+            "values": [
+              [
+                "0.99",
+                1
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 13,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [],
+        "league": "Fate of the Vaal",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Unique"
       }
     ]
   }

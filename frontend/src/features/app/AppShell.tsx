@@ -63,7 +63,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-ink-800 bg-ink-900/60 px-4 py-2 backdrop-blur">
         <h1 className="font-display text-lg text-ember-400">PoE2 Butler</h1>
         <span className="text-sm text-parchment-100/80">{me.account_name}</span>
@@ -114,8 +114,8 @@ export function AppShell() {
       </header>
 
       {view === "characters" ? (
-        <main className="grid flex-1 gap-4 p-4 lg:grid-cols-[280px,1fr,360px]">
-          <section aria-label="Characters" className="space-y-3">
+        <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px,1fr,360px]">
+          <section aria-label="Characters" className="flex flex-col gap-2 overflow-y-auto">
             <h2 className="font-display text-parchment-100/80">Characters</h2>
             {charactersQ.isLoading && <p className="text-ink-500">Loading characters&hellip;</p>}
             {charactersQ.data && (
@@ -127,7 +127,7 @@ export function AppShell() {
             )}
           </section>
 
-          <section aria-label="Equipped gear" className="space-y-3">
+          <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">
             <h2 className="font-display text-parchment-100/80">
               {selectedCharacter ? `${selectedCharacter} — equipped` : "Select a character"}
             </h2>
@@ -151,13 +151,15 @@ export function AppShell() {
           />
         </main>
       ) : (
-        <main className="grid flex-1 gap-4 p-4 lg:grid-cols-[1fr,360px]">
-          <StashBrowser
-            league={selectedLeague}
-            selectedItemId={selectedItem?.id ?? null}
-            onSelectItem={setSelectedItem}
-            valuableThreshold={prefsQ.data?.valuable_threshold_chaos}
-          />
+        <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr,360px]">
+          <div className="overflow-y-auto">
+            <StashBrowser
+              league={selectedLeague}
+              selectedItemId={selectedItem?.id ?? null}
+              onSelectItem={setSelectedItem}
+              valuableThreshold={prefsQ.data?.valuable_threshold_chaos}
+            />
+          </div>
           <ItemDetailPane
             item={selectedItem}
             league={selectedLeague}

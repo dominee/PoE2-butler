@@ -1,4 +1,61 @@
 {
+  "dominee": {
+    "profile": {
+      "name": "dominee#9275",
+      "uuid": "d8890288-fc34-2f35-68de-96a839c1b4c8",
+      "realm": "pc",
+      "guild": null
+    },
+    "leagues": [
+      {
+        "id": "Standard",
+        "realm": "pc",
+        "description": "Standard",
+        "current": false
+      },
+      {
+        "id": "Fate of the Vaal",
+        "realm": "pc",
+        "description": "Current challenge league",
+        "current": true
+      },
+      {
+        "id": "Hardcore Fate of the Vaal",
+        "realm": "pc",
+        "description": "Hardcore temp league",
+        "current": false
+      }
+    ],
+    "characters": [
+      {
+        "id": "153614a9-0105-2b7f-1a4e-1f8fa9fb8f21",
+        "name": "Catticiaan",
+        "realm": "pc",
+        "class": "Tactician",
+        "level": 96,
+        "league": "Fate of the Vaal",
+        "experience": 0
+      },
+      {
+        "id": "831739e4-031e-d70d-274e-38253b577505",
+        "name": "NextWizardKing",
+        "realm": "pc",
+        "class": "Chronomancer",
+        "level": 95,
+        "league": "Fate of the Vaal",
+        "experience": 0
+      },
+      {
+        "id": "f28b8c38-0424-5b05-b624-1e34d7c44fbb",
+        "name": "IamGothmog",
+        "realm": "pc",
+        "class": "Smith of Kitava",
+        "level": 84,
+        "league": "Fate of the Vaal",
+        "experience": 0
+      }
+    ]
+  },
   "exile_one": {
     "profile": {
       "name": "ExileOne#1234",
@@ -7,9 +64,24 @@
       "guild": null
     },
     "leagues": [
-      { "id": "Standard", "realm": "pc", "description": "Standard", "current": false },
-      { "id": "Dawn of the Hunt", "realm": "pc", "description": "Current temp league", "current": true },
-      { "id": "Hardcore Dawn of the Hunt", "realm": "pc", "description": "Hardcore temp league", "current": false }
+      {
+        "id": "Standard",
+        "realm": "pc",
+        "description": "Standard",
+        "current": false
+      },
+      {
+        "id": "Dawn of the Hunt",
+        "realm": "pc",
+        "description": "Current temp league",
+        "current": true
+      },
+      {
+        "id": "Hardcore Dawn of the Hunt",
+        "realm": "pc",
+        "description": "Hardcore temp league",
+        "current": false
+      }
     ],
     "characters": [
       {

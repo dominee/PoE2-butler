@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient
 from app.db.models import Snapshot, SnapshotKind, User, UserToken
+from app.domain.league import parse_leagues, pick_current_league
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
 
@@ -106,6 +107,12 @@ async def refresh_user_snapshot(
             session, user_id=user.id, kind=SnapshotKind.LEAGUES, key="", payload=leagues
         )
         outcome.leagues = True
+        # Promote the current league to the user row on first login (preferred_league
+        # is None) so the session carries a meaningful league from the very first request.
+        if user.preferred_league is None:
+            current = pick_current_league(parse_leagues(leagues))
+            if current:
+                user.preferred_league = current
     except Exception as exc:  # noqa: BLE001
         log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"leagues:{exc}")

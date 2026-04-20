@@ -1,4 +1,124 @@
 {
+  "Fate of the Vaal": {
+    "tabs": [
+      { "id": "vaal-tab-1", "name": "Dump", "type": "PremiumStash", "index": 0, "colour": { "r": 120, "g": 60, "b": 200 } },
+      { "id": "vaal-tab-2", "name": "Currency", "type": "CurrencyStash", "index": 1, "colour": { "r": 200, "g": 160, "b": 60 } },
+      { "id": "vaal-tab-3", "name": "Div Cards", "type": "DivinationCardStash", "index": 2, "colour": { "r": 80, "g": 180, "b": 120 } }
+    ],
+    "contents": {
+      "vaal-tab-1": {
+        "items": [
+          {
+            "id": "vaal-item-001",
+            "verified": true,
+            "w": 2,
+            "h": 3,
+            "x": 0,
+            "y": 0,
+            "ilvl": 83,
+            "name": "Havoc Brand",
+            "typeLine": "Ezomyte Dagger",
+            "baseType": "Ezomyte Dagger",
+            "rarity": "Rare",
+            "identified": true,
+            "corrupted": false,
+            "inventoryId": "Stash1",
+            "icon": null,
+            "properties": [
+              { "name": "Physical Damage", "values": [["84-190", 1]], "displayMode": 0 },
+              { "name": "Critical Hit Chance", "values": [["7.20%", 0]], "displayMode": 0 },
+              { "name": "Attacks per Second", "values": [["1.40", 0]], "displayMode": 0 }
+            ],
+            "requirements": [
+              { "name": "Level", "values": [["62", 0]], "displayMode": 0 }
+            ],
+            "explicitMods": [
+              "+52 to maximum Life",
+              "+22% to Fire Resistance",
+              "+28% to Lightning Resistance",
+              "14% increased Attack Speed",
+              "Adds 9 to 18 Fire Damage"
+            ]
+          },
+          {
+            "id": "vaal-item-002",
+            "verified": true,
+            "w": 2,
+            "h": 2,
+            "x": 2,
+            "y": 0,
+            "ilvl": 80,
+            "name": "Storm Shell",
+            "typeLine": "Advanced Plate",
+            "baseType": "Advanced Plate",
+            "rarity": "Rare",
+            "identified": true,
+            "corrupted": false,
+            "inventoryId": "Stash1",
+            "icon": null,
+            "explicitMods": [
+              "+78 to maximum Life",
+              "+35% to Lightning Resistance",
+              "+26% to Cold Resistance",
+              "9% increased maximum Energy Shield"
+            ]
+          }
+        ]
+      },
+      "vaal-tab-2": {
+        "items": [
+          {
+            "id": "vaal-currency-001",
+            "verified": true,
+            "w": 1,
+            "h": 1,
+            "x": 0,
+            "y": 0,
+            "stackSize": 7,
+            "maxStackSize": 10,
+            "typeLine": "Divine Orb",
+            "baseType": "Divine Orb",
+            "rarity": "Currency",
+            "identified": true,
+            "inventoryId": "Stash2"
+          },
+          {
+            "id": "vaal-currency-002",
+            "verified": true,
+            "w": 1,
+            "h": 1,
+            "x": 1,
+            "y": 0,
+            "stackSize": 843,
+            "maxStackSize": 5000,
+            "typeLine": "Chaos Orb",
+            "baseType": "Chaos Orb",
+            "rarity": "Currency",
+            "identified": true,
+            "inventoryId": "Stash2"
+          },
+          {
+            "id": "vaal-currency-003",
+            "verified": true,
+            "w": 1,
+            "h": 1,
+            "x": 2,
+            "y": 0,
+            "stackSize": 14,
+            "maxStackSize": 20,
+            "typeLine": "Exalted Orb",
+            "baseType": "Exalted Orb",
+            "rarity": "Currency",
+            "identified": true,
+            "inventoryId": "Stash2"
+          }
+        ]
+      },
+      "vaal-tab-3": {
+        "items": []
+      }
+    }
+  },
   "Dawn of the Hunt": {
     "tabs": [
       { "id": "tab-1", "name": "Loot Dump", "type": "PremiumStash", "index": 0, "colour": { "r": 80, "g": 120, "b": 200 } },
