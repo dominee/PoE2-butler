@@ -25,6 +25,7 @@ const testItem: Item = {
   implicit_mods: [],
   explicit_mods: ["+100 to maximum Life"],
   explicit_mod_details: [],
+  socketed_items: [],
   rune_mods: [],
   enchant_mods: [],
   crafted_mods: [],

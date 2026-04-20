@@ -289,6 +289,34 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       <ModSection title="Implicit" mods={item.implicit_mods} tone="text-rarity-magic" />
       <ModSection title="Rune" mods={item.rune_mods} tone="text-rarity-gem" />
 
+      {/* ── Socketed items (runes, soul cores) ── */}
+      {item.socketed_items.length > 0 && (
+        <div>
+          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+            Runes &amp; Cores
+          </h4>
+          <ul className="mt-1 space-y-2">
+            {item.socketed_items.map((si) => (
+              <li key={si.id} className="rounded border border-ink-600 bg-ink-800/60 px-2 py-1.5">
+                <div className="text-xs font-semibold text-rarity-currency">
+                  {si.type_line || si.name}
+                </div>
+                {si.explicit_mods.length > 0 && (
+                  <ul className="mt-0.5 space-y-0.5 text-[11px] text-parchment-100/70">
+                    {si.explicit_mods.map((mod, idx) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={idx} className="break-words leading-snug">
+                        <ModText raw={mod} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ── Explicit mods: prefix / suffix split with optional tier badges ── */}
       {item.explicit_mods.length > 0 && (
         <div className="space-y-1">

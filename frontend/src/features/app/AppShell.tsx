@@ -12,6 +12,7 @@ import {
 import type { Item } from "@/api/types";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
 import { PaperDoll } from "@/features/characters/PaperDoll";
+import { ItemCard } from "@/features/items/ItemCard";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
 import { StashBrowser } from "@/features/stashes/StashBrowser";
 import { useUIStore } from "@/store/uiStore";
@@ -135,11 +136,30 @@ export function AppShell() {
               <p className="text-ink-500">Loading gear&hellip;</p>
             )}
             {characterQ.data && (
-              <PaperDoll
-                equipped={characterQ.data.equipped}
-                selectedItemId={selectedItem?.id ?? null}
-                onSelectItem={setSelectedItem}
-              />
+              <>
+                <PaperDoll
+                  equipped={characterQ.data.equipped}
+                  selectedItemId={selectedItem?.id ?? null}
+                  onSelectItem={setSelectedItem}
+                />
+                {characterQ.data.inventory.length > 0 && (
+                  <div className="mt-2">
+                    <h3 className="mb-1 text-xs font-semibold uppercase tracking-widest text-ink-500">
+                      Jewels
+                    </h3>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {characterQ.data.inventory.map((jewel) => (
+                        <ItemCard
+                          key={jewel.id}
+                          item={jewel}
+                          selected={selectedItem?.id === jewel.id}
+                          onClick={setSelectedItem}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </section>
 

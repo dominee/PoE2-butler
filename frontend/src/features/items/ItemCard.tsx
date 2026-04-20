@@ -83,14 +83,11 @@ export function ItemCard({
       </div>
       {!compact && item.explicit_mods.length > 0 && (
         <ul className="mt-1 list-none text-[11px] text-rarity-magic/90">
-          {item.explicit_mods.slice(0, 4).map((mod, idx) => (
+          {item.explicit_mods.map((mod, idx) => (
             <li key={`${item.id}-mod-${idx}`} className="break-words leading-snug">
               {stripTags(mod)}
             </li>
           ))}
-          {item.explicit_mods.length > 4 && (
-            <li className="text-ink-500">+{item.explicit_mods.length - 4} more</li>
-          )}
         </ul>
       )}
     </button>

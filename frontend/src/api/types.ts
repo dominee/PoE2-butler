@@ -52,6 +52,7 @@ export interface Item {
   implicit_mods: string[];
   explicit_mods: string[];
   explicit_mod_details: ModDetail[];
+  socketed_items: Item[];
   rune_mods: string[];
   enchant_mods: string[];
   crafted_mods: string[];

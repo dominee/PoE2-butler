@@ -8,6 +8,18 @@ from __future__ import annotations
 import re
 from typing import Any
 
+# ── tag stripping ─────────────────────────────────────────────────────────────
+# GGG item data encodes display tags as [Id|Label] or [Id].
+# Strip them to plain text (same logic lives in frontend/src/utils/modText.ts).
+_TAG_LABELED = re.compile(r"\[([^\]|]+)\|([^\]]+)\]")
+_TAG_PLAIN = re.compile(r"\[([^\]]+)\]")
+
+
+def _strip_tags(text: str) -> str:
+    text = _TAG_LABELED.sub(lambda m: m.group(2), text)
+    text = _TAG_PLAIN.sub(lambda m: m.group(1), text)
+    return text
+
 from pydantic import BaseModel, Field
 
 
@@ -17,7 +29,7 @@ class ItemProperty(BaseModel):
 
     @classmethod
     def from_ggg(cls, raw: dict[str, Any]) -> ItemProperty:
-        name = str(raw.get("name", ""))
+        name = _strip_tags(str(raw.get("name", "")))
         values = raw.get("values") or []
         value = None
         if values and isinstance(values[0], list) and values[0]:
@@ -71,6 +83,7 @@ class Item(BaseModel):
     enchant_mods: list[str] = Field(default_factory=list)
     crafted_mods: list[str] = Field(default_factory=list)
     sockets: list[Socket] = Field(default_factory=list)
+    socketed_items: list["Item"] = Field(default_factory=list)
     stack_size: int | None = None
     max_stack_size: int | None = None
     icon: str | None = None
@@ -129,6 +142,11 @@ def parse_item(raw: dict[str, Any]) -> Item:
         if isinstance(s, dict)
     ]
     explicit_mod_details = _parse_mod_details(raw.get("extended"))
+    socketed_items = [
+        parse_item(si)
+        for si in (raw.get("socketedItems") or [])
+        if isinstance(si, dict)
+    ]
 
     return Item(
         id=str(raw.get("id", "")) or str(raw.get("name", "")),
@@ -149,6 +167,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         implicit_mods=list(raw.get("implicitMods") or []),
         explicit_mods=list(raw.get("explicitMods") or []),
         explicit_mod_details=explicit_mod_details,
+        socketed_items=socketed_items,
         rune_mods=list(raw.get("runeMods") or []),
         enchant_mods=list(raw.get("enchantMods") or []),
         crafted_mods=list(raw.get("craftedMods") or []),
