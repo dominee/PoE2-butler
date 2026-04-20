@@ -4,6 +4,8 @@
 
 A web application that lets **Path of Exile 2** players pair their GGG account via OAuth2, then browse their characters, equipped gear, and stash tabs online with enriched item information, price estimates, and one-click deep-links to the official trade site.
 
+![Screenshot](Screenshot.png)
+
 ## Features
 
 - Sign in with your GGG account (OAuth2 + PKCE).
