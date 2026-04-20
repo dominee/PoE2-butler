@@ -108,6 +108,7 @@ class Snapshot(Base):
     )
     key: Mapped[str] = mapped_column(String(200), default="")
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
+    prev_payload: Mapped[dict | None] = mapped_column(JSONType, nullable=True, default=None)
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

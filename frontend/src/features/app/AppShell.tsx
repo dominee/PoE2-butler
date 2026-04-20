@@ -10,6 +10,7 @@ import {
   useRefresh,
 } from "@/api/hooks";
 import type { Item } from "@/api/types";
+import { ActivityLog } from "@/features/activity/ActivityLog";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { ItemCard } from "@/features/items/ItemCard";
@@ -115,7 +116,9 @@ export function AppShell() {
       </header>
 
       {view === "characters" ? (
-        <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px,1fr,360px]">
+        <main className="flex min-h-0 flex-1 overflow-hidden">
+        <ActivityLog league={selectedLeague} onSelectItem={setSelectedItem} />
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px,1fr,360px]">
           <section aria-label="Characters" className="flex flex-col gap-2 overflow-y-auto">
             <h2 className="font-display text-parchment-100/80">Characters</h2>
             {charactersQ.isLoading && <p className="text-ink-500">Loading characters&hellip;</p>}
@@ -169,9 +172,12 @@ export function AppShell() {
             prefs={prefsQ.data}
             onClose={() => setSelectedItem(null)}
           />
+        </div>
         </main>
       ) : (
-        <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr,360px]">
+        <main className="flex min-h-0 flex-1 overflow-hidden">
+        <ActivityLog league={selectedLeague} onSelectItem={setSelectedItem} />
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr,360px]">
           <div className="overflow-y-auto">
             <StashBrowser
               league={selectedLeague}
@@ -186,6 +192,7 @@ export function AppShell() {
             prefs={prefsQ.data}
             onClose={() => setSelectedItem(null)}
           />
+        </div>
         </main>
       )}
     </div>

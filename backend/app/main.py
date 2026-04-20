@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.api import (
+    activity_router,
     auth_router,
     characters_router,
     health_router,
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(auth_router)
+    app.include_router(activity_router)
     app.include_router(me_router)
     app.include_router(leagues_router)
     app.include_router(characters_router)

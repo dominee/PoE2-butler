@@ -4,6 +4,7 @@ import { usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
 import type { Item, ItemProperty, ItemRarity, ModDetail, Prefs } from "@/api/types";
 import { parseModParts, stripTags } from "@/utils/modText";
 
+import { PercentBar, computeItemScore } from "./PercentBar";
 import { PriceBadge } from "./PriceBadge";
 
 export interface ItemDetailPaneProps {
@@ -78,9 +79,36 @@ function ModText({ raw }: { raw: string }) {
 }
 
 /**
- * Renders one explicit mod line with an optional tier badge and roll range.
- * `detail` comes from `item.explicit_mod_details[idx]` — may be undefined
- * when the GGG API didn't return extended mod data.
+ * Extract the dominant numeric value from a mod string for quality calculation.
+ * Returns the absolute value of the first number found, or null.
+ */
+function extractModValue(modText: string): number | null {
+  const parts = parseModParts(modText);
+  const numPart = parts.find((p) => p.isNum);
+  if (!numPart) return null;
+  const n = parseFloat(numPart.text.replace("%", ""));
+  return Number.isFinite(n) ? Math.abs(n) : null;
+}
+
+/** Roll quality: how well this roll sits within its tier range (0–100+). */
+function rollQuality(value: number, min: number, max: number): number {
+  if (max <= min) return 100;
+  return Math.round(((value - min) / (max - min)) * 100);
+}
+
+/** Compute per-mod quality percentage from ModDetail if available. */
+function modQuality(mod: string, detail: ModDetail | undefined): number | null {
+  const mag = detail?.magnitudes?.[0];
+  if (mag?.min == null || mag?.max == null) return null;
+  const value = extractModValue(mod);
+  if (value == null) return null;
+  return rollQuality(value, mag.min, mag.max);
+}
+
+/**
+ * Renders one explicit mod line with an optional tier badge, roll range, and
+ * quality bar.  `detail` comes from `item.explicit_mod_details[idx]` — may be
+ * undefined when the GGG API didn't return extended mod data.
  */
 function ExplicitModLine({
   mod,
@@ -92,18 +120,28 @@ function ExplicitModLine({
   const tier = detail?.tier ?? null;
   const mag = detail?.magnitudes?.[0];
   const hasRange = mag?.min != null && mag?.max != null && mag.min !== mag.max;
+  const pct = modQuality(mod, detail);
 
   return (
-    <li className="flex items-start gap-1.5 break-words leading-snug">
-      {tier != null && <TierBadge tier={tier} />}
-      <span className="min-w-0 flex-1">
-        <ModText raw={mod} />
-        {hasRange && (
-          <span className="ml-1 text-[10px] text-ink-500">
-            [{mag!.min}–{mag!.max}]
-          </span>
-        )}
-      </span>
+    <li className="break-words leading-snug">
+      <div className="flex items-start gap-1.5">
+        {tier != null && <TierBadge tier={tier} />}
+        <span className="min-w-0 flex-1">
+          <ModText raw={mod} />
+          {hasRange && (
+            <span className="ml-1 text-[10px] text-ink-500">
+              [{mag!.min}–{mag!.max}]
+            </span>
+          )}
+        </span>
+      </div>
+      {detail != null && (
+        <PercentBar
+          pct={pct}
+          tierLabel={tier != null ? `T${tier}` : undefined}
+          showValue={pct != null}
+        />
+      )}
     </li>
   );
 }
@@ -184,6 +222,12 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
   const hasTierData = item.explicit_mod_details.some((d) => d.tier != null);
 
+  // Per-mod quality percentages and item score
+  const modPcts = item.explicit_mods.map((mod, idx) =>
+    modQuality(mod, item.explicit_mod_details[idx]),
+  );
+  const itemScore = hasTierData ? computeItemScore(modPcts) : null;
+
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
   const onSearch = async (mode: "exact" | "upgrade") => {
@@ -239,6 +283,18 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
           )}
         </div>
       </header>
+
+      {/* ── Item quality score ── */}
+      {hasTierData && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">
+            Item score
+          </span>
+          <div className="flex-1">
+            <PercentBar pct={itemScore} showValue />
+          </div>
+        </div>
+      )}
 
       {/* ── Item stats (Physical Damage, APS, Armour …) ── */}
       {visibleProps.length > 0 && (

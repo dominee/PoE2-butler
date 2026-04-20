@@ -23,6 +23,8 @@ const RARITY_NAME_CLASS: Partial<Record<ItemRarity, string>> = {
   Currency: "text-rarity-currency",
 };
 
+export type ActivityStatus = "new" | "changed" | undefined;
+
 export interface ItemCardProps {
   item: Item;
   selected?: boolean;
@@ -30,7 +32,13 @@ export interface ItemCardProps {
   compact?: boolean;
   price?: PriceEstimate | null;
   valuableThreshold?: number;
+  activityStatus?: ActivityStatus;
 }
+
+const ACTIVITY_DOT: Record<NonNullable<ActivityStatus>, string> = {
+  new: "bg-emerald-400",
+  changed: "bg-amber-400",
+};
 
 export function ItemCard({
   item,
@@ -39,6 +47,7 @@ export function ItemCard({
   compact,
   price,
   valuableThreshold,
+  activityStatus,
 }: ItemCardProps) {
   const rarityClass = RARITY_CLASSNAME[item.rarity] ?? RARITY_CLASSNAME.Normal;
   const nameClass = RARITY_NAME_CLASS[item.rarity] ?? "text-parchment-50";
@@ -52,7 +61,7 @@ export function ItemCard({
       type="button"
       onClick={onClick ? () => onClick(item) : undefined}
       className={[
-        "panel w-full text-left border",
+        "panel relative w-full text-left border",
         "min-h-[72px] px-3 py-2 transition focus:outline-none",
         "hover:border-ember-400/80",
         selected ? "ring-2 ring-ember-400" : "",
@@ -63,8 +72,25 @@ export function ItemCard({
       aria-label={`Item ${item.name || item.type_line}`}
       data-testid="item-card"
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="min-w-0">
+      {/* Activity status dot */}
+      {activityStatus && (
+        <span
+          className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ${ACTIVITY_DOT[activityStatus]}`}
+          title={activityStatus === "new" ? "New item" : "Changed item"}
+        />
+      )}
+      <div className="flex items-start justify-between gap-2">
+        {/* Icon thumbnail */}
+        {item.icon && !compact && (
+          <img
+            src={item.icon}
+            alt=""
+            className="mt-0.5 h-8 w-8 shrink-0 object-contain"
+            loading="lazy"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        )}
+        <div className="min-w-0 flex-1">
           {item.name && (
             <div className={`font-display text-sm leading-tight ${nameClass}`}>
               {item.name}

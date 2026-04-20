@@ -51,6 +51,9 @@ async def upsert_snapshot(
             Snapshot(user_id=user_id, kind=kind, key=key, payload=payload, fetched_at=now)
         )
     else:
+        # Preserve current payload as previous before overwriting — this is the
+        # basis for the activity log diff on the next refresh.
+        existing.prev_payload = existing.payload
         existing.payload = payload
         existing.fetched_at = now
 

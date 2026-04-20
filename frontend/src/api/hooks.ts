@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./client";
 import type {
+  ActivityResponse,
   CharacterDetail,
   CharactersResponse,
   Item,
@@ -16,6 +17,7 @@ import type {
 } from "./types";
 
 export const queryKeys = {
+  activity: (league: string | null) => ["activity", league] as const,
   me: ["me"] as const,
   leagues: ["leagues"] as const,
   characters: (league: string | null) => ["characters", league] as const,
@@ -65,6 +67,7 @@ export function useRefresh() {
       qc.invalidateQueries({ queryKey: ["characters"] });
       qc.invalidateQueries({ queryKey: queryKeys.leagues });
       qc.invalidateQueries({ queryKey: queryKeys.me });
+      qc.invalidateQueries({ queryKey: ["activity"] });
     },
   });
 }
@@ -146,6 +149,16 @@ export function usePriceLookup(league: string | null, items: Item[]) {
       api.post<PricingResponse>("/api/pricing/lookup", { league, items }),
     enabled: Boolean(league) && items.length > 0,
     staleTime: 60_000,
+  });
+}
+
+export function useActivity(league: string | null) {
+  const query = league ? `?league=${encodeURIComponent(league)}` : "";
+  return useQuery<ActivityResponse>({
+    queryKey: queryKeys.activity(league),
+    queryFn: () => api.get<ActivityResponse>(`/api/activity${query}`),
+    enabled: Boolean(league),
+    staleTime: 30_000,
   });
 }
 

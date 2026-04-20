@@ -162,3 +162,26 @@ export interface StashTab {
   tab: StashTabSummary;
   items: Item[];
 }
+
+// ── activity log ──────────────────────────────────────────────────────────────
+
+export interface ChangedItem {
+  old: Item;
+  new: Item;
+}
+
+export interface ActivityEntry {
+  tab_id: string;
+  tab_name: string;
+  new_items: Item[];
+  changed_items: ChangedItem[];
+  removed_items: Item[];
+}
+
+export interface ActivityResponse {
+  league: string;
+  has_prev: boolean;
+  total_new: number;
+  total_changed: number;
+  entries: ActivityEntry[];
+}
