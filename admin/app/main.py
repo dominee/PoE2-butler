@@ -60,6 +60,11 @@ def create_app() -> FastAPI:
 
 def _register_routes(app: FastAPI) -> None:
 
+    @app.get("/")
+    async def root() -> RedirectResponse:
+        """Dedicated admin host has no SPA at `/`; send browsers to the console."""
+        return RedirectResponse(url="/admin/", status_code=302)
+
     @app.get("/admin/login", response_class=HTMLResponse)
     async def login_form(request: Request) -> HTMLResponse:
         mgr = _session_manager()

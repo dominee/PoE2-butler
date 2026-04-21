@@ -19,9 +19,9 @@ async def redis_summary() -> dict:
     redis = get_redis()
     info = await redis.info(section="memory")
     info_cpu = await redis.info(section="clients")
-    keys = await redis.dbsize()
+    key_count = await redis.dbsize()
     return {
-        "keys": keys,
+        "key_count": key_count,
         "used_memory_human": info.get("used_memory_human"),
         "used_memory_peak_human": info.get("used_memory_peak_human"),
         "maxmemory_human": info.get("maxmemory_human"),
@@ -50,7 +50,7 @@ async def price_cache_summary() -> dict:
             sample.extend(keys[: 10 - len(sample)])
         if cursor == 0:
             break
-    return {"keys": total, "sample": sample}
+    return {"key_count": total, "sample": sample}
 
 
 async def backend_health() -> dict:

@@ -6,9 +6,9 @@
     <tbody>
       <tr><th>Users</th><td>{{ totals.users }}</td></tr>
       <tr><th>Snapshots</th><td>{{ totals.snapshots }}</td></tr>
-      <tr><th>Redis keys</th><td>{{ redis.keys }}</td></tr>
+      <tr><th>Redis keys</th><td>{{ redis.key_count }}</td></tr>
       <tr><th>Redis memory</th><td>{{ redis.used_memory_human }} / {{ redis.maxmemory_human }}</td></tr>
-      <tr><th>Price cache entries</th><td>{{ price_cache.keys }}</td></tr>
+      <tr><th>Price cache entries</th><td>{{ price_cache.key_count }}</td></tr>
       <tr><th>Queue length</th><td>{{ queue.queued }} (in-progress: {{ queue.in_progress }})</td></tr>
     </tbody>
   </table>
