@@ -96,12 +96,25 @@ function rollQuality(value: number, min: number, max: number): number {
   return Math.round(((value - min) / (max - min)) * 100);
 }
 
-/** Compute per-mod quality percentage from ModDetail if available. */
+/** Compute per-mod quality percentage from ModDetail if available.
+ *
+ * When `t1_max` is known (from bundled mod DB), returns the cross-tier
+ * percentage: value / t1_max × 100 (can exceed 100%).
+ * Otherwise falls back to within-tier quality.
+ */
 function modQuality(mod: string, detail: ModDetail | undefined): number | null {
   const mag = detail?.magnitudes?.[0];
-  if (mag?.min == null || mag?.max == null) return null;
+  if (!mag) return null;
   const value = extractModValue(mod);
   if (value == null) return null;
+
+  // Cross-tier: compare against T1 max from the bundled mod DB.
+  if (mag.t1_max != null && mag.t1_max > 0) {
+    return Math.round((value / mag.t1_max) * 100);
+  }
+
+  // Within-tier fallback.
+  if (mag.min == null || mag.max == null) return null;
   return rollQuality(value, mag.min, mag.max);
 }
 
@@ -120,6 +133,7 @@ function ExplicitModLine({
   const tier = detail?.tier ?? null;
   const mag = detail?.magnitudes?.[0];
   const hasRange = mag?.min != null && mag?.max != null && mag.min !== mag.max;
+  const hasCrossTier = mag?.t1_max != null;
   const pct = modQuality(mod, detail);
 
   return (
@@ -133,12 +147,23 @@ function ExplicitModLine({
               [{mag!.min}–{mag!.max}]
             </span>
           )}
+          {hasCrossTier && (
+            <span className="ml-1 text-[10px] text-parchment-100/40">
+              T1 max: {mag!.t1_max}
+            </span>
+          )}
         </span>
       </div>
       {detail != null && (
         <PercentBar
           pct={pct}
-          tierLabel={tier != null ? `T${tier}` : undefined}
+          tierLabel={
+            hasCrossTier
+              ? `vs T1 max (${mag!.t1_max})`
+              : tier != null
+                ? `T${tier} roll quality`
+                : undefined
+          }
           showValue={pct != null}
         />
       )}
@@ -260,28 +285,45 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       aria-label="Item details"
     >
       {/* ── Header ── */}
-      <header className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+      <header className="flex items-start gap-3">
+        {/* Item icon */}
+        {item.icon && (
+          <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
+            <img
+              src={item.icon}
+              alt={item.name || item.type_line}
+              className="object-contain"
+              style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
+              loading="lazy"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).parentElement!.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
           {item.name && (
             <div className={`break-words font-display text-base leading-snug ${nameClass}`}>
               {item.name}
             </div>
           )}
           <div className="break-words text-parchment-100/80">{item.type_line}</div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 text-[11px] uppercase tracking-wide text-ink-500">
-          <span>{item.rarity}</span>
-          {item.ilvl != null && <span>ilvl {item.ilvl}</span>}
-          {item.corrupted && <span className="text-red-400">corrupted</span>}
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] uppercase tracking-wide text-ink-500">
+            <span>{item.rarity}</span>
+            {item.ilvl != null && <span>ilvl {item.ilvl}</span>}
+            {item.corrupted && <span className="text-red-400">corrupted</span>}
+          </div>
           {price && (
-            <PriceBadge price={price} threshold={prefs?.valuable_threshold_chaos} />
-          )}
-          {onClose && (
-            <button type="button" onClick={onClose} className="mt-1 text-ember-400">
-              close
-            </button>
+            <div className="mt-1">
+              <PriceBadge price={price} threshold={prefs?.valuable_threshold_chaos} />
+            </div>
           )}
         </div>
+        {onClose && (
+          <button type="button" onClick={onClose} className="shrink-0 text-ember-400 text-sm">
+            ✕
+          </button>
+        )}
       </header>
 
       {/* ── Item quality score ── */}

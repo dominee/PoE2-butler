@@ -39,10 +39,29 @@ PENDING_AUTH: dict[str, dict[str, Any]] = {}
 ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
 REFRESH_TOKENS: dict[str, dict[str, Any]] = {}
 
+# Per-tab call counter: first call returns prev_contents (if present), later
+# calls return the full contents.  Simulates items arriving between snapshots,
+# which populates the activity log on the second Refresh.
+_TAB_CALL_COUNT: dict[str, int] = {}
+
 
 @app.get("/healthz")
 async def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/dev/reset-activity", response_class=HTMLResponse)
+async def reset_activity() -> HTMLResponse:
+    """Reset the stash-tab call counters so the activity simulation restarts."""
+    _TAB_CALL_COUNT.clear()
+    return HTMLResponse(
+        """<!doctype html><html><body style="font-family:system-ui;background:#1a1a1a;color:#eee;padding:2rem">
+        <h2 style="color:#8f8">Activity simulation reset ✓</h2>
+        <p>Stash tab counters cleared. The next refresh in the app will store the
+        <em>previous</em> (smaller) snapshot, and the subsequent Refresh will
+        detect the new items.</p>
+        </body></html>"""
+    )
 
 
 # --- OAuth2 endpoints ---------------------------------------------------------
@@ -85,6 +104,7 @@ async def authorize(
   select, button {{ width: 100%; padding: 0.5rem; font-size: 1rem; }}
   button {{ margin-top: 1.5rem; background: #c8a040; border: 0; color: #1a1a1a; cursor: pointer; }}
   small {{ color: #888; display: block; margin-top: 1rem; }}
+  .hint {{ background: #1e2a1e; border: 1px solid #2a4a2a; border-radius: 6px; padding: 0.75rem; margin-top: 1.5rem; font-size: 0.8rem; color: #8a8; }}
 </style></head>
 <body>
   <h1>Mock GGG sign-in</h1>
@@ -95,6 +115,11 @@ async def authorize(
     <button type="submit">Authorize</button>
     <small>client_id: {client_id}<br/>scope: {scope}</small>
   </form>
+  <div class="hint">
+    <strong>Activity log tip:</strong> After signing in, click <em>Refresh</em> once
+    in the app to populate the activity log with new items detected since the initial snapshot.
+    To re-run the simulation, visit <a href="/dev/reset-activity" style="color:#8f8">/dev/reset-activity</a>.
+  </div>
 </body></html>"""
     return HTMLResponse(html)
 
@@ -226,4 +251,14 @@ async def stash_tab(league: str, tab_id: str, request: Request) -> JSONResponse:
     data = STASHES.get(league)
     if data is None or tab_id not in data["contents"]:
         raise HTTPException(404, "not_found")
+
+    key = f"{league}/{tab_id}"
+    call_n = _TAB_CALL_COUNT.get(key, 0)
+    _TAB_CALL_COUNT[key] = call_n + 1
+
+    # First call: return prev_contents if available (simulates "before refresh" state).
+    # Subsequent calls: return the full current contents.
+    if call_n == 0 and "prev_contents" in data and tab_id in data["prev_contents"]:
+        return JSONResponse(data["prev_contents"][tab_id])
+
     return JSONResponse(data["contents"][tab_id])

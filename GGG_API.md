@@ -12,8 +12,8 @@ Send an application to **developer@grindinggear.com** with:
 - Contact email and developer identity.
 - Requested scopes (see below).
 - Registered redirect URIs:
-  - Production: `https://api.<your-domain>/api/auth/callback`
-  - Staging/Dev: `https://dev-api.<your-domain>/api/auth/callback`
+  - Production: `https://api.hideoutbutler.com/api/auth/callback`
+  - Staging: `https://dev-api.hideoutbutler.com/api/auth/callback`
   - Local: `http://api.localhost/api/auth/callback`
 - Expected request volume and rate-limit strategy.
 
@@ -30,8 +30,26 @@ GGG_CLIENT_ID=...
 GGG_CLIENT_SECRET=...
 GGG_OAUTH_BASE_URL=https://www.pathofexile.com
 GGG_API_BASE_URL=https://api.pathofexile.com
-GGG_REDIRECT_URI=https://api.<your-domain>/api/auth/callback
+GGG_REDIRECT_URI=https://api.hideoutbutler.com/api/auth/callback
 ```
+
+## 1b. Recommended registration inputs (hideoutbutler.com)
+
+Use these when emailing **developer@grindinggear.com** or filling an application form.
+
+| Field | Recommended value |
+|---|---|
+| **Application name** | PoE2 Hideout Butler |
+| **Application URL** | `https://app.hideoutbutler.com` |
+| **Short description** | Read-only PoE2 companion: users sign in with GGG OAuth2 to browse characters, equipped gear, and stash tabs online, with item insights, price estimates, and trade-site links. Does not mutate account or game state. |
+| **Requested scopes** | `account:profile account:characters account:stashes account:leagues` (read-only; no write scopes) |
+| **Redirect URIs** | `https://api.hideoutbutler.com/api/auth/callback`, `https://dev-api.hideoutbutler.com/api/auth/callback`, `http://api.localhost/api/auth/callback` |
+| **Contact** | Your stable email (ideally on the same domain, e.g. `ops@hideoutbutler.com`) plus name / GitHub org. |
+| **Expected volume** | Low-volume beta initially; login plus on-demand snapshot refresh; conservative throttling and backoff on 429. |
+| **Rate-limit strategy** | Parse `X-Rate-Limit-*` headers, Redis token-bucket per account, honour `Retry-After`, exponential backoff on repeated 429s, 60 s per-user refresh cooldown. |
+| **Security** | Authorization Code + PKCE + `state`; tokens server-side only, encrypted at rest; strict redirect URI match; session cookie is `HttpOnly` / `Secure` (prod) / `SameSite=Lax`. |
+
+**Email subject (example):** `OAuth2 client registration — PoE2 Hideout Butler (hideoutbutler.com)`
 
 ## 2. Required scopes
 

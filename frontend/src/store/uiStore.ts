@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type AppView = "characters" | "stashes";
-export type StashLayout = "grid" | "table";
+export type StashLayout = "grid" | "icons" | "table";
 
 interface UIState {
   selectedLeague: string | null;

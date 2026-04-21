@@ -12,6 +12,7 @@ import type {
   PricingResponse,
   RefreshResponse,
   StashListResponse,
+  StashSearchResponse,
   StashTab,
   TradeSearchResponse,
 } from "./types";
@@ -25,6 +26,7 @@ export const queryKeys = {
   stashes: (league: string | null) => ["stashes", league] as const,
   stashTab: (league: string | null, tabId: string | null) =>
     ["stash-tab", league, tabId] as const,
+  stashSearch: (league: string | null, q: string) => ["stash-search", league, q] as const,
 };
 
 export function useMe() {
@@ -149,6 +151,18 @@ export function usePriceLookup(league: string | null, items: Item[]) {
       api.post<PricingResponse>("/api/pricing/lookup", { league, items }),
     enabled: Boolean(league) && items.length > 0,
     staleTime: 60_000,
+  });
+}
+
+export function useStashSearch(league: string | null, q: string) {
+  return useQuery<StashSearchResponse>({
+    queryKey: queryKeys.stashSearch(league, q),
+    queryFn: () =>
+      api.get<StashSearchResponse>(
+        `/api/stashes/search?league=${encodeURIComponent(league ?? "")}&q=${encodeURIComponent(q)}`,
+      ),
+    enabled: Boolean(league) && q.trim().length >= 2,
+    staleTime: 30_000,
   });
 }
 

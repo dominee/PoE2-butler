@@ -1,93 +1,228 @@
-# AGENTS.md
+# AGENTS.md — PoE2 Hideout Butler
 
-Primary context file for AI agents contributing to **PoE2 Hideout Butler**. Read this before touching code. Human-facing docs live in `README.md`; the original brief is `INSTRUCTIONS.md`.
+AI-agent context file. Read this first when starting any coding session.
 
-## Project summary
+---
 
-Public multi-user SPA that lets PoE2 players sign in with GGG OAuth2 and browse their characters, equipped gear, and stash tabs, with enriched item info, price estimates (poe.ninja), and PoE2 Trade deep-links.
+## 1. Project overview
 
-## Locked-in architectural decisions
+**PoE2 Hideout Butler** is a multi-user SPA that lets Path of Exile 2 players view their characters' gear and stash contents online. It enriches item information with pricing, tier/roll quality data, and trade-site deep-links.
 
-| Topic | Decision |
-|---|---|
-| Tenancy | Multi-user public (data isolation per GGG account is mandatory) |
-| Frontend | React 18 + Vite + TypeScript, Tailwind, TanStack Query, Zustand |
-| Backend | FastAPI, Python 3.12, `uv`, pydantic v2, Alembic, `arq` |
-| Storage | PostgreSQL 16 (persistent) + Redis 7 (cache, sessions, rate-limit, queue) |
-| Identity | GGG OAuth2 only; Authorization Code + PKCE + `state` |
-| API shape | JSON only, read-mostly; writes limited to auth, refresh trigger, user prefs |
-| Admin | Separate app (`admin/`), not behind GGG OAuth2, read-only v1 |
-| Dev mock | `mock-ggg/` stubs GGG endpoints with fixtures for local dev and tests |
-| Deploy | docker compose + Traefik + Let's Encrypt on a 1 vCPU / 1 GB DO droplet |
-| Refresh policy | On login + manual `POST /api/refresh` with per-account 60 s cooldown |
-| Leagues | Default to the current temp league; switchable via dropdown |
-| Trade tolerances | Exact search &plusmn;10% (configurable); upgrade min = current &times; 0.95, no max |
+**Production domain:** apex **`hideoutbutler.com`**. Public services use `app.hideoutbutler.com` (SPA), `api.hideoutbutler.com` (API + OAuth callback), `admin.hideoutbutler.com` (admin). Staging API host for OAuth: `dev-api.hideoutbutler.com` (optional until DNS exists).
 
-## Folder map
+Key features:
+- GGG OAuth2 login (Authorization Code + PKCE).
+- Snapshot of characters, gear, and stash tabs stored in Postgres.
+- Item detail pane: rarity-coloured border, tag-stripped property names, explicit mod tiers, roll quality bars, socketed-item (rune/soul-core) display.
+- Activity log: diff of current vs previous snapshot; new (green) / changed (amber) indicators in grid and table views.
+- Price estimates via poe.ninja (cached in Redis).
+- Admin observability app (separate FastAPI + Jinja2, basic auth + TOTP + IP allowlist).
 
-```text
-backend/
-  app/
-    api/             FastAPI routers (auth, me, leagues, characters, stashes, items, prices, refresh)
-    clients/         ggg_client.py, poe_ninja.py
-    domain/          Pydantic domain models (User, Item, Character, StashTab, PriceEstimate)
-    services/        trade_url.py, snapshot.py, pricing.py, rate_limit.py
-    db/              SQLAlchemy models, Alembic env
-    security/        crypto.py (AES-GCM), sessions.py, csrf.py
-    workers/         arq_worker.py (snapshot + price warm jobs)
-    main.py          App factory + middleware wiring
-    config.py        Pydantic settings
-  tests/
-  Dockerfile
-  pyproject.toml
+---
 
-frontend/
-  src/
-    api/             HTTP client (fetch wrapper with CSRF + credentials: include)
-    features/
-      auth/          Login button, callback landing
-      characters/    Character grid, paper-doll, ItemCard
-      stashes/       Tab strip, grid, table view
-      items/         Detail pane, trade link buttons
-      prices/        Price badge
-    store/           Zustand stores (filters, prefs, session)
-    theme/           Tailwind tokens (PoE2-derived, not direct copies)
-    routes.tsx
-    main.tsx
-  Dockerfile
+## 2. Repository layout
 
-admin/               Separate container; read-only observability
-mock-ggg/            FastAPI + fixtures that emulate GGG's OAuth2 and item endpoints
-deploy/
-  compose/           docker-compose.dev.yml, docker-compose.prod.yml, traefik/
-  env/               .env.example(s)
-docs/                Supplementary docs (DISCORD_BOT_API.md, SECURITY.md, etc.)
+```
+PoE2-butler/
+├── backend/          Python 3.12 · FastAPI · SQLAlchemy 2 · arq · uv
+│   ├── app/
+│   │   ├── api/      Route handlers (auth, characters, stashes, activity, pricing, trade, prefs)
+│   │   ├── clients/  GGG httpx client
+│   │   ├── config.py pydantic-settings (all env vars)
+│   │   ├── db/       SQLAlchemy models + session factory
+│   │   ├── domain/   Item parsing, trade-query builders
+│   │   ├── services/ Snapshot service, pricing service
+│   │   └── workers/  arq worker (snapshot refresh + price warming)
+│   └── alembic/      Migrations (0001_init → 0003_prev_payload)
+├── frontend/         React 18 · Vite · TypeScript · TanStack Query · Zustand · Tailwind
+│   └── src/
+│       ├── api/      hooks.ts · types.ts · client.ts
+│       ├── features/ activity · characters · items · stashes · app
+│       ├── store/    uiStore (Zustand)
+│       └── utils/    modText.ts (stripTags, parseModParts)
+├── admin/            FastAPI + Jinja2 admin app (port 8001)
+├── mock-ggg/         Dev mock of GGG OAuth2 + API (FastAPI, port 9000)
+│   ├── app/fixtures/ users.json · characters.json · stashes.json
+│   └── samples/      poe.ninja character exports + convert.py
+├── deploy/
+│   ├── compose/      docker-compose.dev.yml · docker-compose.prod.yml · Traefik configs
+│   └── env/          .env.example · .env.dev (gitignored)
+├── docs/
+├── INSTRUCTIONS.md   Original requirements (do not edit)
+├── AGENTS.md         This file
+├── DEPLOY.md         Build & deploy runbook
+└── GGG_API.md        GGG OAuth2 integration guide
 ```
 
-## Non-negotiable rules
+---
 
-1. **Security before performance.** Every change must consider: does it leak tokens, weaken CSP, bypass CSRF, or log secrets?
-2. **GGG tokens are always encrypted at rest** (AES-GCM, key from `APP_SECRET_KEY`).
-3. **Session cookies** are `HttpOnly`, `Secure` (in prod), `SameSite=Lax`, and carry only a random Redis session id.
-4. **Rate limits** must be respected: per-GGG-account token bucket, per-IP global bucket, per-user refresh cooldown.
-5. **Backend is read-mostly**: only `/api/auth/*`, `/api/refresh`, `/api/prefs` and admin write endpoints perform state mutation.
-6. **No secrets in the frontend bundle.** Config is injected at runtime by serving `config.json` from the API, or via build-time public env vars for non-sensitive values only.
-7. **`INSTRUCTIONS.md` is the source of truth.** If this file disagrees with it, update this file.
+## 3. Architecture
 
-## Testing expectations
+```
+Browser
+  └─ React SPA  (app.localhost · prod: app.hideoutbutler.com)
+       │  JSON API (credentials)
+       └─ FastAPI backend  (api.localhost · prod: api.hideoutbutler.com)
+            ├─ PostgreSQL 16  (users, snapshots, tokens)
+            ├─ Redis 7        (sessions, rate-limit counters, price cache, arq queue)
+            └─ GGG API / mock-ggg  (OAuth2 + game data)
+```
 
-- Backend: `pytest` for unit + API contract tests against `mock-ggg`.
-- Frontend: Vitest for components + one Playwright smoke test per milestone.
-- CI must pass before a milestone is considered done (lint + tests + audit).
+- **Traefik v3** handles routing in both dev and prod (subdomains, HTTPS/ACME in prod).
+- **arq** worker runs in the same Docker image as the backend (`arq app.workers.arq_worker.WorkerSettings`).
+- All GGG API calls are **server-side only**; tokens never reach the browser.
 
-## Milestone status
+---
 
-See the plan in `.cursor/plans/` and the issue tracker (once opened). Current in-progress milestone is tracked there; keep this list in sync with actual state.
+## 4. Key technical conventions
 
-- M0 Foundations
-- M1 Auth + characters + gear
-- M2 Item detail pane + trade links
-- M3 Stash tabs + search/filters
-- M4 Pricing via poe.ninja
-- M5 Admin observability app
-- M6 Prod deploy + Discord bot API contract
+### Backend
+
+| Concern | Approach |
+|---|---|
+| Virtual env | `uv` — use `uv sync` / `uv run` |
+| Settings | `pydantic-settings`; class `Settings` in `backend/app/config.py` |
+| DB session | `get_db()` async generator → yields `AsyncSession` |
+| ORM | SQLAlchemy 2 async (`AsyncSession`); Alembic migrations |
+| Token encryption | AES-GCM, key from `APP_SECRET_KEY` |
+| Sessions | Redis session ID in signed `httpOnly SameSite=Lax` cookie `poe2b_session` |
+| CSRF | Double-submit cookie pattern |
+| Logging | `structlog` structured JSON; `request_id` middleware |
+| Tests | `pytest` + `pytest-asyncio`; fixtures in `tests/conftest.py` |
+| Lint | `ruff` (format + lint); run via `uv run ruff check .` |
+
+**Snapshot model** (`backend/app/db/models.py`):
+
+```python
+class Snapshot(Base):
+    payload: Mapped[dict]           # current GGG data
+    prev_payload: Mapped[dict|None] # previous snapshot (for activity diff)
+```
+
+`upsert_snapshot` in `backend/app/services/snapshot.py` shifts `payload → prev_payload` before writing the new data.
+
+**Item parsing** (`backend/app/domain/item.py`):
+
+- `_strip_tags(text)` removes `[Label|Short]` or `[Plain]` GGG markdown tags.
+- `ModDetail` / `ModMagnitude` capture tier + roll ranges from `item.extended.mods`.
+- `socketed_items: list[Item]` recursively parsed from `item.socketedItems` (runes, soul cores).
+
+### Frontend
+
+| Concern | Approach |
+|---|---|
+| State | Zustand `uiStore` (view, league, character, tab, stash layout) |
+| Server state | TanStack Query; keys in `queryKeys` map in `hooks.ts` |
+| Styling | Tailwind CSS with custom design tokens (ink-*, ember-*, parchment-*, rarity-*) |
+| Mod rendering | `parseModParts` + `ModText` component for numeric highlighting |
+| Tag stripping | `stripTags(text)` in `frontend/src/utils/modText.ts` |
+| Roll quality | `PercentBar` component + `computeItemScore` in `features/items/PercentBar.tsx` |
+| Activity | `useActivity(league)` hook; `ActivityLog` collapsible panel (left column) |
+
+**Rarity colour tokens** (Tailwind):
+
+```
+text-rarity-normal  text-rarity-magic  text-rarity-rare  text-rarity-unique
+text-rarity-currency  text-rarity-gem  text-rarity-quest
+border-rarity-*  (same names)
+```
+
+---
+
+## 5. Key data flows
+
+### Auth / first login
+1. `GET /api/auth/login` → generates PKCE, stores state in Redis, redirects to GGG authorize URL.
+2. GGG → `GET /api/auth/callback?code=&state=` → exchanges code, upserts `User` + `UserToken`, triggers `refresh_user_snapshot` in a separate `snap_db` session, sets session cookie.
+3. `await db.refresh(user)` ensures `preferred_league` populated before setting the session.
+
+### Snapshot refresh
+`POST /api/refresh` → `refresh_user_snapshot(user_id, db)` → fetches profile / leagues / characters / stashes from GGG API → upserts snapshots in Postgres (shifting `payload → prev_payload`).
+
+### Activity diff
+`GET /api/activity?league=X` → loads `STASH_TAB` snapshots, compares `payload` vs `prev_payload` item-by-item (by `id`), returns `new_items`, `changed_items`, `removed_items` grouped by tab.
+
+### Stash item display
+`StashBrowser` → `useStashTab` + `usePriceLookup` + `useActivity` → passes:
+- `highlightIds` (valuable items, `price ≥ threshold` → gold outline `outline-yellow-400`)
+- `activityMap` (Map<itemId, "new"|"changed"> → corner dot: emerald-400 / amber-400)
+
+---
+
+## 6. Environment variables (key subset)
+
+| Variable | Purpose |
+|---|---|
+| `APP_SECRET_KEY` | AES-GCM key for token encryption (32 bytes, base64) |
+| `SESSION_SIGNING_KEY` | Cookie signing key |
+| `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET` | GGG OAuth2 credentials |
+| `GGG_OAUTH_BASE_URL` | Internal (server-to-server) GGG base URL |
+| `GGG_OAUTH_AUTHORIZE_BASE_URL` | Browser-facing authorize URL (overridden in dev to `http://ggg.localhost`) |
+| `GGG_REDIRECT_URI` | Dev: `http://api.localhost/api/auth/callback` · Prod: `https://api.hideoutbutler.com/api/auth/callback` |
+| `CORS_ALLOW_ORIGINS` | JSON array, e.g. `["http://app.localhost"]` |
+| `PRICING_SOURCE` | `static` (dev) or `poe_ninja` |
+| `DEFAULT_VALUABLE_THRESHOLD_CHAOS` | Starting threshold for valuable item highlights |
+
+---
+
+## 7. Database migrations
+
+Migrations live in `backend/alembic/versions/`. After adding a model change:
+
+```bash
+# Generate
+docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.dev \
+  exec backend alembic revision --autogenerate -m "describe_change"
+
+# Apply
+docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.dev \
+  exec backend alembic upgrade head
+```
+
+Current migrations:
+- `0001_init` — users, user_tokens, snapshots, snapshot_kind enum
+- `0002_valuable_threshold` — adds `valuable_threshold_chaos` to users
+- `0003_prev_payload` — adds `prev_payload JSONB` to snapshots
+
+---
+
+## 8. Mock GGG service
+
+Located in `mock-ggg/`. Fixture data in `mock-ggg/app/fixtures/`.
+
+To regenerate fixture data from poe.ninja exports:
+
+```bash
+cd mock-ggg/samples
+python convert.py  # reads *.json, writes ../app/fixtures/characters.json
+```
+
+The first entry in `users.json` is auto-selected on the mock login form.
+
+---
+
+## 9. Pending work (as of 2026-04-19)
+
+| # | Task | Notes |
+|---|---|---|
+| 1 | Image-first icon grid view for stash | Display `item.icon` from PoE CDN with stat overlay |
+| 2 | T1 mod database (bundled JSON) | Needed to complete roll % bar — compare vs T1 range |
+| 3 | Cross-tab stash search | Query all loaded tab snapshots, not just current |
+| 4 | Character items table view | Mirror stash table view for equipped gear |
+| 5 | Currency stash tab renderer | Fixed-grid layout matching in-game currency tab |
+| 6 | Real GGG API approval | Apply to developer@grindinggear.com |
+| 7 | DigitalOcean VM provisioning | See `DEPLOY.md` |
+| 8 | Backend tests: update Item fixtures | Add `explicit_mod_details`, `socketed_items` fields |
+| 9 | Frontend tests: ActivityLog, PercentBar | Unit tests missing |
+| 10 | `AGENTS.md` subagent skills | Create skills for domain-specific contexts if needed |
+
+---
+
+## 10. Known gotchas
+
+- **OAuth callback host**: GGG redirects to `GGG_REDIRECT_URI` on the **API** host (`api.localhost` / `api.hideoutbutler.com`). Session cookies are set on that host; the SPA on `app.*` must call the API with `credentials: include` (CORS allowlist includes the app origin). Same-site subdomains under `hideoutbutler.com` satisfy `SameSite=Lax` for fetches between `app` and `api`.
+- **Enum mapping**: `Snapshot.kind` uses `values_callable=lambda e: [m.value for m in e]` + `create_type=False` to avoid `snapshot_kind` type conflicts across Alembic runs.
+- **Transaction isolation**: `refresh_user_snapshot` runs in a separate `snap_db` session committed before the main auth session is committed — prevents `InFailedSQLTransactionError` on snapshot write errors.
+- **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.localhost"]`.
+- **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
+- **Traefik dev**: uses static file provider (`dynamic.dev.yml`), not the Docker provider — avoids Docker socket security exposure in dev.

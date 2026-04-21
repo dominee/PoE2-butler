@@ -91,5 +91,5 @@ to the code that enforces it so regressions can be caught by reviewers.
 ## Responsible disclosure
 
 Security issues should be emailed to the address configured in
-`TRAEFIK_ACME_EMAIL` (typically `ops@<domain>`). Please do not open public
+`TRAEFIK_ACME_EMAIL` (typically `ops@hideoutbutler.com`). Please do not open public
 issues for security reports.

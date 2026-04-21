@@ -8,6 +8,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.services import mod_db as _mod_db
+
 # ── tag stripping ─────────────────────────────────────────────────────────────
 # GGG item data encodes display tags as [Id|Label] or [Id].
 # Strip them to plain text (same logic lives in frontend/src/utils/modText.ts).
@@ -48,6 +50,7 @@ class ModMagnitude(BaseModel):
     hash: str = ""
     min: float | None = None
     max: float | None = None
+    t1_max: float | None = None  # from bundled mod DB; None = unknown
 
 
 class ModDetail(BaseModel):
@@ -93,7 +96,7 @@ class Item(BaseModel):
 _TIER_RE = re.compile(r"\d+")
 
 
-def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:
+def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:  # noqa: PLR0912
     if not isinstance(extended, dict):
         return []
     mods = extended.get("mods")
@@ -112,15 +115,19 @@ def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:
                 m = _TIER_RE.search(str(tier_raw))
                 if m:
                     tier = int(m.group())
-        magnitudes = [
-            ModMagnitude(
-                hash=str(mag.get("hash", "")),
-                min=mag.get("min"),
-                max=mag.get("max"),
+        magnitudes = []
+        for mag in raw_mod.get("magnitudes") or []:
+            if not isinstance(mag, dict):
+                continue
+            stat_hash = str(mag.get("hash", ""))
+            magnitudes.append(
+                ModMagnitude(
+                    hash=stat_hash,
+                    min=mag.get("min"),
+                    max=mag.get("max"),
+                    t1_max=_mod_db.get_t1_max(stat_hash) if stat_hash else None,
+                )
             )
-            for mag in (raw_mod.get("magnitudes") or [])
-            if isinstance(mag, dict)
-        ]
         details.append(
             ModDetail(
                 name=str(raw_mod.get("name", "")),

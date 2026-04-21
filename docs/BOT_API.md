@@ -17,7 +17,7 @@ path:
 
 1. The user links their PoE2 Butler account with the Discord bot via a
    Discord-side slash command; the bot redirects them to
-   `https://app.<domain>/link-bot?state=<opaque>` (frontend flow — not part of
+   `https://app.hideoutbutler.com/link-bot?state=<opaque>` (frontend flow — not part of
    this contract).
 2. After consent, the backend issues a long-lived, scoped **bot access token**
    (planned for a later milestone, out of scope for M6).
@@ -206,7 +206,7 @@ Relevant status codes:
 
 ## Operational hooks
 
-- **Admin observability** lives at `admin.<domain>` and is not part of the bot
+- **Admin observability** lives at `https://admin.hideoutbutler.com` and is not part of the bot
   contract. It is documented in `admin/README.md`.
 - **Metrics & tracing**: structured JSON logs include `request_id` which is
   echoed back in the `X-Request-Id` response header. Bots should log the header

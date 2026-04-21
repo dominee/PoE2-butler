@@ -22,6 +22,8 @@ export interface ModMagnitude {
   hash: string;
   min: number | null;
   max: number | null;
+  /** T1 maximum from the bundled mod DB. Null when data is unavailable. */
+  t1_max: number | null;
 }
 
 /** Per-modifier metadata from GGG ``extended.mods``.  Present only when the
@@ -161,6 +163,22 @@ export interface StashListResponse {
 export interface StashTab {
   tab: StashTabSummary;
   items: Item[];
+}
+
+// ── cross-tab search ──────────────────────────────────────────────────────────
+
+export interface StashSearchResult {
+  tab_id: string;
+  tab_name: string;
+  tab_index: number;
+  items: Item[];
+}
+
+export interface StashSearchResponse {
+  league: string;
+  query: string;
+  results: StashSearchResult[];
+  total_items: number;
 }
 
 // ── activity log ──────────────────────────────────────────────────────────────

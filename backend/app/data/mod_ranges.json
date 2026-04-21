@@ -1,0 +1,5 @@
+{
+  "_info": "Stat hash → tier range database for PoE2 explicit mod quality calculation.",
+  "_populate": "Run: python backend/scripts/extract_mod_ranges.py  (requires poe.ninja exports with extended data or real GGG API snapshots)",
+  "stat_hashes": {}
+}

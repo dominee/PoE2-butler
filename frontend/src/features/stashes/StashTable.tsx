@@ -10,6 +10,7 @@ export interface StashTableProps {
   highlightIds?: Set<string>;
   prices?: Record<string, PriceEstimate | null>;
   valuableThreshold?: number;
+  activityMap?: Map<string, "new" | "changed">;
 }
 
 const ROW_HEIGHT = 36;
@@ -27,6 +28,7 @@ export function StashTable({
   highlightIds,
   prices,
   valuableThreshold,
+  activityMap,
 }: StashTableProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -63,9 +65,10 @@ export function StashTable({
       aria-label="Stash items"
     >
       <div
-        className="sticky top-0 z-10 grid grid-cols-[minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] gap-2 border-b border-ink-700 bg-ink-900/95 px-3 py-2 text-[11px] uppercase tracking-wide text-ink-400"
+        className="sticky top-0 z-10 grid grid-cols-[16px_minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] gap-2 border-b border-ink-700 bg-ink-900/95 px-3 py-2 text-[11px] uppercase tracking-wide text-ink-400"
         role="row"
       >
+        <span aria-label="Activity status" />
         <span>Name</span>
         <span>Base type</span>
         <span>Rarity</span>
@@ -81,6 +84,7 @@ export function StashTable({
             const price = prices?.[item.id];
             const valuable =
               price && valuableThreshold != null && price.chaos_equiv >= valuableThreshold;
+            const activityStatus = activityMap?.get(item.id);
             return (
               <button
                 type="button"
@@ -88,15 +92,26 @@ export function StashTable({
                 onClick={() => onSelect(item)}
                 style={{ height: ROW_HEIGHT }}
                 className={[
-                  "grid w-full grid-cols-[minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] items-center gap-2 px-3 text-left text-sm",
+                  "grid w-full grid-cols-[16px_minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] items-center gap-2 px-3 text-left text-sm",
                   "border-b border-ink-800 transition hover:bg-ink-800/70 focus:outline-none focus-visible:bg-ink-800",
                   isSelected ? "bg-ember-500/10 text-ember-200" : "text-parchment-100",
-                  highlighted ? "ring-1 ring-emerald-400/70" : "",
+                  highlighted ? "ring-1 ring-yellow-400/70" : "",
                 ].join(" ")}
                 role="row"
                 aria-selected={isSelected}
                 data-testid="stash-row"
               >
+                <span className="flex items-center justify-center">
+                  {activityStatus && (
+                    <span
+                      className={[
+                        "h-1.5 w-1.5 rounded-full",
+                        activityStatus === "new" ? "bg-emerald-400" : "bg-amber-400",
+                      ].join(" ")}
+                      aria-label={activityStatus === "new" ? "New item" : "Changed item"}
+                    />
+                  )}
+                </span>
                 <span className="truncate">{item.name || "—"}</span>
                 <span className="truncate text-parchment-100/80">{item.base_type}</span>
                 <span className="text-xs uppercase tracking-wide text-ink-400">
@@ -106,7 +121,7 @@ export function StashTable({
                 <span
                   className={
                     valuable
-                      ? "text-xs font-semibold text-emerald-300"
+                      ? "text-xs font-semibold text-yellow-300"
                       : "text-xs text-parchment-100/90"
                   }
                 >

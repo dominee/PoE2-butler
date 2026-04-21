@@ -6,6 +6,8 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 
 ![Screenshot](Screenshot.png)
 
+![Screenshot-stash](Screenshot_stash.png)
+
 ## Features
 
 - Sign in with your GGG account (OAuth2 + PKCE).
@@ -51,6 +53,10 @@ Once containers are healthy:
 - Traefik dashboard: <http://localhost:8080>
 
 Add `127.0.0.1 app.localhost api.localhost ggg.localhost` to `/etc/hosts` if your resolver does not already handle `.localhost`.
+
+## Production domain
+
+Public deployment uses **`hideoutbutler.com`**: SPA at `https://app.hideoutbutler.com`, API (and GGG OAuth callback) at `https://api.hideoutbutler.com`, admin at `https://admin.hideoutbutler.com`. See [GGG_API.md](GGG_API.md) for OAuth redirect URIs.
 
 ## Documentation
 

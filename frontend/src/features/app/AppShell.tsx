@@ -12,6 +12,7 @@ import {
 import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
+import { CharacterTable } from "@/features/characters/CharacterTable";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { ItemCard } from "@/features/items/ItemCard";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
@@ -33,6 +34,7 @@ export function AppShell() {
   const setView = useUIStore((state) => state.setView);
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [charLayout, setCharLayout] = useState<"doll" | "table">("doll");
 
   useEffect(() => {
     if (!selectedLeague && leaguesQ.data?.current) {
@@ -132,13 +134,41 @@ export function AppShell() {
           </section>
 
           <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">
-            <h2 className="font-display text-parchment-100/80">
-              {selectedCharacter ? `${selectedCharacter} — equipped` : "Select a character"}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-parchment-100/80">
+                {selectedCharacter ? `${selectedCharacter} — equipped` : "Select a character"}
+              </h2>
+              {characterQ.data && (
+                <div
+                  className="ml-auto inline-flex rounded-md border border-ink-700 bg-ink-800 text-xs"
+                  role="radiogroup"
+                  aria-label="Gear layout"
+                >
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={charLayout === "doll"}
+                    onClick={() => setCharLayout("doll")}
+                    className={charLayoutBtn(charLayout === "doll")}
+                  >
+                    Doll
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={charLayout === "table"}
+                    onClick={() => setCharLayout("table")}
+                    className={charLayoutBtn(charLayout === "table")}
+                  >
+                    Table
+                  </button>
+                </div>
+              )}
+            </div>
             {selectedCharacter && characterQ.isLoading && (
               <p className="text-ink-500">Loading gear&hellip;</p>
             )}
-            {characterQ.data && (
+            {characterQ.data && charLayout === "doll" && (
               <>
                 <PaperDoll
                   equipped={characterQ.data.equipped}
@@ -163,6 +193,14 @@ export function AppShell() {
                   </div>
                 )}
               </>
+            )}
+            {characterQ.data && charLayout === "table" && (
+              <CharacterTable
+                equipped={characterQ.data.equipped}
+                jewels={characterQ.data.inventory}
+                selectedItemId={selectedItem?.id ?? null}
+                onSelect={setSelectedItem}
+              />
             )}
           </section>
 
@@ -205,5 +243,12 @@ function viewBtn(active: boolean): string {
     active
       ? "border-ember-400 bg-ember-500/10 text-ember-200"
       : "border-ink-700 bg-ink-800 text-parchment-100 hover:border-ember-400",
+  ].join(" ");
+}
+
+function charLayoutBtn(active: boolean): string {
+  return [
+    "px-3 py-1 transition",
+    active ? "bg-ember-500/10 text-ember-200" : "text-parchment-100",
   ].join(" ");
 }

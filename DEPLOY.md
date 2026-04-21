@@ -1,201 +1,362 @@
-# Deployment Guide
+# DEPLOY.md — Build & Deploy Runbook
 
-Build and deploy procedure for **PoE2 Hideout Butler**.
+PoE2 Hideout Butler deployment guide for local development and production (DigitalOcean Droplet).
 
-## Environments
+---
 
-| Name | Stack | Domain pattern |
+## 1. Prerequisites
+
+| Tool | Min version | Purpose |
 |---|---|---|
-| Local dev | `deploy/compose/docker-compose.dev.yml` with `mock-ggg` | `*.localhost` via Traefik |
-| Remote DEV | `docker-compose.prod.yml` with `.env.dev` | `dev-app.<domain>`, `dev-api.<domain>`, `dev-admin.<domain>` |
-| PROD | `docker-compose.prod.yml` with `.env.prod` | `app.<domain>`, `api.<domain>`, `admin.<domain>` |
+| Docker Desktop / Docker Engine | 26+ | Container runtime |
+| Docker Compose plugin | v2.24+ | Orchestration |
+| `openssl` | any | Generating secrets |
+| `bcrypt` (Python) | any | Hashing admin password |
 
-Both remote stacks run on the **same 1 vCPU / 1 GB VM** and are routed by a single shared Traefik instance.
+---
 
-## Target VM sizing
+## 2. Local development
 
-Budget for the 1 vCPU / 1 GB / 25 GB / 1 TB egress class:
-
-| Service | Budget | Notes |
-|---|---|---|
-| Traefik | ~50 MB | hard limit 96 MB |
-| Backend (uvicorn, 2 workers) | ~220 MB | hard limit 256 MB |
-| Arq worker | ~110 MB | hard limit 128 MB |
-| Frontend (nginx-alpine serving static bundle) | ~10 MB | hard limit 64 MB |
-| Admin console | ~50 MB | hard limit 64 MB |
-| Postgres | ~200 MB RSS | `shared_buffers=128MB`, limit 320 MB |
-| Redis | ~140 MB RSS | `maxmemory 128mb` + `allkeys-lru`, limit 160 MB |
-| **Total** | **~780 MB** | leaves ~240 MB for page cache / kernel |
-
-A `swapfile` of 2 GB is strongly recommended as a safety net.
-
-## First-time VM bootstrap
-
-1. Create the droplet, add the deploy SSH key, note the public IP.
-2. Point A records:
-   - `app.<domain>`, `api.<domain>`, `admin.<domain>`
-   - `dev-app.<domain>`, `dev-api.<domain>`, `dev-admin.<domain>`
-3. SSH in as root, create an unprivileged `deploy` user with sudo, disable
-   password auth, enable UFW: allow `22`, `80`, `443`.
-4. Install Docker Engine + compose plugin. Add `deploy` to the `docker` group.
-5. Create `/opt/poe2-butler`, clone this repo as `deploy`, and copy env files:
-
-   ```bash
-   cp deploy/env/.env.example deploy/env/.env.prod
-   cp deploy/env/.env.example deploy/env/.env.dev
-   chmod 600 deploy/env/.env.*
-   ```
-
-6. Fill in real secrets (see **Secrets** below) and domain names.
-7. Run the stack:
-
-   ```bash
-   docker compose \
-     -f deploy/compose/docker-compose.prod.yml \
-     --env-file deploy/env/.env.prod \
-     up -d --build
-   ```
-
-8. Apply database migrations (one-off):
-
-   ```bash
-   docker compose -f deploy/compose/docker-compose.prod.yml \
-     --env-file deploy/env/.env.prod \
-     exec backend alembic upgrade head
-   ```
-
-9. Verify Traefik obtained certificates:
-
-   ```bash
-   docker logs poe2b-traefik | grep -i acme
-   curl -I https://api.<domain>/healthz
-   ```
-
-## Secrets to populate per environment
-
-| Variable | Notes |
-|---|---|
-| `APP_SECRET_KEY` | 32 random bytes, base64-encoded. Used for AES-GCM token encryption. |
-| `SESSION_SIGNING_KEY` | 32 random bytes, base64. Used to sign session cookies. |
-| `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET` / `GGG_REDIRECT_URI` | From GGG after the OAuth2 application is approved. |
-| `POSTGRES_PASSWORD` | Strong random. |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` | Admin login; hash is bcrypt (`bcrypt.hashpw`). |
-| `ADMIN_TOTP_SECRET` | Optional; enables TOTP on admin login. |
-| `ADMIN_SESSION_SECRET` | 32 random bytes; signs the admin session cookie. |
-| `ADMIN_IP_ALLOWLIST` | JSON list of CIDRs, e.g. `["203.0.113.0/24"]`. |
-| `TRAEFIK_ACME_EMAIL` | For Let's Encrypt. |
-| `APP_DOMAIN` / `API_DOMAIN` / `ADMIN_DOMAIN` | Full hostnames per environment. |
-
-Generating values:
+### 2.1 First-time setup
 
 ```bash
-# Random 32-byte base64 keys
-openssl rand -base64 32
+# Clone
+git clone https://github.com/<you>/PoE2-butler.git
+cd PoE2-butler
 
-# Bcrypt hash for admin
-python -c 'import bcrypt,getpass; \
-  p=getpass.getpass().encode(); \
-  print(bcrypt.hashpw(p, bcrypt.gensalt()).decode())'
-
-# TOTP secret (scan into an authenticator app)
-python -c 'import pyotp; print(pyotp.random_base32())'
+# Copy and customise the env file
+cp deploy/env/.env.example deploy/env/.env.dev
+# Edit .env.dev if needed (defaults work out of the box for local dev)
 ```
 
-## Rolling updates
+### 2.2 Build and start
 
-Image swap with health-check preservation (no blue/green needed at this scale):
+```bash
+docker compose \
+  -f deploy/compose/docker-compose.dev.yml \
+  --env-file deploy/env/.env.dev \
+  up --build
+```
+
+Services and their local URLs:
+
+| Service | URL | Notes |
+|---|---|---|
+| Frontend (Vite HMR) | http://app.localhost | SPA |
+| Backend (FastAPI) | http://api.localhost | JSON API + docs at `/docs` |
+| Mock GGG | http://ggg.localhost | OAuth2 + fixture data |
+| Admin | http://admin.localhost | Basic auth + TOTP |
+| Traefik dashboard | http://localhost:8080 | Routing overview |
+
+> **Note**: `*.localhost` subdomains resolve on most Linux/macOS/Windows hosts via the system resolver. If they don't, add entries to `/etc/hosts`:
+> ```
+> 127.0.0.1  app.localhost api.localhost ggg.localhost admin.localhost
+> ```
+
+### 2.3 Apply database migrations
+
+Run once after first start, and after any schema change:
+
+```bash
+docker compose \
+  -f deploy/compose/docker-compose.dev.yml \
+  --env-file deploy/env/.env.dev \
+  exec backend alembic upgrade head
+```
+
+### 2.4 Regenerating mock fixtures
+
+After adding new poe.ninja character exports to `mock-ggg/samples/`:
+
+```bash
+cd mock-ggg/samples
+python convert.py
+cd ../..
+
+# Rebuild only the mock-ggg image
+docker compose \
+  -f deploy/compose/docker-compose.dev.yml \
+  --env-file deploy/env/.env.dev \
+  up --build mock-ggg -d
+```
+
+### 2.5 Rebuilding a single service
+
+```bash
+docker compose \
+  -f deploy/compose/docker-compose.dev.yml \
+  --env-file deploy/env/.env.dev \
+  up --build backend -d
+```
+
+### 2.6 Running backend tests locally
+
+```bash
+cd backend
+uv sync
+uv run pytest
+```
+
+### 2.7 Linting
+
+```bash
+# Backend
+cd backend && uv run ruff check . && uv run ruff format --check .
+
+# Frontend
+cd frontend && npm run lint
+```
+
+---
+
+## 3. Environment variables
+
+All variables documented in `deploy/env/.env.example`. Copy to `.env.dev` (dev) or `.env.prod` (prod) and fill in secrets.
+
+### Generating secrets
+
+```bash
+# APP_SECRET_KEY (32 random bytes, base64)
+openssl rand -base64 32
+
+# SESSION_SIGNING_KEY
+openssl rand -base64 32
+
+# ADMIN_SESSION_SECRET
+openssl rand -base64 32
+
+# ADMIN_TOTP_SECRET (RFC 4648 base32)
+python -c "import base64, os; print(base64.b32encode(os.urandom(20)).decode())"
+
+# ADMIN_PASSWORD_HASH
+python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
+```
+
+> **Important**: bcrypt hashes contain `$` characters. In docker-compose `--env-file` files each `$` must be escaped as `$$`.
+
+---
+
+## 4. Production deployment (DigitalOcean Droplet)
+
+Target VM: **DigitalOcean Basic, Premium AMD, 1 vCPU / 1 GB RAM / 25 GB disk**.
+
+### 4.1 Initial VM setup
+
+```bash
+# SSH in (replace with your droplet IP and key path)
+ssh -i ~/.ssh/id_ed25519 root@<DROPLET_IP>
+
+# System packages
+apt-get update && apt-get upgrade -y
+apt-get install -y git curl
+
+# Install Docker (official script)
+curl -fsSL https://get.docker.com | sh
+usermod -aG docker $USER
+newgrp docker
+
+# Verify
+docker compose version
+```
+
+### 4.2 Deploy the application
+
+```bash
+# On the VM
+git clone https://github.com/<you>/PoE2-butler.git /opt/poe2-butler
+cd /opt/poe2-butler
+
+# Create the prod env file
+cp deploy/env/.env.example deploy/env/.env.prod
+# Fill in all required secrets (see section 3)
+nano deploy/env/.env.prod
+```
+
+Required variables for prod (in addition to defaults):
+
+| Variable | Value |
+|---|---|
+| `APP_SECRET_KEY` | Random 32-byte base64 |
+| `SESSION_SIGNING_KEY` | Random 32-byte base64 |
+| `POSTGRES_PASSWORD` | Strong random password |
+| `GGG_CLIENT_ID` | From GGG developer approval |
+| `GGG_CLIENT_SECRET` | From GGG developer approval |
+| `GGG_OAUTH_BASE_URL` | `https://www.pathofexile.com` |
+| `GGG_API_BASE_URL` | `https://api.pathofexile.com` |
+| `GGG_REDIRECT_URI` | `https://api.hideoutbutler.com/api/auth/callback` |
+| `CORS_ALLOW_ORIGINS` | `["https://app.hideoutbutler.com"]` |
+| `API_DOMAIN` | `api.hideoutbutler.com` |
+| `APP_DOMAIN` | `app.hideoutbutler.com` |
+| `ADMIN_DOMAIN` | `admin.hideoutbutler.com` |
+| `TRAEFIK_ACME_EMAIL` | Your email (Let's Encrypt notifications) |
+| `ADMIN_PASSWORD_HASH` | bcrypt hash (escape `$` → `$$`) |
+| `ADMIN_TOTP_SECRET` | base32 secret |
+| `ADMIN_SESSION_SECRET` | Random 32-byte base64 |
+| `GITHUB_OWNER` | Your GitHub username (for image tags) |
+
+### 4.3 Start the production stack
 
 ```bash
 cd /opt/poe2-butler
-git pull
 
-COMPOSE="docker compose \
+docker compose \
   -f deploy/compose/docker-compose.prod.yml \
-  --env-file deploy/env/.env.prod"
+  --env-file deploy/env/.env.prod \
+  up -d --build
 
-# Pull pre-built images (or build locally if not using the registry)
-$COMPOSE pull backend worker frontend admin || $COMPOSE build
-
-# Migrate schema first (idempotent)
-$COMPOSE run --rm backend alembic upgrade head
-
-# Roll services one at a time, leaving dependencies untouched.
-$COMPOSE up -d --no-deps backend
-$COMPOSE up -d --no-deps worker
-$COMPOSE up -d --no-deps frontend admin
-
-$COMPOSE ps
+# Apply migrations
+docker compose \
+  -f deploy/compose/docker-compose.prod.yml \
+  --env-file deploy/env/.env.prod \
+  exec backend alembic upgrade head
 ```
 
-Watch `docker logs -f poe2b-backend` during the swap and curl `https://api.<domain>/healthz`.
+### 4.4 DNS configuration
 
-## Backups & restore drill
-
-### Postgres
-
-Nightly `pg_dump` via host cron (drop the following into `/etc/cron.d/poe2b-pgdump`):
+Point the following A records to `<DROPLET_IP>`:
 
 ```
-15 3 * * * deploy /usr/bin/docker exec poe2b-postgres \
-  pg_dump -U $POSTGRES_USER $POSTGRES_DB \
-  | gzip > /opt/poe2-butler/backups/pg/poe2b-$(date +\%Y\%m\%d).sql.gz
+app.hideoutbutler.com    → <DROPLET_IP>
+api.hideoutbutler.com    → <DROPLET_IP>
+admin.hideoutbutler.com  → <DROPLET_IP>
 ```
 
-Retain at least 14 daily dumps plus a weekly offsite copy via `rclone`.
+Optional staging (if used for GGG `dev-api` redirect):
 
-### Redis
+```
+dev-api.hideoutbutler.com → <DROPLET_IP>
+```
 
-Cache-only; not backed up. A cold start re-populates prices and sessions on demand.
+Traefik will automatically obtain Let's Encrypt TLS certificates via HTTP-01 challenge once DNS resolves.
 
-### Restore drill (run quarterly)
+### 4.5 Updating to a new version
 
 ```bash
-# 1. Spin up a disposable stack pinned to the current release
-cp -r /opt/poe2-butler /tmp/poe2b-drill
-cd /tmp/poe2b-drill
+cd /opt/poe2-butler
 
-# 2. Restore the most recent dump into a fresh Postgres container
-gunzip -c /opt/poe2-butler/backups/pg/poe2b-<YYYYMMDD>.sql.gz \
-  | docker compose -f deploy/compose/docker-compose.prod.yml \
-      --env-file deploy/env/.env.prod \
-      exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB
+git pull
 
-# 3. Run the backend smoke tests against the restored stack
-docker compose run --rm backend uv run pytest tests/test_health.py -q
+docker compose \
+  -f deploy/compose/docker-compose.prod.yml \
+  --env-file deploy/env/.env.prod \
+  up -d --build
 
-# 4. Tear down the drill stack
-docker compose down -v
+# Apply any new migrations
+docker compose \
+  -f deploy/compose/docker-compose.prod.yml \
+  --env-file deploy/env/.env.prod \
+  exec backend alembic upgrade head
 ```
 
-Record the drill date in `docs/RESTORE_DRILL_LOG.md`.
+---
 
-## CI/CD
+## 5. Secret rotation
 
-- GitHub Actions runs lint + tests + `pip-audit` + `npm audit` on every PR (backend, admin, frontend, mock-ggg).
-- `main` builds tagged images (`ghcr.io/<owner>/poe2b-{backend,frontend,admin}:<sha>`) which the rolling update command pulls.
-- Manual promotions for now: operator SSH in, `git pull`, run the rolling update. A self-hosted runner can be wired later.
+### APP_SECRET_KEY (AES-GCM token encryption key)
 
-## OpenAPI contract & Discord bot consumers
+Rotating this key invalidates **all stored GGG tokens**. Users will need to re-authenticate.
 
-- The backend ships an OpenAPI 3.1 schema at `GET /openapi.json` (FastAPI default). This is the canonical contract.
-- A frozen copy for external consumers — including the future Discord bot — lives at `docs/openapi.json` and is updated via:
+1. Generate new key: `openssl rand -base64 32`
+2. Update `APP_SECRET_KEY` in the env file.
+3. Restart the backend: `docker compose ... restart backend worker`
+4. Users will be prompted to log in again on next visit.
 
-  ```bash
-  cd backend
-  uv run python -c \
-    'import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))' \
-    > ../docs/openapi.json
-  ```
+### SESSION_SIGNING_KEY
 
-  Refresh on every milestone-closing commit.
+Rotating invalidates all active sessions (users are logged out).
 
-- Bot-facing endpoint contract is documented in `docs/BOT_API.md`.
+### ADMIN_TOTP_SECRET
 
-## Suggested subdomain scheme
+1. Generate a new base32 secret.
+2. Re-enrol your authenticator app.
+3. Update env and restart admin.
 
-| Sub | Service |
+---
+
+## 6. Observability
+
+### Logs
+
+```bash
+# All services, follow
+docker compose -f deploy/compose/docker-compose.prod.yml --env-file deploy/env/.env.prod logs -f
+
+# Backend only
+docker compose ... logs -f backend
+
+# Worker
+docker compose ... logs -f worker
+```
+
+Backend logs are structured JSON (`structlog`). Each request includes a `request_id` field.
+
+### Admin dashboard
+
+Accessible at `https://admin.hideoutbutler.com`. Protected by:
+- HTTP Basic auth (username + bcrypt password)
+- TOTP second factor
+- IP allowlist (`ADMIN_IP_ALLOWLIST`)
+
+### Resource usage (target VM)
+
+| Service | Memory limit |
 |---|---|
-| `app.<d>` | Frontend SPA |
-| `api.<d>` | Public backend API |
-| `admin.<d>` | Admin observability UI |
-| `dev-app.<d>`, `dev-api.<d>`, `dev-admin.<d>` | Same, for DEV stack |
+| Traefik | 96 MB |
+| Postgres | 320 MB |
+| Redis | 160 MB |
+| Backend | 256 MB |
+| Worker | 128 MB |
+| Frontend (nginx) | 64 MB |
+| Admin | 64 MB |
+| **Total** | **~1088 MB** |
+
+On a 1 GB VM, keep the OS footprint low and avoid running other services.
+
+---
+
+## 7. Backup & restore
+
+### Postgres backup
+
+```bash
+docker compose ... exec postgres \
+  pg_dump -U poe2b poe2b | gzip > poe2b_$(date +%Y%m%d).sql.gz
+```
+
+### Restore
+
+```bash
+gunzip -c poe2b_20260101.sql.gz | \
+  docker compose ... exec -T postgres psql -U poe2b poe2b
+```
+
+### What is stored in Postgres
+
+- `users` — account names, preferred league, valuable threshold.
+- `user_tokens` — AES-GCM encrypted GGG tokens.
+- `snapshots` — JSONB payload + prev_payload for characters, stashes, profile.
+
+Redis data is ephemeral (sessions, cache, rate-limit counters). It does not need to be backed up.
+
+---
+
+## 8. Traefik configuration summary
+
+| Environment | Config file | Provider |
+|---|---|---|
+| Dev | `deploy/compose/traefik/traefik.dev.yml` | Static file (`dynamic.dev.yml`) |
+| Prod | `deploy/compose/traefik/traefik.prod.yml` | Docker labels + Let's Encrypt |
+
+Dev uses a static provider to avoid exposing the Docker socket inside the Traefik container.
+
+---
+
+## 9. CI/CD (GitHub Actions)
+
+Workflows in `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | push / PR | Lint (ruff, eslint), unit tests (pytest, vitest), dependency audit |
+
+To publish images to GHCR (optional), add a workflow that builds and pushes `ghcr.io/${GITHUB_OWNER}/poe2b-{backend,frontend,admin}:${IMAGE_TAG}` on releases. The prod compose file references these tags.
