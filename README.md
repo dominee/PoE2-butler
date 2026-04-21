@@ -1,6 +1,6 @@
 # PoE2 Hideout Butler
 
-> *"Think of it as your personal PoE2 Hideout butler who takes care of your gear and stash."*
+> *"Think of it as your personal PoE2 Hideout Butler who takes care of your gear and stash."*
 
 A web application that lets **Path of Exile 2** players pair their GGG account via OAuth2, then browse their characters, equipped gear, and stash tabs online with enriched item information, price estimates, and one-click deep-links to the official trade site.
 
@@ -32,7 +32,7 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 ```text
 backend/      FastAPI app, domain models, GGG + poe.ninja clients
 frontend/     React SPA
-admin/        Separate FastAPI + minimal React admin (observability only)
+admin/        Separate FastAPI + Jinja2 admin console (observability; port 8001)
 mock-ggg/     Local mock of GGG OAuth2 + API for development and tests
 deploy/       docker-compose files, Traefik config, env templates
 docs/         Supplementary docs referenced by the top-level MDs
@@ -42,25 +42,40 @@ docs/         Supplementary docs referenced by the top-level MDs
 
 ```bash
 cp deploy/env/.env.example deploy/env/.env.dev
+# Edit deploy/env/.env.dev so browser-facing URLs match the hostnames below
 docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.dev up --build
 ```
 
-Once containers are healthy:
+Traefik (`deploy/compose/traefik/dynamic.dev.yml`) routes by **hostname** to each service. The default dev hostnames are:
 
-- Frontend: <http://app.localhost>
-- API: <http://api.localhost>
-- Mock GGG: <http://ggg.localhost>
-- Traefik dashboard: <http://localhost:8080>
+| Service   | URL |
+|-----------|-----|
+| SPA (Vite) | <http://app.dev.hideoutbutler.com> |
+| API       | <http://api.dev.hideoutbutler.com> |
+| Admin     | <http://admin.dev.hideoutbutler.com> |
+| Mock GGG  | <http://ggg.dev.hideoutbutler.com> |
+| Traefik dashboard | <http://localhost:8080> |
 
-Add `127.0.0.1 app.localhost api.localhost ggg.localhost` to `/etc/hosts` if your resolver does not already handle `.localhost`.
+Point those names at your machine (for example wildcard DNS `*.dev.hideoutbutler.com` → `127.0.0.1`, or individual `/etc/hosts` lines). In `.env.dev`, keep **`APP_BASE_URL`**, **`API_BASE_URL`**, **`CORS_ALLOW_ORIGINS`**, **`GGG_OAUTH_AUTHORIZE_BASE_URL`**, **`GGG_REDIRECT_URI`**, and related values consistent with those hosts (see [AGENTS.md](AGENTS.md) §6–§10).
+
+The Vite dev server allows the app hostname via **`server.allowedHosts`** in `frontend/vite.config.ts`; set **`VITE_ALLOWED_HOSTS`** (comma-separated) if you introduce another dev hostname. The admin app serves HTML under **`/admin/`**; a request to **`/`** on the admin host redirects there.
+
+OAuth in dev is configured so the browser hits the mock GGG host above while the backend talks to `mock-ggg` inside Docker; see [GGG_API.md](GGG_API.md).
 
 ## Production domain
 
 Public deployment uses **`hideoutbutler.com`**: SPA at `https://app.hideoutbutler.com`, API (and GGG OAuth callback) at `https://api.hideoutbutler.com`, admin at `https://admin.hideoutbutler.com`. See [GGG_API.md](GGG_API.md) for OAuth redirect URIs.
 
+## CI workflow
+
+GitHub Actions runs on push/PR to `main` via `.github/workflows/ci.yml`.
+
+- Python services (`backend`, `admin`, `mock-ggg`) use `uv` with Ruff and pytest.
+- Frontend uses Node 22 and caches `~/.npm` via `actions/cache` keyed by `frontend/package.json`.
+- Frontend lint and dependency audits are currently non-blocking (`|| true`) to keep CI informative while avoiding hard-failures on advisory-only checks.
+
 ## Documentation
 
-- [INSTRUCTIONS.md](INSTRUCTIONS.md) — original user brief (do not edit).
 - [AGENTS.md](AGENTS.md) — context for AI agents contributing to the project.
 - [GGG_API.md](GGG_API.md) — GGG OAuth2 setup, scopes, rate-limits.
 - [DEPLOY.md](DEPLOY.md) — build and deploy procedure.
