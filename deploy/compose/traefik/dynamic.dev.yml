@@ -1,22 +1,22 @@
 http:
   routers:
     app:
-      rule: Host(`app.localhost`)
+      rule: Host(`app.dev.hideoutbutler.com`)
       entryPoints:
         - web
       service: app
     api:
-      rule: Host(`api.localhost`)
+      rule: Host(`api.dev.hideoutbutler.com`)
       entryPoints:
         - web
       service: api
     admin:
-      rule: Host(`admin.localhost`)
+      rule: Host(`admin.dev.hideoutbutler.com`)
       entryPoints:
         - web
       service: admin
     mockggg:
-      rule: Host(`ggg.localhost`)
+      rule: Host(`ggg.dev.hideoutbutler.com`)
       entryPoints:
         - web
       service: mockggg

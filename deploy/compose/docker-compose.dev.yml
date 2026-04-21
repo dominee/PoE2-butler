@@ -77,11 +77,7 @@ services:
       - edge
       - internal
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=poe2b_edge"
-      - "traefik.http.routers.mockggg.rule=Host(`ggg.localhost`)"
-      - "traefik.http.routers.mockggg.entrypoints=web"
-      - "traefik.http.services.mockggg.loadbalancer.server.port=9000"
+      - "traefik.enable=false"   # routing handled by static dynamic.dev.yml
 
   backend:
     build:
@@ -98,7 +94,8 @@ services:
       GGG_OAUTH_BASE_URL: http://mock-ggg:9000
       GGG_API_BASE_URL: http://mock-ggg:9000
       # Browser-facing authorize redirect — must be reachable from the user's browser.
-      GGG_OAUTH_AUTHORIZE_BASE_URL: http://ggg.localhost
+      # Reads GGG_OAUTH_AUTHORIZE_BASE_URL from the env file (e.g. .env.dev).
+      # Do NOT hard-code a value here; let the env file drive it.
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,11 +107,7 @@ services:
       - edge
       - internal
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=poe2b_edge"
-      - "traefik.http.routers.api.rule=Host(`api.localhost`)"
-      - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.services.api.loadbalancer.server.port=8000"
+      - "traefik.enable=false"   # routing handled by static dynamic.dev.yml
 
   frontend:
     build:
@@ -130,11 +123,7 @@ services:
     networks:
       - edge
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=poe2b_edge"
-      - "traefik.http.routers.app.rule=Host(`app.localhost`)"
-      - "traefik.http.routers.app.entrypoints=web"
-      - "traefik.http.services.app.loadbalancer.server.port=5173"
+      - "traefik.enable=false"   # routing handled by static dynamic.dev.yml
 
   admin:
     build:
@@ -157,8 +146,4 @@ services:
       - edge
       - internal
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=poe2b_edge"
-      - "traefik.http.routers.admin.rule=Host(`admin.localhost`)"
-      - "traefik.http.routers.admin.entrypoints=web"
-      - "traefik.http.services.admin.loadbalancer.server.port=8001"
+      - "traefik.enable=false"   # routing handled by static dynamic.dev.yml

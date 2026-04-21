@@ -60,9 +60,9 @@ PoE2-butler/
 
 ```
 Browser
-  └─ React SPA  (app.localhost · prod: app.hideoutbutler.com)
+  └─ React SPA  (app.dev.hideoutbutler.com · prod: app.hideoutbutler.com)
        │  JSON API (credentials)
-       └─ FastAPI backend  (api.localhost · prod: api.hideoutbutler.com)
+       └─ FastAPI backend  (api.dev.hideoutbutler.com · prod: api.hideoutbutler.com)
             ├─ PostgreSQL 16  (users, snapshots, tokens)
             ├─ Redis 7        (sessions, rate-limit counters, price cache, arq queue)
             └─ GGG API / mock-ggg  (OAuth2 + game data)
@@ -157,9 +157,9 @@ border-rarity-*  (same names)
 | `SESSION_SIGNING_KEY` | Cookie signing key |
 | `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET` | GGG OAuth2 credentials |
 | `GGG_OAUTH_BASE_URL` | Internal (server-to-server) GGG base URL |
-| `GGG_OAUTH_AUTHORIZE_BASE_URL` | Browser-facing authorize URL (overridden in dev to `http://ggg.localhost`) |
-| `GGG_REDIRECT_URI` | Dev: `http://api.localhost/api/auth/callback` · Prod: `https://api.hideoutbutler.com/api/auth/callback` |
-| `CORS_ALLOW_ORIGINS` | JSON array, e.g. `["http://app.localhost"]` |
+| `GGG_OAUTH_AUTHORIZE_BASE_URL` | Browser-facing authorize URL — set in `.env.dev` to `http://ggg.dev.hideoutbutler.com`; empty in prod (falls back to `GGG_OAUTH_BASE_URL`) |
+| `GGG_REDIRECT_URI` | Dev: `http://app.dev.hideoutbutler.com/api/auth/callback` · Prod: `https://app.hideoutbutler.com/api/auth/callback` |
+| `CORS_ALLOW_ORIGINS` | JSON array, e.g. `["http://app.dev.hideoutbutler.com"]` |
 | `PRICING_SOURCE` | `static` (dev) or `poe_ninja` |
 | `DEFAULT_VALUABLE_THRESHOLD_CHAOS` | Starting threshold for valuable item highlights |
 
@@ -220,9 +220,9 @@ The first entry in `users.json` is auto-selected on the mock login form.
 
 ## 10. Known gotchas
 
-- **OAuth callback host**: GGG redirects to `GGG_REDIRECT_URI` on the **API** host (`api.localhost` / `api.hideoutbutler.com`). Session cookies are set on that host; the SPA on `app.*` must call the API with `credentials: include` (CORS allowlist includes the app origin). Same-site subdomains under `hideoutbutler.com` satisfy `SameSite=Lax` for fetches between `app` and `api`.
+- **OAuth callback host**: `GGG_REDIRECT_URI` points to the **app** host (`app.dev.hideoutbutler.com/api/auth/callback`). The Vite dev server proxies `/api/*` → backend, so the Set-Cookie response is scoped to the SPA origin. All subsequent API calls go through the same proxy — no cross-origin cookie issues.
 - **Enum mapping**: `Snapshot.kind` uses `values_callable=lambda e: [m.value for m in e]` + `create_type=False` to avoid `snapshot_kind` type conflicts across Alembic runs.
 - **Transaction isolation**: `refresh_user_snapshot` runs in a separate `snap_db` session committed before the main auth session is committed — prevents `InFailedSQLTransactionError` on snapshot write errors.
-- **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.localhost"]`.
+- **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.dev.hideoutbutler.com"]`.
 - **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
 - **Traefik dev**: uses static file provider (`dynamic.dev.yml`), not the Docker provider — avoids Docker socket security exposure in dev.

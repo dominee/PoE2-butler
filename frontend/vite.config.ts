@@ -13,6 +13,13 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     strictPort: true,
+    // Traefik forwards the browser Host header; Vite must allow it (DNS rebinding guard).
+    allowedHosts: [
+      "localhost",
+      "app.localhost",
+      "app.dev.hideoutbutler.com",
+      ...(process.env.VITE_ALLOWED_HOSTS?.split(/[\s,]+/).filter(Boolean) ?? []),
+    ],
     proxy: {
       "/api": {
         target: process.env.VITE_API_PROXY_TARGET ?? "http://backend:8000",
