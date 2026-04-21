@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient, GGGError
 from app.config import Settings, get_settings
-from app.db.base import get_session, _session_factory
+from app.db.base import _session_factory, get_session
 from app.db.models import User, UserToken
 from app.deps import (
     get_cipher,

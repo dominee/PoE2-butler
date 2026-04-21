@@ -69,7 +69,10 @@ def _item_changed(old: dict[str, Any], new: dict[str, Any]) -> bool:
     return old_props != new_props
 
 
-def _diff_tab(old_p: dict[str, Any], new_p: dict[str, Any]) -> tuple[list[Item], list[ChangedItem], list[Item]]:
+def _diff_tab(
+    old_p: dict[str, Any],
+    new_p: dict[str, Any],
+) -> tuple[list[Item], list[ChangedItem], list[Item]]:
     old_map = _items_by_id(old_p)
     new_map = _items_by_id(new_p)
 

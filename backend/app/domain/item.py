@@ -8,6 +8,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from app.services import mod_db as _mod_db
 
 # ── tag stripping ─────────────────────────────────────────────────────────────
@@ -21,9 +23,6 @@ def _strip_tags(text: str) -> str:
     text = _TAG_LABELED.sub(lambda m: m.group(2), text)
     text = _TAG_PLAIN.sub(lambda m: m.group(1), text)
     return text
-
-from pydantic import BaseModel, Field
-
 
 class ItemProperty(BaseModel):
     name: str
@@ -86,7 +85,7 @@ class Item(BaseModel):
     enchant_mods: list[str] = Field(default_factory=list)
     crafted_mods: list[str] = Field(default_factory=list)
     sockets: list[Socket] = Field(default_factory=list)
-    socketed_items: list["Item"] = Field(default_factory=list)
+    socketed_items: list[Item] = Field(default_factory=list)
     stack_size: int | None = None
     max_stack_size: int | None = None
     icon: str | None = None
