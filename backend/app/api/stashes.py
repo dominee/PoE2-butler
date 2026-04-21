@@ -105,9 +105,9 @@ async def search_stash(
                         raw.get("name", ""),
                         raw.get("typeLine", ""),
                         raw.get("baseType", ""),
-                        *((raw.get("explicitMods") or [])),
-                        *((raw.get("implicitMods") or [])),
-                        *((raw.get("craftedMods") or [])),
+                        *(raw.get("explicitMods") or []),
+                        *(raw.get("implicitMods") or []),
+                        *(raw.get("craftedMods") or []),
                     ],
                 )
             )

@@ -20,9 +20,7 @@ _TAG_PLAIN = re.compile(r"\[([^\]]+)\]")
 
 
 def _strip_tags(text: str) -> str:
-    text = _TAG_LABELED.sub(lambda m: m.group(2), text)
-    text = _TAG_PLAIN.sub(lambda m: m.group(1), text)
-    return text
+    return _TAG_PLAIN.sub(lambda m: m.group(1), _TAG_LABELED.sub(lambda m: m.group(2), text))
 
 class ItemProperty(BaseModel):
     name: str

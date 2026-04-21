@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
 import type { Item, ItemProperty, ItemRarity, ModDetail, Prefs } from "@/api/types";
-import { parseModParts, stripTags } from "@/utils/modText";
+import { parseModParts } from "@/utils/modText";
 
 import { PercentBar, computeItemScore } from "./PercentBar";
 import { PriceBadge } from "./PriceBadge";

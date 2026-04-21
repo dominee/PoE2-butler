@@ -6,7 +6,6 @@
  */
 
 import type { Item } from "@/api/types";
-import { formatChaos } from "@/features/items/PriceBadge";
 import { stripTags } from "@/utils/modText";
 
 const SLOT_LABELS: Record<string, string> = {
