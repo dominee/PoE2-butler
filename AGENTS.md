@@ -119,6 +119,17 @@ class Snapshot(Base):
 | Roll quality | `PercentBar` component + `computeItemScore` in `features/items/PercentBar.tsx` |
 | Activity | `useActivity(league)` hook; `ActivityLog` collapsible panel (left column) |
 
+### CI / quality gates
+
+| Concern | Approach |
+|---|---|
+| CI trigger | `.github/workflows/ci.yml` runs on push/PR to `main` |
+| Python CI | `uv sync --frozen || uv sync`, then `ruff check` and `pytest` |
+| Frontend runtime | Node `22` |
+| Frontend cache | `actions/cache` caches `~/.npm` keyed by `hashFiles('frontend/package.json')` |
+| Frontend lint | `npm run lint || true` (non-blocking today) |
+| Dependency audits | `pip-audit` and `npm audit` run with `|| true` (informational) |
+
 **Rarity colour tokens** (Tailwind):
 
 ```
@@ -226,3 +237,4 @@ The first entry in `users.json` is auto-selected on the mock login form.
 - **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.dev.hideoutbutler.com"]`.
 - **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
 - **Traefik dev**: uses static file provider (`dynamic.dev.yml`), not the Docker provider — avoids Docker socket security exposure in dev.
+- **Frontend CI cache key**: cache is keyed from `frontend/package.json` (not `package-lock.json`), because this repo does not currently commit a frontend lockfile.
