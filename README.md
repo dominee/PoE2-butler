@@ -34,7 +34,7 @@ backend/      FastAPI app, domain models, GGG + poe.ninja clients
 frontend/     React SPA
 admin/        Separate FastAPI + Jinja2 admin console (observability; port 8001)
 mock-ggg/     Local mock of GGG OAuth2 + API for development and tests
-deploy/       docker-compose files, Traefik config, env templates
+deploy/       docker-compose (dev, **uat**, prod), Traefik, env templates (e.g. `.env.uat.example` for UAT)
 docs/         Supplementary docs referenced by the top-level MDs
 ```
 
@@ -65,6 +65,8 @@ OAuth in dev is configured so the browser hits the mock GGG host above while the
 ## Production domain
 
 Public deployment uses **`hideoutbutler.com`**: SPA at `https://app.hideoutbutler.com`, API (and GGG OAuth callback) at `https://api.hideoutbutler.com`, admin at `https://admin.hideoutbutler.com`. See [GGG_API.md](GGG_API.md) for OAuth redirect URIs.
+
+**UAT** (optional): a third stack, `deploy/compose/docker-compose.uat.yml`, uses **mock GGG** like dev but **HTTPS** to the origin with a **Cloudflare Origin CA** certificate (same `certs/` filenames as prod; include `*.uat.hideoutbutler.com` on the cert). Copy `deploy/env/.env.uat.example` to `deploy/env/.env.uat`, then see [DEPLOY.md](DEPLOY.md) §4.6 and [AGENTS.md](AGENTS.md) §4.3.
 
 ## CI workflow
 

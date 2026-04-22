@@ -1,0 +1,170 @@
+name: poe2b-uat
+
+# UAT: mock GGG (like dev) + public HTTPS on the origin with Cloudflare Origin CA
+# (like prod). Traefik uses a static file provider (no Docker socket) + :443.
+# The app host splits /api → backend and / → static SPA (same-origin as dev w/ Vite).
+
+networks:
+  uat_edge:
+    name: poe2b_uat_edge
+  uat_internal:
+    name: poe2b_uat_internal
+    internal: true
+
+volumes:
+  poe2b_uat_postgres:
+  poe2b_uat_redis:
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: poe2b-uat-traefik
+    restart: unless-stopped
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.uat.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.uat.yml:/etc/traefik/dynamic.uat.yml:ro
+      - ./traefik/certs:/certs:ro
+    networks:
+      - uat_edge
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: poe2b-uat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-poe2b}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-poe2b-dev-password}
+      POSTGRES_DB: ${POSTGRES_DB:-poe2b}
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=8MB
+      -c max_connections=40
+      -c effective_cache_size=256MB
+    volumes:
+      - poe2b_uat_postgres:/var/lib/postgresql/data
+    networks:
+      - uat_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-poe2b}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: poe2b-uat-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --appendonly no
+    volumes:
+      - poe2b_uat_redis:/data
+    networks:
+      - uat_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mock-ggg:
+    build:
+      context: ../../mock-ggg
+    container_name: poe2b-uat-mock-ggg
+    restart: unless-stopped
+    networks:
+      - uat_edge
+      - uat_internal
+
+  backend:
+    build:
+      context: ../../backend
+    container_name: poe2b-uat-backend
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/env/.env.uat
+    environment:
+      ENVIRONMENT: uat
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
+      REDIS_URL: redis://redis:6379/0
+      GGG_OAUTH_BASE_URL: http://mock-ggg:9000
+      GGG_API_BASE_URL: http://mock-ggg:9000
+    command:
+      - uvicorn
+      - app.main:app
+      - --host=0.0.0.0
+      - --port=8000
+      - --workers=2
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-ggg:
+        condition: service_started
+    networks:
+      - uat_edge
+      - uat_internal
+
+  worker:
+    build:
+      context: ../../backend
+    container_name: poe2b-uat-worker
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/env/.env.uat
+    environment:
+      ENVIRONMENT: uat
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
+      REDIS_URL: redis://redis:6379/0
+      GGG_OAUTH_BASE_URL: http://mock-ggg:9000
+      GGG_API_BASE_URL: http://mock-ggg:9000
+    command:
+      - arq
+      - app.workers.arq_worker.WorkerSettings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - uat_internal
+
+  frontend:
+    build:
+      context: ../../frontend
+    container_name: poe2b-uat-frontend
+    restart: unless-stopped
+    networks:
+      - uat_edge
+
+  admin:
+    build:
+      context: ../../admin
+    container_name: poe2b-uat-admin
+    restart: unless-stopped
+    environment:
+      ADMIN_ENVIRONMENT: uat
+      ADMIN_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
+      ADMIN_REDIS_URL: redis://redis:6379/0
+      ADMIN_BACKEND_BASE_URL: http://backend:8000
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-uat-change-me}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-$$2b$$12$$kf1Sh4imysin12trFxWc6uhSuXCR4JUySGOwKgYR9Kn8y4obxEiYu}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - uat_edge
+      - uat_internal

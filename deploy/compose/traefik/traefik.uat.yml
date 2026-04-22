@@ -1,0 +1,29 @@
+# UAT: same TLS story as production (Cloudflare Origin CA) + file-based routes
+# (no Docker socket in Traefik). See docker-compose.uat.yml and dynamic.uat.yml.
+api:
+  dashboard: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.uat.yml
+    watch: true
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  bufferingSize: 100

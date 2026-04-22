@@ -47,9 +47,9 @@ PoE2-butler/
 │   ├── app/fixtures/ users.json · characters.json · stashes.json
 │   └── samples/      poe.ninja character exports + convert.py
 ├── deploy/
-│   ├── compose/      docker-compose.dev.yml · docker-compose.prod.yml
-│   │   └── traefik/  traefik.{dev,prod}.yml · dynamic.{dev,prod}.yml · certs/ (PEM+key, prod)
-│   └── env/          .env.example · .env.dev / .env.prod (gitignored)
+│   ├── compose/      docker-compose.{dev,uat,prod}.yml
+│   │   └── traefik/  traefik.{dev,uat,prod}.yml · dynamic.{dev,uat,prod}.yml · certs/ (PEM+key, UAT+prod)
+│   └── env/          .env.example · .env.uat.example · .env.* (gitignored)
 ├── docs/
 ├── INSTRUCTIONS.md   Original / product requirements (optional; may be local-only)
 ├── AGENTS.md         This file
@@ -101,10 +101,26 @@ Browser
 | Topic | Details |
 |-------|--------|
 | **Routing** | Traefik uses the **Docker provider** (socket mounted) + static **`dynamic.prod.yml`**. |
+| **Host ports** | Traefik must publish **`80:80` and `443:443`**. `docker ps` without **`443->443`** usually means the **dev** stack (which maps `8080` for the dashboard) or an outdated prod compose. Cloudflare **Full (strict)** needs TLS on the origin. |
 | **TLS** | **No ACME in-repo.** `dynamic.prod.yml` sets the default TLS store to PEM + key at **`/certs/cloudflare-origin.pem`** and **`/certs/cloudflare-origin.key`**; host path **`deploy/compose/traefik/certs/`** is mounted read-only. Create certs in **Cloudflare → SSL/TLS → Origin Server**. |
 | **Cloudflare** | **Proxied** A records, SSL mode **Full (strict)**. See `DEPLOY.md` §4.3. |
 | **GGG redirect (prod)** | **Registered** callback is on the **API** host: `https://api.hideoutbutler.com/api/auth/callback` (see `GGG_API.md` / `deploy/env/.env.example`). This differs from dev, where the app host is used for same-origin + Vite proxy. |
 | **Env** | Optional `SECURITY_CONTACT_EMAIL` for ops / disclosure text (not consumed by Traefik). |
+
+### 4.3 UAT (`docker-compose.uat.yml`)
+
+| Topic | Details |
+|-------|--------|
+| **Purpose** | Public acceptance testing: **mock-ggg** (same as dev) + **HTTPS** to the origin with the same **Cloudflare Origin CA** pattern as prod. |
+| **Project** | Compose name **`poe2b-uat`**, networks **`poe2b_uat_*`**, containers **`poe2b-uat-*`** — can run beside dev/prod on one host. |
+| **Routing** | **File provider only** (`traefik.uat.yml` + **`dynamic.uat.yml`**) — no Docker socket. TLS block + `http.routers` in one file. |
+| **App host** | **Single** host `app.uat.hideoutbutler.com`: Traefik matches **`PathPrefix(/api)`** → backend, else → static **`frontend`** (prod Docker image). Same-origin `fetch("/api/...")` and `GGG_REDIRECT_URI` **`https://app.uat.../api/auth/callback`**. |
+| **Other hosts** | `ggg.uat.hideoutbutler.com` → mock-ggg, `admin.uat.hideoutbutler.com` → admin. |
+| **TLS / CF** | Same `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` paths as prod; add **`*.uat.hideoutbutler.com`** (or each FQDN) to the Origin certificate. |
+| **Worker** | `arq` worker service included. |
+| **Env** | `deploy/env/.env.uat` (copy from **`.env.uat.example`**) and `ENVIRONMENT=uat` (enables `Secure` cookies in backend, like prod). |
+
+`DEPLOY.md` §4.6 has the full runbook.
 
 ---
 
@@ -209,7 +225,7 @@ border-rarity-*  (same names)
 | `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET` | GGG OAuth2 credentials |
 | `GGG_OAUTH_BASE_URL` | Internal (server-to-server) GGG or mock base URL |
 | `GGG_OAUTH_AUTHORIZE_BASE_URL` | Browser authorize URL — dev: `http://ggg.dev.hideoutbutler.com`; prod: usually empty (real GGG host) |
-| `GGG_REDIRECT_URI` | **Dev (typical):** `http://app.dev.hideoutbutler.com/api/auth/callback` (Vite proxy). **Prod (registered with GGG):** `https://api.hideoutbutler.com/api/auth/callback` |
+| `GGG_REDIRECT_URI` | **Dev:** `http://app.dev.hideoutbutler.com/api/auth/callback` (Vite proxy). **UAT (mock GGG):** `https://app.uat.hideoutbutler.com/api/auth/callback` (Traefik path split). **Prod (real GGG):** `https://api.hideoutbutler.com/api/auth/callback` |
 | `CORS_ALLOW_ORIGINS` | JSON array string, e.g. `["https://app.hideoutbutler.com"]` or dev equivalent |
 | `PRICING_SOURCE` | `static` (dev) or `poe_ninja` |
 | `DEFAULT_VALUABLE_THRESHOLD_CHAOS` | Starting threshold for valuable item highlights |
@@ -277,7 +293,7 @@ The first entry in `users.json` is auto-selected on the mock login form.
 - **Transaction isolation**: `refresh_user_snapshot` runs in a separate `snap_db` session committed before the main auth session is committed — prevents `InFailedSQLTransactionError` on snapshot write errors.
 - **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.dev.hideoutbutler.com"]`.
 - **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
-- **Traefik dev**: only the **file** provider (`dynamic.dev.yml`) — no Docker socket in the Traefik container. Prod Traefik **does** use the Docker provider; TLS from **`dynamic.prod.yml` + `certs/`** (Cloudflare Origin CA), not Let’s Encrypt.
+- **Traefik dev / UAT**: only the **file** provider for routes (`dynamic.dev.yml` / `dynamic.uat.yml`) — no Docker socket. **UAT** also loads TLS + HTTPS routes from the same `dynamic.uat.yml`. **Prod** Traefik uses the **Docker** provider for routing and **`dynamic.prod.yml` + `certs/`** (Cloudflare Origin CA) for TLS, not Let’s Encrypt.
 - **Admin templates**: for dicts passed to Jinja, avoid a key named `keys` (use e.g. `key_count`); `{{ d.keys }}` prints the method object, not a count.
 - **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`.
 - **Frontend CI cache key**: `actions/cache` uses `frontend/package.json` (no root lockfile in repo for npm).

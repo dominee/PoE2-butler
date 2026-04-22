@@ -248,6 +248,14 @@ docker compose \
   exec backend alembic upgrade head
 ```
 
+**Verify Traefik is listening for HTTPS (required for Cloudflare → origin):** the **production** compose file publishes `80` and `443` on the Traefik container, not `8080`. A healthy prod `poe2b-traefik` should look like this:
+
+```text
+0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
+```
+
+If you only see `80` and `8080` and **no** `443`, you are on the **development** stack (`docker-compose.dev.yml`) or an **old** prod compose that omitted the host port. Use `deploy/compose/docker-compose.prod.yml` and `docker compose ... up -d --force-recreate traefik` after adding `443:443`. On the VM, ensure nothing else binds to host `:443` before starting Traefik.
+
 ### 4.5 Updating to a new version
 
 ```bash
@@ -266,6 +274,35 @@ docker compose \
   --env-file deploy/env/.env.prod \
   exec backend alembic upgrade head
 ```
+
+### 4.6 UAT environment (mock GGG + public HTTPS)
+
+**UAT** is for acceptance testing on a **public** VM with **Cloudflare** in front and **Origin CA** TLS to Traefik, while the stack still uses **`mock-ggg`** and dev-like OAuth client IDs (not real GGG). It is defined in `deploy/compose/docker-compose.uat.yml` and `deploy/compose/traefik/{traefik.uat,dynamic.uat}.yml`.
+
+- **Isolated project**: Compose project name `poe2b-uat` with separate Docker networks (`poe2b_uat_edge`, `poe2b_uat_internal`) and **prefixed** container names (`poe2b-uat-*`) so you can run UAT on the same host as dev/prod without network clashes.
+- **No Docker socket in Traefik** (static routes only, like dev).
+- **App host** `app.uat.hideoutbutler.com` routes `PathPrefix(/api)` to the **backend** and the rest to the **static** SPA, so the browser can keep **same-origin** `fetch("/api/...")` and OAuth `GGG_REDIRECT_URI` on `https://app.uat.../api/auth/callback` (analogous to the Vite proxy in dev).
+- **Worker** (`arq`) is included for snapshot jobs.
+
+**Setup**
+
+1. In Cloudflare, add proxied A records e.g. `app.uat`, `ggg.uat`, `admin.uat` under your zone (or a delegated sub-zone) pointing to the UAT droplet. SSL mode: **Full (strict)**.
+2. Issue or re-use a Cloudflare **Origin** certificate that covers `app.uat.hideoutbutler.com`, `ggg.uat.hideoutbutler.com`, and `admin.uat.hideoutbutler.com` (a **`*.uat.hideoutbutler.com` wildcard** is typical). Place PEM + key in `deploy/compose/traefik/certs/` as `cloudflare-origin.pem` and `cloudflare-origin.key` (same filenames as production; use a **separate** UAT keypair if the prod and UAT origins differ).
+3. On the host:
+
+   ```bash
+   cp deploy/env/.env.uat.example deploy/env/.env.uat
+   # Edit: secrets, POSTGRES_PASSWORD, ADMIN_*, etc.
+
+   docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat up -d --build
+
+   docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat \
+     exec backend alembic upgrade head
+   ```
+
+4. `docker ps` should show `poe2b-uat-traefik` with `80` and `443` published (not `8080`).
+
+5. If your UAT DNS names are not under **`*.uat.hideoutbutler.com`**, edit `deploy/compose/traefik/dynamic.uat.yml` Host rules and update `deploy/env/.env.uat` accordingly (and create a matching Cloudflare Origin certificate).
 
 ---
 
@@ -363,7 +400,8 @@ Redis data is ephemeral (sessions, cache, rate-limit counters). It does not need
 
 | Environment | Config file | Provider |
 |---|---|---|
-| Dev | `deploy/compose/traefik/traefik.dev.yml` | Static file (`dynamic.dev.yml`) |
+| Dev | `deploy/compose/traefik/traefik.dev.yml` | Static file (`dynamic.dev.yml`, HTTP) |
+| UAT | `deploy/compose/traefik/traefik.uat.yml` + `dynamic.uat.yml` | Static file, HTTPS + origin cert (no Docker socket) |
 | Prod | `deploy/compose/traefik/traefik.prod.yml` + `dynamic.prod.yml` | Docker labels + file TLS (Cloudflare Origin CA) |
 
 Dev uses a static provider to avoid exposing the Docker socket inside the Traefik container.

@@ -1,0 +1,55 @@
+# UAT: TLS (Cloudflare Origin CA) + static routes for mock-ggg + path-split app host.
+# Include these names on the origin certificate (e.g. *.hideoutbutler.com or each FQDN).
+# Change Host(`...`) rules below if your UAT zone differs.
+#
+# app host: /api* → FastAPI, /* → static SPA (same origin for fetch("/api/...") and OAuth callback).
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/cloudflare-origin.pem
+        keyFile: /certs/cloudflare-origin.key
+
+http:
+  routers:
+    uat-app-api:
+      rule: Host(`app.hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints:
+        - websecure
+      service: uat-app-api
+      priority: 100
+    uat-app:
+      rule: Host(`app.hideoutbutler.com`)
+      entryPoints:
+        - websecure
+      service: uat-app-frontend
+      priority: 1
+    uat-ggg:
+      rule: Host(`ggg.hideoutbutler.com`)
+      entryPoints:
+        - websecure
+      service: uat-mockggg
+    uat-admin:
+      rule: Host(`admin.hideoutbutler.com`)
+      entryPoints:
+        - websecure
+      service: uat-admin
+
+  services:
+    uat-app-api:
+      loadBalancer:
+        servers:
+          - url: http://backend:8000
+    uat-app-frontend:
+      loadBalancer:
+        servers:
+          - url: http://frontend:80
+    uat-mockggg:
+      loadBalancer:
+        servers:
+          - url: http://mock-ggg:9000
+    uat-admin:
+      loadBalancer:
+        servers:
+          - url: http://admin:8001

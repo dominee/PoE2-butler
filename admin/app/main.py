@@ -105,7 +105,7 @@ def _register_routes(app: FastAPI) -> None:
             token,
             httponly=True,
             samesite="strict",
-            secure=get_admin_settings().environment == "prod",
+            secure=get_admin_settings().environment in ("prod", "uat"),
             max_age=get_admin_settings().session_ttl_seconds,
         )
         return response

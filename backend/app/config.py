@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    environment: Literal["dev", "test", "prod"] = "dev"
+    environment: Literal["dev", "test", "prod", "uat"] = "dev"
     log_level: str = "INFO"
     public_domain: str = "localhost"
     app_base_url: str = "http://app.localhost"
@@ -71,7 +71,8 @@ class Settings(BaseSettings):
 
     @property
     def cookie_secure(self) -> bool:
-        return self.is_prod
+        # UAT: public HTTPS behind Cloudflare (same as prod for browser cookies)
+        return self.environment in ("prod", "uat")
 
 
 @lru_cache
