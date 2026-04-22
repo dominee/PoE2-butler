@@ -129,6 +129,7 @@ class Snapshot(Base):
 | Frontend cache | `actions/cache` caches `~/.npm` keyed by `hashFiles('frontend/package.json')` |
 | Frontend lint | `npm run lint || true` (non-blocking today) |
 | Dependency audits | `pip-audit` and `npm audit` run with `|| true` (informational) |
+| Pre-push expectation | Run backend + frontend tests locally before pushing (same commands as README) |
 
 **Rarity colour tokens** (Tailwind):
 
@@ -237,4 +238,4 @@ The first entry in `users.json` is auto-selected on the mock login form.
 - **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.dev.hideoutbutler.com"]`.
 - **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
 - **Traefik dev**: uses static file provider (`dynamic.dev.yml`), not the Docker provider — avoids Docker socket security exposure in dev.
-- **Frontend CI cache key**: cache is keyed from `frontend/package.json` (not `package-lock.json`), because this repo does not currently commit a frontend lockfile.
+- **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`.

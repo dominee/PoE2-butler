@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -64,7 +64,7 @@ describe("ItemDetailPane", () => {
     expect(screen.getByText(/doom horn/i)).toBeInTheDocument();
     expect(screen.getByText(/physical damage/i)).toBeInTheDocument();
     expect(screen.getByText(/120-280/)).toBeInTheDocument();
-    expect(screen.getByText(/\+100 to maximum life/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/item details/i)).toHaveTextContent(/\+100\s+to maximum life/i);
     expect(screen.getByText(/requires/i)).toBeInTheDocument();
   });
 
@@ -77,6 +77,15 @@ describe("ItemDetailPane", () => {
   it("calls fetch when the exact trade button is clicked", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            league: "Dawn of the Hunt",
+            prices: { i1: null },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -94,8 +103,8 @@ describe("ItemDetailPane", () => {
     renderPane(testItem);
     await user.click(screen.getByRole("button", { name: /same item on trade/i }));
 
-    expect(fetchMock).toHaveBeenCalled();
-    const [, init] = fetchMock.mock.calls[0];
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [, init] = fetchMock.mock.calls.at(-1)!;
     const body = JSON.parse((init?.body as string) ?? "{}");
     expect(body.mode).toBe("exact");
     expect(body.league).toBe("Dawn of the Hunt");

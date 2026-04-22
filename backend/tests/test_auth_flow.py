@@ -357,15 +357,15 @@ async def test_stash_refresh_and_list(app_stack) -> None:
     assert resp.status_code == 200
     body = resp.json()
     names = [t["name"] for t in body["tabs"]]
-    assert "Loot Dump" in names
+    assert "Gear Dump" in names
     assert "Currency" in names
 
     tab_id = body["tabs"][0]["id"]
     resp = await client.get(f"/api/stashes/{tab_id}", params={"league": "Dawn of the Hunt"})
     assert resp.status_code == 200
     tab = resp.json()
-    assert tab["tab"]["name"] == "Loot Dump"
-    assert tab["items"][0]["name"] == "Brood Grip"
+    assert tab["tab"]["name"] == "Gear Dump"
+    assert tab["items"][0]["name"] == "Agony Beads"
 
 
 # Silence unused-import warnings from lint when these aren't referenced directly.

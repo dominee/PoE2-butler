@@ -74,6 +74,38 @@ GitHub Actions runs on push/PR to `main` via `.github/workflows/ci.yml`.
 - Frontend uses Node 22 and caches `~/.npm` via `actions/cache` keyed by `frontend/package.json`.
 - Frontend lint and dependency audits are currently non-blocking (`|| true`) to keep CI informative while avoiding hard-failures on advisory-only checks.
 
+## Local test checklist (before push)
+
+Run local tests before pushing so CI failures are caught earlier.
+
+```bash
+# Backend lint + tests
+uv run --project backend ruff check backend/app backend/tests
+uv run --project backend pytest backend/tests -q
+```
+
+```bash
+# Frontend unit tests (native, when npm is installed)
+cd frontend
+npm test
+```
+
+```bash
+# Frontend unit tests (Docker fallback; useful when npm is unavailable locally)
+docker run --rm \
+  -v "$PWD:/work" \
+  -w /work/frontend \
+  node:22 \
+  bash -lc "npm test"
+```
+
+`npm test` runs Vitest unit tests only (E2E specs in `frontend/e2e/` are excluded). Run Playwright separately when the dev stack is up:
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
 ## Documentation
 
 - [AGENTS.md](AGENTS.md) — context for AI agents contributing to the project.
