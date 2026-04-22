@@ -4,6 +4,7 @@ Reference for integrating **PoE2 Hideout Butler** with the official GGG (Grindin
 
 > The GGG API requires a manually approved OAuth2 client application. Approval is not instant; plan for weeks of lead time. Until approval is granted, development uses the `mock-ggg/` service which exposes the same surface area against fixture data.
 
+
 ## 1. Applying for a client
 
 Send an application to **developer@grindinggear.com** with:

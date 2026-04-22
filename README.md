@@ -24,7 +24,7 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 | Frontend | React 18 + Vite + TypeScript, Tailwind CSS, TanStack Query, Zustand |
 | Backend | Python 3.12, FastAPI, `uv`, Alembic, `arq`, `httpx`, pydantic v2 |
 | Storage | PostgreSQL 16 + Redis 7 |
-| Edge | Traefik v3 with Let's Encrypt (production) |
+| Edge | Traefik v3; production TLS via **Cloudflare Origin CA** on the origin behind Cloudflare (see [DEPLOY.md](DEPLOY.md)) |
 | Tests | `pytest`, Vitest, Playwright |
 
 ## Repository layout
@@ -56,7 +56,7 @@ Traefik (`deploy/compose/traefik/dynamic.dev.yml`) routes by **hostname** to eac
 | Mock GGG  | <http://ggg.dev.hideoutbutler.com> |
 | Traefik dashboard | <http://localhost:8080> |
 
-Point those names at your machine (for example wildcard DNS `*.dev.hideoutbutler.com` → `127.0.0.1`, or individual `/etc/hosts` lines). In `.env.dev`, keep **`APP_BASE_URL`**, **`API_BASE_URL`**, **`CORS_ALLOW_ORIGINS`**, **`GGG_OAUTH_AUTHORIZE_BASE_URL`**, **`GGG_REDIRECT_URI`**, and related values consistent with those hosts (see [AGENTS.md](AGENTS.md) §6–§10).
+Point those names at your machine (for example wildcard DNS `*.dev.hideoutbutler.com` → `127.0.0.1`, or individual `/etc/hosts` lines). In `.env.dev`, keep **`APP_BASE_URL`**, **`API_BASE_URL`**, **`CORS_ALLOW_ORIGINS`**, **`GGG_OAUTH_AUTHORIZE_BASE_URL`**, **`GGG_REDIRECT_URI`**, and related values consistent with those hosts (see [AGENTS.md](AGENTS.md) — especially **Environments** and **Environment variables**).
 
 The Vite dev server allows the app hostname via **`server.allowedHosts`** in `frontend/vite.config.ts`; set **`VITE_ALLOWED_HOSTS`** (comma-separated) if you introduce another dev hostname. The admin app serves HTML under **`/admin/`**; a request to **`/`** on the admin host redirects there.
 

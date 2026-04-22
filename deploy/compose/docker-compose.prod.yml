@@ -1,8 +1,9 @@
 name: poe2b-prod
 
 # Production stack for PoE2 Hideout Butler, sized for a single 1 vCPU / 1 GB
-# VM. All public services are routed through Traefik with Let's Encrypt; the
-# database + redis are bound to the internal network only. Resource limits
+# VM. All public services are routed through Traefik; TLS on :443 uses a
+# Cloudflare Origin CA certificate (mounted from deploy/compose/traefik/certs).
+# The database + redis are bound to the internal network only. Resource limits
 # are conservative on purpose so a runaway worker cannot OOM the host.
 
 networks:
@@ -14,7 +15,6 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  letsencrypt_data:
 
 services:
   traefik:
@@ -26,11 +26,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      TRAEFIK_ACME_EMAIL: ${TRAEFIK_ACME_EMAIL}
     volumes:
       - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
-      - letsencrypt_data:/letsencrypt
+      - ./traefik/dynamic.prod.yml:/etc/traefik/dynamic.prod.yml:ro
+      - ./traefik/certs:/certs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - edge
@@ -126,7 +125,7 @@ services:
       - "traefik.docker.network=poe2b_edge"
       - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api.tls=true"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
     deploy:
       resources:
@@ -173,7 +172,7 @@ services:
       - "traefik.docker.network=poe2b_edge"
       - "traefik.http.routers.app.rule=Host(`${APP_DOMAIN}`)"
       - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.app.tls=true"
       - "traefik.http.services.app.loadbalancer.server.port=80"
     deploy:
       resources:
@@ -209,7 +208,7 @@ services:
       - "traefik.docker.network=poe2b_edge"
       - "traefik.http.routers.admin.rule=Host(`${ADMIN_DOMAIN}`)"
       - "traefik.http.routers.admin.entrypoints=websecure"
-      - "traefik.http.routers.admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.admin.tls=true"
       - "traefik.http.services.admin.loadbalancer.server.port=8001"
     deploy:
       resources:

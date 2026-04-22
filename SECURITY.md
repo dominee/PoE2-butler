@@ -60,8 +60,10 @@ to the code that enforces it so regressions can be caught by reviewers.
   `HSTS`) — see [`middleware.py`](backend/app/middleware.py).
 - [x] Frontend nginx ships a strict CSP + HSTS (see
   [`nginx.conf`](frontend/nginx.conf)).
-- [x] Traefik redirects HTTP → HTTPS and only exposes `80`/`443` publicly
-  ([`traefik.prod.yml`](deploy/compose/traefik/traefik.prod.yml),
+- [x] Traefik redirects HTTP → HTTPS and only exposes `80`/`443` publicly;
+  production uses a **Cloudflare Origin CA** certificate on the origin (see
+  [`traefik.prod.yml`](deploy/compose/traefik/traefik.prod.yml),
+  [`dynamic.prod.yml`](deploy/compose/traefik/dynamic.prod.yml),
   [`docker-compose.prod.yml`](deploy/compose/docker-compose.prod.yml)).
 - [x] Postgres + Redis on an `internal: true` docker network — no host ports
   published.
@@ -90,6 +92,8 @@ to the code that enforces it so regressions can be caught by reviewers.
 
 ## Responsible disclosure
 
-Security issues should be emailed to the address configured in
-`TRAEFIK_ACME_EMAIL` (typically `ops@hideoutbutler.com`). Please do not open public
-issues for security reports.
+Security issues should be emailed to the **operations / security** contact
+configured for your deployment (e.g. `SECURITY_CONTACT_EMAIL` in
+`deploy/env/.env.prod` — not committed; see
+[`deploy/env/.env.example`](deploy/env/.env.example)). Please do not open
+public issues for security reports.

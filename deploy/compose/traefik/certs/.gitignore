@@ -1,0 +1,4 @@
+# Do not commit Cloudflare origin certificate material.
+*
+!.gitignore
+!.gitkeep

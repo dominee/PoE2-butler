@@ -12,22 +12,15 @@ entryPoints:
           permanent: true
   websecure:
     address: ":443"
-    http:
-      tls:
-        certResolver: letsencrypt
+    # TLS: default certificate from file provider (Cloudflare Origin CA; see dynamic.prod.yml)
 
 providers:
   docker:
     exposedByDefault: false
     network: poe2b_edge
-
-certificatesResolvers:
-  letsencrypt:
-    acme:
-      email: ${TRAEFIK_ACME_EMAIL:-ops@example.com}
-      storage: /letsencrypt/acme.json
-      httpChallenge:
-        entryPoint: web
+  file:
+    filename: /etc/traefik/dynamic.prod.yml
+    watch: true
 
 log:
   level: INFO

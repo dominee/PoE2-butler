@@ -188,13 +188,50 @@ Required variables for prod (in addition to defaults):
 | `API_DOMAIN` | `api.hideoutbutler.com` |
 | `APP_DOMAIN` | `app.hideoutbutler.com` |
 | `ADMIN_DOMAIN` | `admin.hideoutbutler.com` |
-| `TRAEFIK_ACME_EMAIL` | Your email (Let's Encrypt notifications) |
+| `SECURITY_CONTACT_EMAIL` | Optional; ops / security contact (not consumed by Traefik) |
 | `ADMIN_PASSWORD_HASH` | bcrypt hash (escape `$` → `$$`) |
 | `ADMIN_TOTP_SECRET` | base32 secret |
 | `ADMIN_SESSION_SECRET` | Random 32-byte base64 |
 | `GITHUB_OWNER` | Your GitHub username (for image tags) |
 
-### 4.3 Start the production stack
+Before first boot, install **Cloudflare Origin CA** TLS material on the VM (next subsection).
+
+### 4.3 Cloudflare: DNS, proxy, and origin certificates
+
+Production assumes **[Cloudflare](https://www.cloudflare.com/)** sits in front of the VM (orange-cloud **proxied** records). Public HTTPS is terminated at Cloudflare; Traefik serves HTTPS on the origin using a **Cloudflare Origin Certificate** so Cloudflare can connect with **Full (strict)** mode.
+
+1. **DNS** — In Cloudflare, create **A** records for the app, API, and admin hostnames pointing to `<DROPLET_IP>`, with the proxy enabled (orange cloud). Example:
+
+   ```
+   app.hideoutbutler.com    A  <DROPLET_IP>  (proxied)
+   api.hideoutbutler.com    A  <DROPLET_IP>  (proxied)
+   admin.hideoutbutler.com  A  <DROPLET_IP>  (proxied)
+   ```
+
+   Optional staging (if used for GGG `dev-api` redirect):
+
+   ```
+   dev-api.hideoutbutler.com  A  <DROPLET_IP>  (proxied)
+   ```
+
+2. **SSL/TLS** — Set encryption mode to **Full (strict)** (SSL/TLS → Overview). Do not use “Flexible” (it would downgrade origin to HTTP).
+
+3. **Origin certificate** — In Cloudflare: **SSL/TLS** → **Origin Server** → **Create certificate**. Include hostnames for this stack, e.g. `app.hideoutbutler.com`, `api.hideoutbutler.com`, `admin.hideoutbutler.com` (or a single wildcard you prefer). Use the default 15-year Origin CA, PEM format.
+
+4. **Install files on the VM** — Save the certificate and private key on the host (not in git):
+
+   ```bash
+   sudo install -d -m 0750 /opt/poe2-butler/deploy/compose/traefik/certs
+   # Paste Cloudflare’s certificate → cloudflare-origin.pem
+   # Paste private key               → cloudflare-origin.key
+   sudo chmod 0640 /opt/poe2-butler/deploy/compose/traefik/certs/cloudflare-origin.{pem,key}
+   ```
+
+   Paths and filenames must match `deploy/compose/traefik/dynamic.prod.yml` (mounted read-only at `/certs` in the Traefik container). Regenerate the origin certificate in Cloudflare when you add hostnames to the same origin.
+
+5. **Client IP (optional)** — With the proxy on, your apps see Cloudflare’s IPs unless you [restore visitor IPs](https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#cf-connecting-ip) (e.g. `CF-Connecting-IP` or Traefik `forwardedHeaders` with [Cloudflare IP ranges](https://www.cloudflare.com/ips/)).
+
+### 4.4 Start the production stack
 
 ```bash
 cd /opt/poe2-butler
@@ -210,24 +247,6 @@ docker compose \
   --env-file deploy/env/.env.prod \
   exec backend alembic upgrade head
 ```
-
-### 4.4 DNS configuration
-
-Point the following A records to `<DROPLET_IP>`:
-
-```
-app.hideoutbutler.com    → <DROPLET_IP>
-api.hideoutbutler.com    → <DROPLET_IP>
-admin.hideoutbutler.com  → <DROPLET_IP>
-```
-
-Optional staging (if used for GGG `dev-api` redirect):
-
-```
-dev-api.hideoutbutler.com → <DROPLET_IP>
-```
-
-Traefik will automatically obtain Let's Encrypt TLS certificates via HTTP-01 challenge once DNS resolves.
 
 ### 4.5 Updating to a new version
 
@@ -345,7 +364,7 @@ Redis data is ephemeral (sessions, cache, rate-limit counters). It does not need
 | Environment | Config file | Provider |
 |---|---|---|
 | Dev | `deploy/compose/traefik/traefik.dev.yml` | Static file (`dynamic.dev.yml`) |
-| Prod | `deploy/compose/traefik/traefik.prod.yml` | Docker labels + Let's Encrypt |
+| Prod | `deploy/compose/traefik/traefik.prod.yml` + `dynamic.prod.yml` | Docker labels + file TLS (Cloudflare Origin CA) |
 
 Dev uses a static provider to avoid exposing the Docker socket inside the Traefik container.
 

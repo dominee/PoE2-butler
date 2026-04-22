@@ -1,0 +1,8 @@
+# Production TLS: Cloudflare Origin CA certificate (see DEPLOY.md).
+# Paths are inside the traefik container; the compose file mounts host ./certs → /certs
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/cloudflare-origin.pem
+        keyFile: /certs/cloudflare-origin.key
