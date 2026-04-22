@@ -85,6 +85,12 @@ uv run --project backend pytest backend/tests -q
 ```
 
 ```bash
+# Admin lint + tests
+uv run --project admin ruff check admin/app admin/tests
+uv run --project admin pytest admin/tests -q
+```
+
+```bash
 # Frontend unit tests (native, when npm is installed)
 cd frontend
 npm test

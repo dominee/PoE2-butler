@@ -39,7 +39,10 @@ def test_issue_and_validate_roundtrip() -> None:
 def test_tampered_token_is_rejected() -> None:
     mgr = SessionManager(_settings())
     token = mgr.issue("admin")
-    tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+    payload, sep, signature = token.rpartition(".")
+    assert sep == "."
+    tampered_payload = payload[:-1] + ("x" if payload[-1] != "x" else "y")
+    tampered = f"{tampered_payload}.{signature}"
     assert mgr.validate(tampered) is None
 
 
