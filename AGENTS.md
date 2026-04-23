@@ -20,6 +20,9 @@ Key features:
 - Price estimates via poe.ninja (cached in Redis).
 - Admin observability app (separate FastAPI + Jinja2 on port **8001**, username + bcrypt + optional TOTP + IP allowlist).
 
+Mandatory legal copy (GGG requirement):
+- Display this exact sentence in a visible place (web footer + docs): **"This product isn't affiliated with or endorsed by Grinding Gear Games in any way."**
+
 ### 1.1 GGG API: PoE2 stash scope (product reality)
 
 Per the [GGG API reference (stashes)](https://www.pathofexile.com/developer/docs/reference#stashes), **no stash scope is available for Path of Exile 2** at this time. Stash-related OAuth scopes in the official docs are **Path of Exile 1** only, for example:

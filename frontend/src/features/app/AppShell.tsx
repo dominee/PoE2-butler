@@ -11,6 +11,7 @@ import {
 } from "@/api/hooks";
 import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
+import { AppFooter } from "@/features/app/AppFooter";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
 import { CharacterTable } from "@/features/characters/CharacterTable";
 import { PaperDoll } from "@/features/characters/PaperDoll";
@@ -51,19 +52,27 @@ export function AppShell() {
 
   if (meError) {
     return (
-      <main className="grid min-h-full place-items-center p-8 text-center">
-        <div className="panel max-w-md p-6">
-          <p>You are not signed in.</p>
-          <a href="/api/auth/login" className="btn-primary mt-4">
-            Sign in with GGG
-          </a>
-        </div>
-      </main>
+      <div className="flex min-h-full flex-col">
+        <main className="grid flex-1 place-items-center p-8 text-center">
+          <div className="panel max-w-md p-6">
+            <p>You are not signed in.</p>
+            <a href="/api/auth/login" className="btn-primary mt-4">
+              Sign in with GGG
+            </a>
+          </div>
+        </main>
+        <AppFooter className="pb-6" />
+      </div>
     );
   }
 
   if (meLoading || !me) {
-    return <main className="p-8 text-ink-500">Loading&hellip;</main>;
+    return (
+      <div className="flex min-h-full flex-col">
+        <main className="flex-1 p-8 text-ink-500">Loading&hellip;</main>
+        <AppFooter className="pb-6" />
+      </div>
+    );
   }
 
   return (
@@ -233,6 +242,7 @@ export function AppShell() {
         </div>
         </main>
       )}
+      <AppFooter className="border-t border-ink-800 bg-ink-900/60 py-2" />
     </div>
   );
 }

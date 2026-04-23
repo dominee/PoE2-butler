@@ -128,6 +128,10 @@ npm run test:e2e
 - [docs/BOT_API.md](docs/BOT_API.md) — frozen contract for external API consumers (e.g. Discord bot).
 - [docs/openapi.json](docs/openapi.json) — pinned OpenAPI 3.1 schema.
 
+## Disclaimer
+
+This product isn't affiliated with or endorsed by Grinding Gear Games in any way.
+
 ## License
 
 See [LICENSE](LICENSE).

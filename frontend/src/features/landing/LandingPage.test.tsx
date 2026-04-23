@@ -9,5 +9,8 @@ describe("LandingPage", () => {
     expect(screen.getByRole("heading", { name: /poe2 hideout butler/i })).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /sign in with ggg/i });
     expect(link).toHaveAttribute("href", "/api/auth/login");
+    expect(
+      screen.getByText(/this product isn't affiliated with or endorsed by grinding gear games/i),
+    ).toBeInTheDocument();
   });
 });
