@@ -18,6 +18,9 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 - See how good each roll is: the panel shows your current tier range, compares it to a T1 max, and gives a % score per stat and for the whole item (can go over 100%).
 - Open ready-made PoE2 Trade searches for the same item or for upgrades with better rolls.
 - Get price estimates from poe.ninja and highlight valuable dump-tab loot while you are offline.
+- Copy any item to clipboard in a PoE2-style text format for quick sharing.
+- Share a direct link to a specific item using a unique item URL.
+- Export an item as an image preview to post in Discord or other chats.
 
 ## Stack
 
