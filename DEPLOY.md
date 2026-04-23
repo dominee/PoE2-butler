@@ -302,7 +302,9 @@ docker compose \
 
 4. `docker ps` should show `poe2b-uat-traefik` with `80` and `443` published (not `8080`).
 
-5. If your UAT DNS names are not under **`*.uat.hideoutbutler.com`**, edit `deploy/compose/traefik/dynamic.uat.yml` Host rules and update `deploy/env/.env.uat` accordingly (and create a matching Cloudflare Origin certificate).
+5. **404 from Traefik** (access log `RequestHost` present, `OriginStatus:0`): the **Host** header must match a rule in `dynamic.uat.yml`. The file matches both **`app.uat.hideoutbutler.com`** and **`app.hideoutbutler.com`** (and the same pattern for ggg/admin). If you use only `app.uat…` in DNS, browse that URL. If you point **production** names at the UAT box, `app.hideoutbutler.com` is also routed. Rebuild/restart Traefik after changing the file: `docker compose ... up -d --force-recreate traefik`. Align `APP_BASE_URL`, `CORS_ALLOW_ORIGINS`, and `GGG_REDIRECT_URI` in `.env.uat` with the **actual** https URL in the browser.
+
+6. If your UAT DNS names are **neither** of the above, edit `deploy/compose/traefik/dynamic.uat.yml` `Host(`…`)` rules and your Origin certificate accordingly.
 
 ---
 

@@ -114,8 +114,8 @@ Browser
 | **Purpose** | Public acceptance testing: **mock-ggg** (same as dev) + **HTTPS** to the origin with the same **Cloudflare Origin CA** pattern as prod. |
 | **Project** | Compose name **`poe2b-uat`**, networks **`poe2b_uat_*`**, containers **`poe2b-uat-*`** — can run beside dev/prod on one host. |
 | **Routing** | **File provider only** (`traefik.uat.yml` + **`dynamic.uat.yml`**) — no Docker socket. TLS block + `http.routers` in one file. |
-| **App host** | **Single** host `app.uat.hideoutbutler.com`: Traefik matches **`PathPrefix(/api)`** → backend, else → static **`frontend`** (prod Docker image). Same-origin `fetch("/api/...")` and `GGG_REDIRECT_URI` **`https://app.uat.../api/auth/callback`**. |
-| **Other hosts** | `ggg.uat.hideoutbutler.com` → mock-ggg, `admin.uat.hideoutbutler.com` → admin. |
+| **App host** | **Single** logical app URL: Traefik matches **`PathPrefix(/api)`** → backend, else → static **`frontend`**. `dynamic.uat.yml` accepts **both** `app.uat.hideoutbutler.com` and **`app.hideoutbutler.com`** (same for ggg/admin) so DNS can use either UAT subdomains or production-style names on an isolated UAT VM. Set `.env.uat` `APP_BASE_URL`, `CORS`, and `GGG_REDIRECT_URI` to the **URL users open in the browser**. |
+| **Other hosts** | mock-ggg and admin: `ggg.uat` or `ggg` / `admin.uat` or `admin` under the same domain (see `dynamic.uat.yml`). |
 | **TLS / CF** | Same `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` paths as prod; add **`*.uat.hideoutbutler.com`** (or each FQDN) to the Origin certificate. |
 | **Worker** | `arq` worker service included. |
 | **Env** | `deploy/env/.env.uat` (copy from **`.env.uat.example`**) and `ENVIRONMENT=uat` (enables `Secure` cookies in backend, like prod). |

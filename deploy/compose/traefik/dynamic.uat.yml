@@ -1,8 +1,14 @@
 # UAT: TLS (Cloudflare Origin CA) + static routes for mock-ggg + path-split app host.
-# Include these names on the origin certificate (e.g. *.hideoutbutler.com or each FQDN).
-# Change Host(`...`) rules below if your UAT zone differs.
+# Add every hostname you use in DNS/Cloudflare to the Origin certificate SANs
+# (e.g. one cert with app.uat, ggg.uat, admin.uat and/or the prod-style names below).
 #
-# app host: /api* → FastAPI, /* → static SPA (same origin for fetch("/api/...") and OAuth callback).
+# Host rules: match BOTH common patterns so a VM with DNS pointing at
+#   app.uat… / ggg.uat… / admin.uat…
+# and a VM that reuses
+#   app. / ggg. / admin.hideoutbutler.com
+# both work. If 404, confirm `docker exec … traefik` sees this file and reload.
+#
+# app: /api* → FastAPI, /* → static SPA (same origin for /api and OAuth callback).
 
 tls:
   stores:
@@ -14,24 +20,24 @@ tls:
 http:
   routers:
     uat-app-api:
-      rule: Host(`app.hideoutbutler.com`) && PathPrefix(`/api`)
+      rule: (Host(`app.uat.hideoutbutler.com`) || Host(`app.hideoutbutler.com`)) && PathPrefix(`/api`)
       entryPoints:
         - websecure
       service: uat-app-api
       priority: 100
     uat-app:
-      rule: Host(`app.hideoutbutler.com`)
+      rule: Host(`app.uat.hideoutbutler.com`) || Host(`app.hideoutbutler.com`)
       entryPoints:
         - websecure
       service: uat-app-frontend
       priority: 1
     uat-ggg:
-      rule: Host(`ggg.hideoutbutler.com`)
+      rule: Host(`ggg.uat.hideoutbutler.com`) || Host(`ggg.hideoutbutler.com`)
       entryPoints:
         - websecure
       service: uat-mockggg
     uat-admin:
-      rule: Host(`admin.hideoutbutler.com`)
+      rule: Host(`admin.uat.hideoutbutler.com`) || Host(`admin.hideoutbutler.com`)
       entryPoints:
         - websecure
       service: uat-admin
