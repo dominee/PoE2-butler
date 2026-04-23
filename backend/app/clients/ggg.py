@@ -40,6 +40,11 @@ class GGGClient:
     def __init__(self, settings: Settings, *, client: httpx.AsyncClient | None = None) -> None:
         self._settings = settings
         self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(15.0))
+        self._user_agent = (
+            f"OAuth {settings.ggg_client_id}/{settings.app_version} "
+            f"(contact: {settings.ggg_user_agent_contact}) "
+            f"{settings.ggg_user_agent_suffix}"
+        ).strip()
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -85,13 +90,17 @@ class GGGClient:
     async def revoke(self, token: str) -> None:
         url = f"{self._settings.ggg_oauth_base_url}/oauth/revoke"
         try:
-            await self._client.post(url, data={"token": token})
+            await self._client.post(
+                url,
+                data={"token": token},
+                headers={"User-Agent": self._user_agent},
+            )
         except httpx.HTTPError as exc:  # best-effort
             log.warning("ggg.revoke_failed", error=str(exc))
 
     async def _post_token(self, data: dict[str, str]) -> TokenResponse:
         url = f"{self._settings.ggg_oauth_base_url}/oauth/token"
-        resp = await self._client.post(url, data=data)
+        resp = await self._client.post(url, data=data, headers={"User-Agent": self._user_agent})
         self._record_rate_limit(resp)
         if resp.status_code >= 400:
             raise GGGError(resp.status_code, self._safe_body(resp))
@@ -125,7 +134,10 @@ class GGGClient:
 
     async def _get(self, path: str, access_token: str) -> dict[str, Any]:
         url = f"{self._settings.ggg_api_base_url}{path}"
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "User-Agent": self._user_agent,
+        }
         resp = await self._client.get(url, headers=headers)
         self._record_rate_limit(resp)
         if resp.status_code >= 400:

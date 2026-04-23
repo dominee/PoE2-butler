@@ -110,8 +110,5 @@ to the code that enforces it so regressions can be caught by reviewers.
 
 ## Responsible disclosure
 
-Security issues should be emailed to the **operations / security** contact
-configured for your deployment (e.g. `SECURITY_CONTACT_EMAIL` in
-`deploy/env/.env.prod` — not committed; see
-[`deploy/env/.env.example`](deploy/env/.env.example)). Please do not open
+Security issues should be emailed to `dev@hell.sk` . Please do not open
 public issues for security reports.

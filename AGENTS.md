@@ -22,6 +22,7 @@ Key features:
 
 Mandatory legal copy (GGG requirement):
 - Display this exact sentence in a visible place (web footer + docs): **"This product isn't affiliated with or endorsed by Grinding Gear Games in any way."**
+- GGG API requests must send an identifiable User-Agent prefixed as: **`User-Agent: OAuth {$clientId}/{$version} (contact: {$contact}) ...`** using contact **`dev@hell.sk`**.
 
 ### 1.1 GGG API: PoE2 stash scope (product reality)
 

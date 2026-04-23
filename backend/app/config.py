@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     ggg_client_secret: SecretStr = SecretStr("poe2-butler-dev-secret")
     ggg_redirect_uri: str = "http://api.localhost/api/auth/callback"
     ggg_scopes: str = "account:profile account:characters account:stashes account:leagues"
+    app_version: str = "0.1.0"
+    ggg_user_agent_contact: str = "dev@hell.sk"
+    ggg_user_agent_suffix: str = "PoE2-Hideout-Butler"
 
     refresh_cooldown_seconds: int = 60
     default_trade_tolerance_pct: int = 10
