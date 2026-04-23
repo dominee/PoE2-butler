@@ -16,10 +16,10 @@ Send an application to **developer@grindinggear.com** with:
 - Application name, URL, and short description (the "PoE2 Hideout Butler" value proposition).
 - Contact email and developer identity.
 - Requested scopes (see below).
-- Registered redirect URIs:
-  - Production: `https://api.hideoutbutler.com/api/auth/callback`
+- Registered redirect URIs (must match `GGG_REDIRECT_URI` exactly; see **Redirect target** below):
+  - Production (recommended, same as Traefik `APP_DOMAIN` + `/api`): `https://app.hideoutbutler.com/api/auth/callback`
   - Staging: `https://dev-api.hideoutbutler.com/api/auth/callback`
-  - Local: `http://api.localhost/api/auth/callback`
+  - Local: `http://api.localhost/api/auth/callback` (or app-style dev URL per `AGENTS.md`)
 - Expected request volume and rate-limit strategy.
 
 On approval you will receive:
@@ -35,8 +35,15 @@ GGG_CLIENT_ID=...
 GGG_CLIENT_SECRET=...
 GGG_OAUTH_BASE_URL=https://www.pathofexile.com
 GGG_API_BASE_URL=https://api.pathofexile.com
-GGG_REDIRECT_URI=https://api.hideoutbutler.com/api/auth/callback
+# Must match a registered redirect URI. Use the app host so the session cookie is set on the SPA origin (see **Redirect target**).
+GGG_REDIRECT_URI=https://app.hideoutbutler.com/api/auth/callback
 ```
+
+## Redirect target (app vs `api` host)
+
+The SPA issues **relative** API calls (e.g. `fetch("/api/me")`, `/api/auth/login` links), which resolve to **`https://<APP_DOMAIN>/api/...`**. Session cookies are **host-scoped** unless you set a shared `Domain=`. For OAuth, **`/api/auth/callback`** should therefore be reached on the **same host as the SPA** — typically **`https://app.hideoutbutler.com/api/auth/callback`**. Production **Traefik** routes `PathPrefix(/api)` on that host to the backend and registers **`traefik…tls=true`** on the **Docker** routers; this matches **UAT** (file-based routes) without mock-ggg.
+
+Registering an additional URI on **`https://api.hideoutbutler.com/api/auth/callback`** is optional (e.g. for tools that call the `API_DOMAIN` host only); keep **`GGG_REDIRECT_URI`** aligned with the URI you use in the **browser** flow.
 
 ## 1b. Recommended registration inputs (hideoutbutler.com)
 
@@ -48,7 +55,7 @@ Use these when emailing **developer@grindinggear.com** or filling an application
 | **Application URL** | `https://app.hideoutbutler.com` |
 | **Short description** | Read-only PoE2 companion: users sign in with GGG OAuth2 to browse characters, equipped gear, and stash tabs online, with item insights, price estimates, and trade-site links. Does not mutate account or game state. |
 | **Requested scopes** | `account:profile account:characters account:stashes account:leagues` (read-only; no write scopes) |
-| **Redirect URIs** | `https://api.hideoutbutler.com/api/auth/callback`, `https://dev-api.hideoutbutler.com/api/auth/callback`, `http://api.localhost/api/auth/callback` |
+| **Redirect URIs** | Primary: `https://app.hideoutbutler.com/api/auth/callback`. Also list staging / local URIs you use. Optional: `https://api.hideoutbutler.com/api/auth/callback` if you need the API hostname separately. |
 | **Contact** | Your stable email (ideally on the same domain, e.g. `ops@hideoutbutler.com`) plus name / GitHub org. |
 | **Expected volume** | Low-volume beta initially; login plus on-demand snapshot refresh; conservative throttling and backoff on 429. |
 | **Rate-limit strategy** | Parse `X-Rate-Limit-*` headers, Redis token-bucket per account, honour `Retry-After`, exponential backoff on repeated 429s, 60 s per-user refresh cooldown. |

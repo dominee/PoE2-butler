@@ -66,7 +66,7 @@ OAuth in dev is configured so the browser hits the mock GGG host above while the
 
 ## Production domain
 
-Public deployment uses **`hideoutbutler.com`**: SPA at `https://app.hideoutbutler.com`, API (and GGG OAuth callback) at `https://api.hideoutbutler.com`, admin at `https://admin.hideoutbutler.com`. See [GGG_API.md](GGG_API.md) for OAuth redirect URIs.
+Public deployment uses **`hideoutbutler.com`**: SPA at `https://app.hideoutbutler.com`, API also reachable at `https://api.hideoutbutler.com`, admin at `https://admin.hideoutbutler.com`. Traefik sends **`/api` on the app host** to the same backend as UAT (relative `fetch("/api/…")`). Register **`GGG_REDIRECT_URI`** with GGG on the **app** host (e.g. `https://app.hideoutbutler.com/api/auth/callback`) so session cookies match the SPA origin — see [GGG_API.md](GGG_API.md) *Redirect target*.
 
 **UAT** (optional): a third stack, `deploy/compose/docker-compose.uat.yml`, uses **mock GGG** like dev but **HTTPS** to the origin with a **Cloudflare Origin CA** certificate (same `certs/` filenames as prod; include `*.uat.hideoutbutler.com` on the cert). Copy `deploy/env/.env.uat.example` to `deploy/env/.env.uat`, then see [DEPLOY.md](DEPLOY.md) §4.6 and [AGENTS.md](AGENTS.md) §4.3.
 

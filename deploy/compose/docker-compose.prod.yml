@@ -123,10 +123,17 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=poe2b_edge"
+      # API on dedicated host (e.g. api.hideoutbutler.com) — server-to-server, tools, OAuth if registered to this host
       - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls=true"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
+      # Same backend on APP_DOMAIN for /api only (matches UAT: SPA uses relative /api from the app host)
+      - "traefik.http.routers.app-api.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.app-api.entrypoints=websecure"
+      - "traefik.http.routers.app-api.tls=true"
+      - "traefik.http.routers.app-api.service=api"
+      - "traefik.http.routers.app-api.priority=100"
     deploy:
       resources:
         limits:
@@ -173,6 +180,7 @@ services:
       - "traefik.http.routers.app.rule=Host(`${APP_DOMAIN}`)"
       - "traefik.http.routers.app.entrypoints=websecure"
       - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app.priority=1"
       - "traefik.http.services.app.loadbalancer.server.port=80"
     deploy:
       resources:

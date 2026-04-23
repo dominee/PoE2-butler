@@ -1,5 +1,8 @@
-# Production TLS: Cloudflare Origin CA certificate (see DEPLOY.md).
-# Paths are inside the traefik container; the compose file mounts host ./certs → /certs
+# Production: TLS default certificate only. HTTP routes come from the Docker
+# provider (see docker-compose.prod.yml): api / admin / app, plus
+# app + PathPrefix(/api) on the backend so the SPA (relative /api) hits FastAPI
+# on the same host as APP_DOMAIN (align GGG_REDIRECT_URI with that host; see GGG_API.md).
+# Paths are inside the traefik container; host mount is ./certs → /certs
 tls:
   stores:
     default:

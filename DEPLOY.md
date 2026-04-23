@@ -183,7 +183,7 @@ Required variables for prod (in addition to defaults):
 | `GGG_CLIENT_SECRET` | From GGG developer approval |
 | `GGG_OAUTH_BASE_URL` | `https://www.pathofexile.com` |
 | `GGG_API_BASE_URL` | `https://api.pathofexile.com` |
-| `GGG_REDIRECT_URI` | `https://api.hideoutbutler.com/api/auth/callback` |
+| `GGG_REDIRECT_URI` | `https://app.hideoutbutler.com/api/auth/callback` (recommended; must match GGG registration — see `GGG_API.md`) |
 | `CORS_ALLOW_ORIGINS` | `["https://app.hideoutbutler.com"]` |
 | `API_DOMAIN` | `api.hideoutbutler.com` |
 | `APP_DOMAIN` | `app.hideoutbutler.com` |
@@ -404,7 +404,7 @@ Redis data is ephemeral (sessions, cache, rate-limit counters). It does not need
 |---|---|---|
 | Dev | `deploy/compose/traefik/traefik.dev.yml` | Static file (`dynamic.dev.yml`, HTTP) |
 | UAT | `deploy/compose/traefik/traefik.uat.yml` + `dynamic.uat.yml` | Static file, HTTPS + origin cert (no Docker socket) |
-| Prod | `deploy/compose/traefik/traefik.prod.yml` + `dynamic.prod.yml` | Docker labels + file TLS (Cloudflare Origin CA) |
+| Prod | `deploy/compose/traefik/traefik.prod.yml` + `dynamic.prod.yml` | Docker labels + file TLS (CF Origin CA); **app** + `PathPrefix(/api)` on backend (see `docker-compose.prod.yml`) |
 
 Dev uses a static provider to avoid exposing the Docker socket inside the Traefik container.
 

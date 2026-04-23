@@ -110,11 +110,12 @@ Browser
 
 | Topic | Details |
 |-------|--------|
-| **Routing** | Traefik uses the **Docker provider** (socket mounted) + static **`dynamic.prod.yml`**. |
+| **Routing** | Traefik uses the **Docker provider** (socket mounted) + static **`dynamic.prod.yml`** (TLS default cert only; **no** `http.routers` in the file). |
+| **App + `/api`** | Same pattern as UAT: the backend service defines router **`app-api`**: `Host(APP_DOMAIN) && PathPrefix(/api)` with **priority 100**; the **frontend** `app` router has **priority 1** so `https://app…/api/...` hits FastAPI and `https://app…/` hits the static SPA. Router **`api`** still exposes **`API_DOMAIN`** to the same backend. |
 | **Host ports** | Traefik must publish **`80:80` and `443:443`**. `docker ps` without **`443->443`** usually means the **dev** stack (which maps `8080` for the dashboard) or an outdated prod compose. Cloudflare **Full (strict)** needs TLS on the origin. |
-| **TLS** | **No ACME in-repo.** `dynamic.prod.yml` sets the default TLS store to PEM + key at **`/certs/cloudflare-origin.pem`** and **`/certs/cloudflare-origin.key`**; host path **`deploy/compose/traefik/certs/`** is mounted read-only. Create certs in **Cloudflare → SSL/TLS → Origin Server**. |
+| **TLS** | **No ACME in-repo.** `dynamic.prod.yml` sets the default TLS store to PEM + key at **`/certs/cloudflare-origin.pem`** and **`/certs/cloudflare-origin.key`**; host path **`deploy/compose/traefik/certs/`** is mounted read-only. Create certs in **Cloudflare → SSL/TLS → Origin Server**. **Docker** routers set **`traefik…tls=true`** (file-based `tls: {}` is not used for these routes). |
 | **Cloudflare** | **Proxied** A records, SSL mode **Full (strict)**. See `DEPLOY.md` §4.3. |
-| **GGG redirect (prod)** | **Registered** callback is on the **API** host: `https://api.hideoutbutler.com/api/auth/callback` (see `GGG_API.md` / `deploy/env/.env.example`). This differs from dev, where the app host is used for same-origin + Vite proxy. |
+| **GGG redirect (prod)** | For **session cookies** + relative `/api` on the app host, register and set **`GGG_REDIRECT_URI=https://app.hideoutbutler.com/api/auth/callback`** (see `GGG_API.md`). The **API** hostname alone is still useful for `API_DOMAIN` and tooling. |
 | **Env** | Optional `SECURITY_CONTACT_EMAIL` for ops / disclosure text (not consumed by Traefik). |
 
 ### 4.3 UAT (`docker-compose.uat.yml`)
@@ -235,7 +236,7 @@ border-rarity-*  (same names)
 | `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET` | GGG OAuth2 credentials |
 | `GGG_OAUTH_BASE_URL` | Internal (server-to-server) GGG or mock base URL |
 | `GGG_OAUTH_AUTHORIZE_BASE_URL` | Browser authorize URL — dev: `http://ggg.dev.hideoutbutler.com`; prod: usually empty (real GGG host) |
-| `GGG_REDIRECT_URI` | **Dev:** `http://app.dev.hideoutbutler.com/api/auth/callback` (Vite proxy). **UAT (mock GGG):** `https://app.uat.hideoutbutler.com/api/auth/callback` (Traefik path split). **Prod (real GGG):** `https://api.hideoutbutler.com/api/auth/callback` |
+| `GGG_REDIRECT_URI` | **Dev:** `http://app.dev…/api/auth/callback` (Vite). **UAT:** `https://app.uat…/api/auth/callback` (Traefik file routes). **Prod (recommended):** `https://app.hideoutbutler.com/api/auth/callback` so OAuth sets cookies on the **app** origin used by the SPA; requires GGG to allow that redirect URI. |
 | `CORS_ALLOW_ORIGINS` | JSON array string, e.g. `["https://app.hideoutbutler.com"]` or dev equivalent |
 | `PRICING_SOURCE` | `static` (dev) or `poe_ninja` |
 | `DEFAULT_VALUABLE_THRESHOLD_CHAOS` | Starting threshold for valuable item highlights |
@@ -298,7 +299,7 @@ The first entry in `users.json` is auto-selected on the mock login form.
 
 ## 11. Known gotchas
 
-- **OAuth `GGG_REDIRECT_URI` (dev vs prod)**: In **dev**, use the **app** hostname so OAuth returns to the SPA; **Vite proxies** `/api/*` to the backend. In **prod**, the registered GGG callback is normally **`https://api.hideoutbutler.com/api/auth/callback`** (API host) — do not conflate the two in documentation or `GGG_API.md` examples.
+- **OAuth `GGG_REDIRECT_URI`**: **Dev** uses the **app** host + Vite **/api** proxy. **Prod** and **UAT** use Traefik to send **/api** on the app host to the backend; set **`GGG_REDIRECT_URI`** to **`https://<app-host>/api/auth/callback`** so `Set-Cookie` matches the origin the SPA uses for `fetch("/api/…")` (host-only cookies). A callback only on **`api.…`** does not send cookies to **`app.…`** unless you add a shared `Domain` cookie (not implemented here).
 - **Enum mapping**: `Snapshot.kind` uses `values_callable=lambda e: [m.value for m in e]` + `create_type=False` to avoid `snapshot_kind` type conflicts across Alembic runs.
 - **Transaction isolation**: `refresh_user_snapshot` runs in a separate `snap_db` session committed before the main auth session is committed — prevents `InFailedSQLTransactionError` on snapshot write errors.
 - **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.dev.hideoutbutler.com"]`.
