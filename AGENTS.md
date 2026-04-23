@@ -192,6 +192,22 @@ class Snapshot(Base):
 | Dependency audits | `pip-audit` and `npm audit` run with `|| true` (informational) |
 | Pre-push expectation | Run backend + frontend tests locally before pushing (same commands as README) |
 
+### Security review workflow plan (stored context)
+
+- Workflow file: `.github/workflows/security-review.yml`
+- Phase: visibility-only (all jobs `continue-on-error: true`)
+- Included checks:
+  - Semgrep SAST (`--config auto`)
+  - gitleaks secret scan
+  - `actions/dependency-review-action` (PR only)
+  - `osv-scanner` recursive scan
+  - `pip-audit` (`backend`, `admin`, `mock-ggg`)
+  - `npm audit` (`frontend`)
+- Rollout intent:
+  1. Baseline findings and tune suppressions.
+  2. Promote critical checks (secrets + high/critical deps) to blocking.
+  3. Later tighten SAST severities after false-positive cleanup.
+
 **Rarity colour tokens** (Tailwind):
 
 ```text

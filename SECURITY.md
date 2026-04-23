@@ -84,6 +84,24 @@ to the code that enforces it so regressions can be caught by reviewers.
 - [x] No unsafe HTML rendering; React escapes by default. No
   `dangerouslySetInnerHTML` in app code.
 
+## Automated security review workflow (visibility-only)
+
+- [x] Dedicated workflow:
+  [`.github/workflows/security-review.yml`](.github/workflows/security-review.yml).
+- [x] Triggers: `pull_request`, push to `main`, weekly schedule, and manual
+  `workflow_dispatch`.
+- [x] SAST: Semgrep (`--config auto`) runs in non-blocking mode (`|| true`).
+- [x] Secrets scan: gitleaks runs in non-blocking mode.
+- [x] Dependency/security checks:
+  - `actions/dependency-review-action` on PRs
+  - `osv-scanner` recursive source scan
+  - `pip-audit` for `backend`, `admin`, `mock-ggg`
+  - `npm audit` for `frontend`
+- [x] All jobs are currently **visibility-only** (`continue-on-error: true`),
+  and reports are uploaded as workflow artifacts for triage.
+- [ ] Move to blocking mode (planned): enforce fail-on-severity after baseline
+  cleanup and suppression policy is finalized.
+
 ## Backup & recovery
 
 - [x] Postgres `pg_dump` cron documented in `DEPLOY.md`.

@@ -1,0 +1,113 @@
+name: Security Review
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  semgrep:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Semgrep (auto ruleset)
+        run: |
+          docker run --rm \
+            -v "${PWD}:/src" \
+            -w /src \
+            semgrep/semgrep:latest \
+            semgrep scan --config auto --error --json --output semgrep.json || true
+      - name: Upload Semgrep report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep.json
+          if-no-files-found: warn
+
+  secrets:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run gitleaks
+        run: |
+          docker run --rm \
+            -v "${PWD}:/repo" \
+            zricethezav/gitleaks:latest \
+            detect --source /repo --report-format json --report-path /repo/gitleaks.json || true
+      - name: Upload gitleaks report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks.json
+          if-no-files-found: warn
+
+  dependency-review:
+    name: Dependency Review (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: actions/dependency-review-action
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
+
+  osv:
+    name: OSV scan
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run osv-scanner
+        run: |
+          docker run --rm \
+            -v "${PWD}:/src" \
+            -w /src \
+            ghcr.io/google/osv-scanner:latest \
+            scan source -r . --format json --output osv.json || true
+      - name: Upload OSV report
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-report
+          path: osv.json
+          if-no-files-found: warn
+
+  pip-audit:
+    name: pip-audit (backend/admin/mock-ggg)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        project: [backend, admin, mock-ggg]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: pip-audit
+        working-directory: ${{ matrix.project }}
+        run: |
+          uv sync --frozen || uv sync
+          uv run pip-audit --strict || true
+
+  npm-audit:
+    name: npm audit (frontend)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high || true
