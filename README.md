@@ -12,12 +12,12 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 
 ## Features
 
-- Sign in with your GGG account (OAuth2 + PKCE).
-- Browse characters per league and inspect equipped gear in a paper-doll view.
-- Browse stash tabs (including currency and other special tab types) in an in-game-like grid or as a virtualised table.
-- Click any item to open a detail pane with the full mod list, requirements, sockets/runes, source, and actions.
-- Generate PoE2 Trade search links for **the same item** (configurable stat tolerance, default &plusmn;10%) and for **upgrades** (min = current &times; 0.95, no max).
-- Price estimates via cached 3rd-party data (poe.ninja), with optional "valuable dump" highlighting for offline price-checks.
+- Log in with your GGG account to load your characters, gear, and stash in one place.
+- Browse all your stash tabs (including currency/special tabs) in a familiar grid or a clean table view.
+- Click any item to see a rich detail panel with mods, requirements, sockets/runes, and quick actions.
+- See how good each roll is: the panel shows your current tier range, compares it to a T1 max, and gives a % score per stat and for the whole item (can go over 100%).
+- Open ready-made PoE2 Trade searches for the same item or for upgrades with better rolls.
+- Get price estimates from poe.ninja and highlight valuable dump-tab loot while you are offline.
 
 ## Stack
 
