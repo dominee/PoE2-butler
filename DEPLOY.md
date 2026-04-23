@@ -302,7 +302,7 @@ docker compose \
 
 4. `docker ps` should show `poe2b-uat-traefik` with `80` and `443` published (not `8080`).
 
-5. **404 from Traefik** (access log `RequestHost` present, `OriginStatus:0`): the **Host** header must match a rule in `dynamic.uat.yml`. The UAT file defines **one router per hostname** (no `||` in rules) for `app.uat…`, `app.…`, the **apex** `hideoutbutler.com`, **`www.hideoutbutler.com`**, and ggg/admin variants. If you see `RequestHost: hideoutbutler.com`, the apex must be both in **DNS** and on the **Origin certificate** SANs, and you must **recreate Traefik** after editing: `docker compose ... up -d --force-recreate traefik`. Set `APP_BASE_URL`, `CORS_ALLOW_ORIGINS`, and `GGG_REDIRECT_URI` in `.env.uat` to match the **exact** origin users use (including apex or `www` if applicable).
+5. **404 from Traefik** (access log `RequestHost` present, `OriginStatus:0`): the **Host** header must match a rule in `dynamic.uat.yml`, and each router on **`websecure` must include `tls: {}`** (Traefik v3 — without it, HTTPS requests do not match any router). The UAT file uses **one router per hostname** for `app.uat…`, `app.…`, the **apex** `hideoutbutler.com`, **`www.hideoutbutler.com`**, and ggg/admin variants. All of those names must be on the **Origin certificate** SANs. **Recreate Traefik** after editing: `docker compose ... up -d --force-recreate traefik`. On the VM, confirm the mounted file: `docker exec poe2b-uat-traefik head -30 /etc/traefik/dynamic.uat.yml`. Set `APP_BASE_URL`, `CORS_ALLOW_ORIGINS`, and `GGG_REDIRECT_URI` in `.env.uat` to the **exact** origin users use.
 
 6. If you need another hostname, add two routers in `dynamic.uat.yml` (one for `PathPrefix(/api)`, one for the SPA) and extend the Cloudflare Origin certificate.
 

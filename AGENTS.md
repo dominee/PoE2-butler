@@ -123,7 +123,7 @@ Browser
 |-------|--------|
 | **Purpose** | Public acceptance testing: **mock-ggg** (same as dev) + **HTTPS** to the origin with the same **Cloudflare Origin CA** pattern as prod. |
 | **Project** | Compose name **`poe2b-uat`**, networks **`poe2b_uat_*`**, containers **`poe2b-uat-*`** — can run beside dev/prod on one host. |
-| **Routing** | **File provider only** (`traefik.uat.yml` + **`dynamic.uat.yml`**) — no Docker socket. TLS block + `http.routers` in one file. |
+| **Routing** | **File provider only** (`traefik.uat.yml` + **`dynamic.uat.yml`**) — no Docker socket. Each router on **`websecure` must set `tls: {}`** or Traefik v3 will not match **HTTPS** traffic (404, `OriginStatus: 0`). |
 | **App host** | Traefik matches **`PathPrefix(/api)`** → backend, else → static **`frontend`**. `dynamic.uat.yml` uses **separate routers per hostname** (no chained OR in one rule): `app.uat…`, `app.…`, **apex** `hideoutbutler.com`, **`www`**, plus ggg/admin pairs. Put every hostname you use on the **Origin cert** SANs. Align `.env.uat` `APP_BASE_URL`, `CORS`, and `GGG_REDIRECT_URI` with the **exact** browser origin. |
 | **Other hosts** | mock-ggg / admin: see `dynamic.uat.yml` (`ggg.uat` + `ggg.`, `admin.uat` + `admin.`). |
 | **TLS / CF** | Same `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` paths as prod; add **`*.uat.hideoutbutler.com`** (or each FQDN) to the Origin certificate. |

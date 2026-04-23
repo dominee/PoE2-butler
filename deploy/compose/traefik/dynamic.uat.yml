@@ -1,8 +1,8 @@
 # UAT: Cloudflare Origin CA + static routes (file provider, no Docker socket in Traefik).
-# List every Host you use in DNS and on the origin certificate.
+# Each router on "websecure" must set `tls: {}` so Traefik v3 actually attaches the
+# route to HTTPS; otherwise the Host rules never match and every request is 404.
 #
-# Do not use a single rule with "||" — some Traefik+yaml combinations parse it poorly.
-# app: /api* → FastAPI, /* → static SPA (same origin).
+# List every Host in your Origin certificate. app: /api* → API, /* → static SPA.
 
 tls:
   stores:
@@ -15,63 +15,87 @@ http:
   routers:
     uat-app-api-01:
       rule: Host(`app.uat.hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-api
       priority: 100
+      tls: {}
     uat-app-api-02:
       rule: Host(`app.hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-api
       priority: 100
+      tls: {}
     uat-app-api-03:
       rule: Host(`hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-api
       priority: 100
+      tls: {}
     uat-app-api-04:
       rule: Host(`www.hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-api
       priority: 100
+      tls: {}
 
     uat-app-spa-01:
       rule: Host(`app.uat.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-frontend
       priority: 1
+      tls: {}
     uat-app-spa-02:
       rule: Host(`app.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-frontend
       priority: 1
+      tls: {}
     uat-app-spa-03:
       rule: Host(`hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-frontend
       priority: 1
+      tls: {}
     uat-app-spa-04:
       rule: Host(`www.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-app-frontend
       priority: 1
+      tls: {}
 
     uat-ggg-01:
       rule: Host(`ggg.uat.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-mockggg
+      tls: {}
     uat-ggg-02:
       rule: Host(`ggg.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-mockggg
+      tls: {}
 
     uat-admin-01:
       rule: Host(`admin.uat.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-admin
+      tls: {}
     uat-admin-02:
       rule: Host(`admin.hideoutbutler.com`)
-      entryPoints: [websecure]
+      entryPoints:
+        - websecure
       service: uat-admin
+      tls: {}
 
   services:
     uat-app-api:
