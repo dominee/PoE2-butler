@@ -102,7 +102,8 @@ services:
       - app.main:app
       - --host=0.0.0.0
       - --port=8000
-      - --workers=2
+      # Single worker: UAT is often a small VM; two workers can OOM-kill child processes
+      - --workers=1
       - --proxy-headers
       - --forwarded-allow-ips=*
     depends_on:

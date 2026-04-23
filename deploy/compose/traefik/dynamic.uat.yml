@@ -1,14 +1,8 @@
-# UAT: TLS (Cloudflare Origin CA) + static routes for mock-ggg + path-split app host.
-# Add every hostname you use in DNS/Cloudflare to the Origin certificate SANs
-# (e.g. one cert with app.uat, ggg.uat, admin.uat and/or the prod-style names below).
+# UAT: Cloudflare Origin CA + static routes (file provider, no Docker socket in Traefik).
+# List every Host you use in DNS and on the origin certificate.
 #
-# Host rules: match BOTH common patterns so a VM with DNS pointing at
-#   app.uat… / ggg.uat… / admin.uat…
-# and a VM that reuses
-#   app. / ggg. / admin.hideoutbutler.com
-# both work. If 404, confirm `docker exec … traefik` sees this file and reload.
-#
-# app: /api* → FastAPI, /* → static SPA (same origin for /api and OAuth callback).
+# Do not use a single rule with "||" — some Traefik+yaml combinations parse it poorly.
+# app: /api* → FastAPI, /* → static SPA (same origin).
 
 tls:
   stores:
@@ -19,27 +13,64 @@ tls:
 
 http:
   routers:
-    uat-app-api:
-      rule: (Host(`app.uat.hideoutbutler.com`) || Host(`app.hideoutbutler.com`)) && PathPrefix(`/api`)
-      entryPoints:
-        - websecure
+    uat-app-api-01:
+      rule: Host(`app.uat.hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints: [websecure]
       service: uat-app-api
       priority: 100
-    uat-app:
-      rule: Host(`app.uat.hideoutbutler.com`) || Host(`app.hideoutbutler.com`)
-      entryPoints:
-        - websecure
+    uat-app-api-02:
+      rule: Host(`app.hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints: [websecure]
+      service: uat-app-api
+      priority: 100
+    uat-app-api-03:
+      rule: Host(`hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints: [websecure]
+      service: uat-app-api
+      priority: 100
+    uat-app-api-04:
+      rule: Host(`www.hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints: [websecure]
+      service: uat-app-api
+      priority: 100
+
+    uat-app-spa-01:
+      rule: Host(`app.uat.hideoutbutler.com`)
+      entryPoints: [websecure]
       service: uat-app-frontend
       priority: 1
-    uat-ggg:
-      rule: Host(`ggg.uat.hideoutbutler.com`) || Host(`ggg.hideoutbutler.com`)
-      entryPoints:
-        - websecure
+    uat-app-spa-02:
+      rule: Host(`app.hideoutbutler.com`)
+      entryPoints: [websecure]
+      service: uat-app-frontend
+      priority: 1
+    uat-app-spa-03:
+      rule: Host(`hideoutbutler.com`)
+      entryPoints: [websecure]
+      service: uat-app-frontend
+      priority: 1
+    uat-app-spa-04:
+      rule: Host(`www.hideoutbutler.com`)
+      entryPoints: [websecure]
+      service: uat-app-frontend
+      priority: 1
+
+    uat-ggg-01:
+      rule: Host(`ggg.uat.hideoutbutler.com`)
+      entryPoints: [websecure]
       service: uat-mockggg
-    uat-admin:
-      rule: Host(`admin.uat.hideoutbutler.com`) || Host(`admin.hideoutbutler.com`)
-      entryPoints:
-        - websecure
+    uat-ggg-02:
+      rule: Host(`ggg.hideoutbutler.com`)
+      entryPoints: [websecure]
+      service: uat-mockggg
+
+    uat-admin-01:
+      rule: Host(`admin.uat.hideoutbutler.com`)
+      entryPoints: [websecure]
+      service: uat-admin
+    uat-admin-02:
+      rule: Host(`admin.hideoutbutler.com`)
+      entryPoints: [websecure]
       service: uat-admin
 
   services:
