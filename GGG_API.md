@@ -4,6 +4,10 @@ Reference for integrating **PoE2 Hideout Butler** with the official GGG (Grindin
 
 > The GGG API requires a manually approved OAuth2 client application. Approval is not instant; plan for weeks of lead time. Until approval is granted, development uses the `mock-ggg/` service which exposes the same surface area against fixture data.
 
+## PoE2 and stash data (current limitation)
+
+Per the [GGG stashes / scopes reference](https://www.pathofexile.com/developer/docs/reference#stashes), **there is no PoE2 stash scope** today. Documented stash APIs and scopes (e.g. `account:stashes`, guild/public stash variants) apply to **Path of Exile 1**. **Production OAuth against real GGG cannot return live PoE2 stash data** until GGG provides an API for it; this app uses **`mock-ggg`** to develop and test stash features in the meantime. The same point is listed under **Limitations** in `INSTRUCTIONS.md` and in `AGENTS.md` §1.1.
+
 
 ## 1. Applying for a client
 

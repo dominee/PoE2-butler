@@ -4,6 +4,8 @@
 
 A web application that lets **Path of Exile 2** players pair their GGG account via OAuth2, then browse their characters, equipped gear, and stash tabs online with enriched item information, price estimates, and one-click deep-links to the official trade site.
 
+> **GGG API disclaimer:** The [official GGG API](https://www.pathofexile.com/developer/docs/reference#stashes) does **not** yet offer a Path of Exile 2 stash scope; current stash-related scopes are PoE1-only. **Live PoE2 stash data from GGG is therefore not available** through their API as of now. This project is built to support that functionality when GGG adds it; in the meantime, development uses a **mock GGG** service with fixture data. We hope GGG will expose PoE2 stash (or equivalent) access **soon** .
+
 ![Screenshot](Screenshot.png)
 
 ![Screenshot-stash](Screenshot_stash.png)
