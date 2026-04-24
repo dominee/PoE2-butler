@@ -62,10 +62,11 @@ describe("ItemDetailPane", () => {
   it("renders item properties, requirements and explicit mods", () => {
     renderPane(testItem);
     expect(screen.getAllByText(/doom horn/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/physical damage/i)).toBeInTheDocument();
-    expect(screen.getByText(/120-280/)).toBeInTheDocument();
+    // PNG snapshot markup duplicates key stats in an off-screen capture tree; allow multiples.
+    expect(screen.getAllByText(/physical damage/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/120-280/).length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/item details/i)).toHaveTextContent(/\+100\s+to maximum life/i);
-    expect(screen.getByText(/requires/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/requires/i).length).toBeGreaterThan(0);
   });
 
   it("starts with tolerance pulled from prefs", () => {

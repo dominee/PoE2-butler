@@ -2,9 +2,17 @@ import { useState } from "react";
 
 import { useItemText, usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
-import type { Item, ItemProperty, ItemRarity, ModDetail, Prefs } from "@/api/types";
+import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
+import {
+  ExplicitModLine,
+  ModDivider,
+  ModSection,
+  ModText,
+  modQuality,
+} from "@/features/items/ItemModPresentation";
+import { PANE_RARITY_BORDER, RARITY_NAME_CLASS } from "@/features/items/itemVisualStyles";
+import type { Item, ItemRarity, Prefs } from "@/api/types";
 import { copyTextToClipboard } from "@/utils/clipboard";
-import { parseModParts } from "@/utils/modText";
 
 import { PercentBar, computeItemScore } from "./PercentBar";
 import { PriceBadge } from "./PriceBadge";
@@ -14,212 +22,6 @@ export interface ItemDetailPaneProps {
   league: string | null;
   prefs: Prefs | undefined;
   onClose?: () => void;
-}
-
-// ─── rarity colour maps ──────────────────────────────────────────────────────
-
-/** Inline border colour for the detail pane (overrides the panel base). */
-const RARITY_BORDER: Partial<Record<ItemRarity, string>> = {
-  Magic: "rgba(136,136,255,0.45)",
-  Rare: "rgba(255,255,119,0.35)",
-  Unique: "rgba(175,96,37,0.9)",
-  Currency: "rgba(170,158,130,0.5)",
-  Gem: "rgba(27,162,155,0.55)",
-  DivinationCard: "rgba(100,100,100,0.4)",
-};
-
-/** Tailwind text class for the item name in the header. */
-const RARITY_NAME_CLASS: Partial<Record<ItemRarity, string>> = {
-  Magic: "text-rarity-magic",
-  Rare: "text-rarity-rare",
-  Unique: "text-rarity-unique",
-  Gem: "text-rarity-gem",
-  Currency: "text-rarity-currency",
-};
-
-// ─── tier badge ──────────────────────────────────────────────────────────────
-
-function tierBadgeClass(tier: number): string {
-  if (tier === 1) return "bg-amber-500/25 text-amber-300 border-amber-500/50";
-  if (tier === 2) return "bg-yellow-600/20 text-yellow-300 border-yellow-500/40";
-  if (tier <= 4) return "bg-lime-900/25 text-lime-400/80 border-lime-700/40";
-  if (tier <= 6) return "bg-ink-600/60 text-ink-300 border-ink-500";
-  return "bg-ink-700/60 text-ink-500 border-ink-600";
-}
-
-function TierBadge({ tier }: { tier: number }) {
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded border px-1 py-px text-[9px] font-bold leading-none ${tierBadgeClass(tier)}`}
-      title={`Tier ${tier}`}
-    >
-      T{tier}
-    </span>
-  );
-}
-
-// ─── mod text components ─────────────────────────────────────────────────────
-
-/** Render a mod string with numeric values highlighted in parchment-50. */
-function ModText({ raw }: { raw: string }) {
-  const parts = parseModParts(raw);
-  return (
-    <span>
-      {parts.map((part, i) =>
-        part.isNum ? (
-          // eslint-disable-next-line react/no-array-index-key
-          <strong key={i} className="font-semibold text-parchment-50">
-            {part.text}
-          </strong>
-        ) : (
-          // eslint-disable-next-line react/no-array-index-key
-          <span key={i}>{part.text}</span>
-        ),
-      )}
-    </span>
-  );
-}
-
-/**
- * Extract the dominant numeric value from a mod string for quality calculation.
- * Returns the absolute value of the first number found, or null.
- */
-function extractModValue(modText: string): number | null {
-  const parts = parseModParts(modText);
-  const numPart = parts.find((p) => p.isNum);
-  if (!numPart) return null;
-  const n = parseFloat(numPart.text.replace("%", ""));
-  return Number.isFinite(n) ? Math.abs(n) : null;
-}
-
-/** Roll quality: how well this roll sits within its tier range (0–100+). */
-function rollQuality(value: number, min: number, max: number): number {
-  if (max <= min) return 100;
-  return Math.round(((value - min) / (max - min)) * 100);
-}
-
-/** Compute per-mod quality percentage from ModDetail if available.
- *
- * When `t1_max` is known (from bundled mod DB), returns the cross-tier
- * percentage: value / t1_max × 100 (can exceed 100%).
- * Otherwise falls back to within-tier quality.
- */
-function modQuality(mod: string, detail: ModDetail | undefined): number | null {
-  const mag = detail?.magnitudes?.[0];
-  if (!mag) return null;
-  const value = extractModValue(mod);
-  if (value == null) return null;
-
-  // Cross-tier: compare against T1 max from the bundled mod DB.
-  if (mag.t1_max != null && mag.t1_max > 0) {
-    return Math.round((value / mag.t1_max) * 100);
-  }
-
-  // Within-tier fallback.
-  if (mag.min == null || mag.max == null) return null;
-  return rollQuality(value, mag.min, mag.max);
-}
-
-/**
- * Renders one explicit mod line with an optional tier badge, roll range, and
- * quality bar.  `detail` comes from `item.explicit_mod_details[idx]` — may be
- * undefined when the GGG API didn't return extended mod data.
- */
-function ExplicitModLine({
-  mod,
-  detail,
-}: {
-  mod: string;
-  detail: ModDetail | undefined;
-}) {
-  const tier = detail?.tier ?? null;
-  const mag = detail?.magnitudes?.[0];
-  const hasRange = mag?.min != null && mag?.max != null && mag.min !== mag.max;
-  const hasCrossTier = mag?.t1_max != null;
-  const pct = modQuality(mod, detail);
-
-  return (
-    <li className="break-words leading-snug">
-      <div className="flex items-start gap-1.5">
-        {tier != null && <TierBadge tier={tier} />}
-        <span className="min-w-0 flex-1">
-          <ModText raw={mod} />
-          {hasRange && (
-            <span className="ml-1 text-[10px] text-ink-500">
-              [{mag!.min}–{mag!.max}]
-            </span>
-          )}
-          {hasCrossTier && (
-            <span className="ml-1 text-[10px] text-parchment-100/40">
-              T1 max: {mag!.t1_max}
-            </span>
-          )}
-        </span>
-      </div>
-      {detail != null && (
-        <PercentBar
-          pct={pct}
-          tierLabel={
-            hasCrossTier
-              ? `vs T1 max (${mag!.t1_max})`
-              : tier != null
-                ? `T${tier} roll quality`
-                : undefined
-          }
-          showValue={pct != null}
-        />
-      )}
-    </li>
-  );
-}
-
-// ─── section helpers ─────────────────────────────────────────────────────────
-
-function ModSection({ title, mods, tone }: { title: string; mods: string[]; tone: string }) {
-  if (mods.length === 0) return null;
-  return (
-    <div>
-      <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-        {title}
-      </h4>
-      <ul className={`mt-1 space-y-0.5 text-sm ${tone}`}>
-        {mods.map((mod, idx) => (
-          // eslint-disable-next-line react/no-array-index-key
-          <li key={idx} className="break-words leading-snug">
-            <ModText raw={mod} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ModDivider() {
-  return <div className="my-0.5 border-t border-ink-600/50" />;
-}
-
-/**
- * PoE2 mod ordering: prefixes come first (≤3), suffixes follow (≤3).
- * We split at position 3 for Rare, at 1 for Magic.
- */
-function splitExplicitMods(
-  mods: string[],
-  rarity: string,
-): { prefixes: string[]; suffixes: string[] } {
-  if (mods.length === 0) return { prefixes: [], suffixes: [] };
-  if (rarity === "Rare") {
-    const cut = Math.min(3, mods.length);
-    return { prefixes: mods.slice(0, cut), suffixes: mods.slice(cut) };
-  }
-  if (rarity === "Magic" && mods.length >= 2) {
-    return { prefixes: [mods[0]], suffixes: mods.slice(1) };
-  }
-  return { prefixes: mods, suffixes: [] };
-}
-
-/** Drop category-header properties (those with empty values, e.g. "Amulet"). */
-function usefulProperties(props: ItemProperty[]): ItemProperty[] {
-  return props.filter((p) => p.value != null && p.value !== "");
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
@@ -295,7 +97,7 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
   return (
     <aside
       className="panel flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 text-sm"
-      style={{ borderColor: RARITY_BORDER[item.rarity as ItemRarity] }}
+      style={{ borderColor: PANE_RARITY_BORDER[item.rarity as ItemRarity] }}
       aria-label="Item details"
     >
       {/* ── Header ── */}

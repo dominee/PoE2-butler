@@ -2,7 +2,11 @@ import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { Item, ItemRarity } from "@/api/types";
 import { itemIconForCanvasProxy } from "@/utils/poecdnIcon";
-import { stripTags } from "@/utils/modText";
+
+import { splitExplicitMods, usefulProperties } from "./itemPaneModel";
+import { modQuality, ExplicitModLine, ModDivider, ModSection, ModText } from "./ItemModPresentation";
+import { RARITY_NAME_CLASS } from "./itemVisualStyles";
+import { computeItemScore, PercentBar } from "./PercentBar";
 
 const LOG_PREFIX = "[HideoutButler] PNG export";
 
@@ -11,7 +15,8 @@ function errDetail(err: unknown): string {
   return String(err);
 }
 
-const RARITY_BORDER: Record<ItemRarity, string> = {
+/** Card border; matches export styling (not the live pane’s rgba border). */
+const RARITY_CARD_BORDER: Record<ItemRarity, string> = {
   Normal: "border-ink-600",
   Magic: "border-rarity-magic/60",
   Rare: "border-rarity-rare/60",
@@ -22,51 +27,209 @@ const RARITY_BORDER: Record<ItemRarity, string> = {
   QuestItem: "border-ink-600",
 };
 
-function ItemExportCard({
-  item,
-  detail,
-}: {
-  item: Item;
-  detail: boolean;
-}) {
-  const b = RARITY_BORDER[item.rarity] ?? "border-ink-600";
+/**
+ * Snapshot aligned with the item detail pane: same prefix/suffix split, tier
+ * lines, and roll bars. `compact` omits “Runes & Cores” only. `detail` includes
+ * socketed items; room for more summary blocks later.
+ */
+function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" | "detail" }) {
+  const b = RARITY_CARD_BORDER[item.rarity] ?? "border-ink-600";
   const iconSrc = itemIconForCanvasProxy(item.icon) ?? item.icon;
+  const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
+
+  const visibleProps = usefulProperties(item.properties);
+  const visibleReqs = usefulProperties(item.requirements);
+  const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
+  const showPrefixSuffix =
+    item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
+  const hasTierData = item.explicit_mod_details.some((d) => d.tier != null);
+  const modPcts = item.explicit_mods.map((mod, idx) =>
+    modQuality(mod, item.explicit_mod_details[idx]),
+  );
+  const itemScore = hasTierData ? computeItemScore(modPcts) : null;
+  const showRunes = variant === "detail" && item.socketed_items.length > 0;
+
   return (
     <div
-      className={`${b} w-[360px] rounded-md border-2 bg-ink-900 p-3 text-left text-sm text-parchment-100 shadow-lg`}
+      className={`${b} w-[400px] rounded-md border-2 bg-ink-900 p-3 text-left text-sm text-parchment-100 shadow-lg`}
     >
       <div className="font-display text-sm font-semibold text-ember-200/90">PoE2 Hideout Butler</div>
       {item.icon && (
         <div className="mt-2 flex items-start gap-2">
-          <img
-            src={iconSrc}
-            alt=""
-            className="h-12 w-12 object-contain"
-          />
+          <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
+            <img
+              src={iconSrc}
+              alt=""
+              className="object-contain"
+              style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
+            />
+          </div>
           <div className="min-w-0">
-            {item.name && <div className="break-words text-base">{item.name}</div>}
+            {item.name && (
+              <div className={`break-words text-base font-display ${nameClass}`}>{item.name}</div>
+            )}
             <div className="text-parchment-100/80">{item.type_line}</div>
-            <div className="text-[10px] uppercase text-ink-500">
-              {item.rarity} {item.ilvl != null ? `· ilvl ${item.ilvl}` : ""}
+            <div className="mt-1 text-[10px] uppercase text-ink-500">
+              <span>{item.rarity}</span>
+              {item.ilvl != null && <span className="ml-1">ilvl {item.ilvl}</span>}
+              {item.corrupted && <span className="ml-1 text-red-400">corrupted</span>}
             </div>
           </div>
         </div>
       )}
       {!item.icon && (
         <div className="mt-2">
-          {item.name && <div className="font-semibold">{item.name}</div>}
+          {item.name && <div className={`font-display text-base font-semibold ${nameClass}`}>{item.name}</div>}
           <div className="text-parchment-100/80">{item.type_line}</div>
         </div>
       )}
-      {detail && item.explicit_mods.length > 0 && (
-        <ul className="mt-2 list-none space-y-0.5 text-[12px] text-rarity-magic/90">
-          {item.explicit_mods.map((m, i) => (
-            <li key={i} className="break-words">
-              {stripTags(m)}
-            </li>
-          ))}
-        </ul>
+
+      {hasTierData && itemScore != null && (
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">Item score</span>
+          <div className="min-w-0 flex-1">
+            <PercentBar pct={itemScore} showValue />
+          </div>
+        </div>
       )}
+
+      {visibleProps.length > 0 && (
+        <div className="mt-2">
+          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Stats</h4>
+          <ul className="mt-1 space-y-0.5 text-sm text-parchment-100/90">
+            {visibleProps.map((p, idx) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <li key={idx} className="flex justify-between gap-2">
+                <span className="text-ink-500">{p.name}</span>
+                <span className="text-right font-semibold text-parchment-50">
+                  {p.value != null ? <ModText raw={p.value} /> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {visibleReqs.length > 0 && (
+        <div className="mt-1 text-xs text-ink-500">
+          Requires {visibleReqs.map((r) => `${r.value} ${r.name}`).join(", ")}
+        </div>
+      )}
+
+      {item.sockets.length > 0 && (
+        <div className="mt-1 flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-ink-500">Sockets</span>
+          {item.sockets.map((s, idx) => (
+            <span
+              // eslint-disable-next-line react/no-array-index-key
+              key={idx}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-ink-600 text-[9px] uppercase text-rarity-gem"
+            >
+              {s.type.slice(0, 1)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-1 space-y-1">
+        <ModSection title="Enchant" mods={item.enchant_mods} tone="text-rarity-rare" />
+        <ModSection title="Implicit" mods={item.implicit_mods} tone="text-rarity-magic" />
+        <ModSection title="Rune" mods={item.rune_mods} tone="text-rarity-gem" />
+      </div>
+
+      {showRunes && (
+        <div className="mt-2">
+          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Runes &amp; Cores</h4>
+          <ul className="mt-1 space-y-2">
+            {item.socketed_items.map((si) => (
+              <li key={si.id} className="rounded border border-ink-600 bg-ink-800/60 px-2 py-1.5">
+                <div className="text-xs font-semibold text-rarity-currency">
+                  {si.type_line || si.name}
+                </div>
+                {si.explicit_mods.length > 0 && (
+                  <ul className="mt-0.5 space-y-0.5 text-[11px] text-parchment-100/70">
+                    {si.explicit_mods.map((mod, idx) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={idx} className="break-words leading-snug">
+                        <ModText raw={mod} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {item.explicit_mods.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {showPrefixSuffix ? (
+            <>
+              {prefixes.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Prefixes</h4>
+                  <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
+                    {prefixes.map((mod, idx) => (
+                      <ExplicitModLine
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={idx}
+                        mod={mod}
+                        detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {prefixes.length > 0 && suffixes.length > 0 && <ModDivider />}
+              {suffixes.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Suffixes</h4>
+                  <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
+                    {suffixes.map((mod, idx) => (
+                      <ExplicitModLine
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={idx}
+                        mod={mod}
+                        detail={
+                          hasTierData
+                            ? item.explicit_mod_details[prefixes.length + idx]
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+                {item.rarity === "Unique" ? "Unique mods" : "Mods"}
+              </h4>
+              <ul
+                className={`mt-1 space-y-0.5 text-sm ${
+                  item.rarity === "Unique" ? "text-rarity-unique" : "text-rarity-magic"
+                }`}
+              >
+                {item.explicit_mods.map((mod, idx) => (
+                  <ExplicitModLine
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={idx}
+                    mod={mod}
+                    detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-1">
+        <ModSection title="Crafted" mods={item.crafted_mods} tone="text-rarity-unique" />
+      </div>
+      {/* detail variant: reserve space for price, roll tables, etc. in future — Runes & Cores above */}
     </div>
   );
 }
@@ -154,10 +317,10 @@ export function ItemImageExportActions({ item }: { item: Item }) {
       {msg && <p className="text-[11px] text-ink-500">{msg}</p>}
       <div className="pointer-events-none fixed -left-[10000px] top-0 z-0" aria-hidden>
         <div ref={compactRef}>
-          <ItemExportCard item={item} detail={false} />
+          <ItemExportSnapshot item={item} variant="compact" />
         </div>
         <div ref={detailRef} className="pt-1">
-          <ItemExportCard item={item} detail={true} />
+          <ItemExportSnapshot item={item} variant="detail" />
         </div>
       </div>
     </div>
