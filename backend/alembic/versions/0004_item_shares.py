@@ -38,7 +38,7 @@ def upgrade() -> None:
         ),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_index("ix_item_shares_user_id", "item_shares", ["user_id"])
+    # user_id has index=True above: Alembic emits ix_item_shares_user_id; do not create again.
 
 
 def downgrade() -> None:
