@@ -18,6 +18,7 @@ import { copyTextToClipboard } from "@/utils/clipboard";
 
 import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar, computeItemScore } from "./PercentBar";
+import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
 
 export interface ItemDetailPaneProps {
@@ -66,9 +67,16 @@ export function ItemDetailPane({
   const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
   const showPrefixSuffix =
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
-  const { modPcts, showAggregate: hasRollData } = itemRollScoreState(item);
+  const gggRoll = itemRollScoreState(item);
+  const typeRefPcts = itemReferenceRollPcts(item);
+  const hasTypeRefRoll = itemReferenceHasAggregate(typeRefPcts);
+  const hasGggRoll = gggRoll.showAggregate;
+  const hasRollData = hasTypeRefRoll || hasGggRoll;
+  const modPctsForScore = hasTypeRefRoll ? typeRefPcts : gggRoll.modPcts;
+  const itemScore = hasRollData ? computeItemScore(modPctsForScore) : null;
   const showModRollHints = item.rarity !== "Unique";
-  const itemScore = hasRollData ? computeItemScore(modPcts) : null;
+  const refIm = item.implicit_mod_range_hints;
+  const refEx = item.explicit_mod_range_hints;
 
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
@@ -209,9 +217,13 @@ export function ItemDetailPane({
         <div className="flex items-center gap-2 text-xs">
           <span
             className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500"
-            title="Mean of per-mod roll% (T1% when known, else tier roll)"
+            title={
+              hasTypeRefRoll
+                ? "Mean of per-mod type quality (0% = min end of wiki range, 100% = best). Excludes lines without a parseable range."
+                : "Mean of per-mod roll% (T1% when known, else tier roll)"
+            }
           >
-            Item score
+            {hasTypeRefRoll ? "Item quality" : "Item score"}
           </span>
           <div className="min-w-0 flex-1">
             <PercentBar pct={itemScore} showValue size="md" />
@@ -281,7 +293,8 @@ export function ItemDetailPane({
                 mod={mod}
                 detail={item.implicit_mod_details[idx]}
                 showRollHints={showModRollHints}
-                referenceRangeText={item.implicit_mod_range_hints?.[idx] ?? null}
+                referenceRangeText={refIm?.[idx] ?? null}
+                typeRollPercent={uniqueTypeRollPercent(mod, refIm?.[idx] ?? null)}
               />
             ))}
           </ul>
@@ -335,7 +348,8 @@ export function ItemDetailPane({
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
                         showRollHints={showModRollHints}
-                        referenceRangeText={item.explicit_mod_range_hints?.[idx] ?? null}
+                        referenceRangeText={refEx?.[idx] ?? null}
+                        typeRollPercent={uniqueTypeRollPercent(mod, refEx?.[idx] ?? null)}
                       />
                     ))}
                   </ul>
@@ -355,7 +369,11 @@ export function ItemDetailPane({
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
                         showRollHints={showModRollHints}
-                        referenceRangeText={item.explicit_mod_range_hints?.[prefixes.length + idx] ?? null}
+                        referenceRangeText={refEx?.[prefixes.length + idx] ?? null}
+                        typeRollPercent={uniqueTypeRollPercent(
+                          mod,
+                          refEx?.[prefixes.length + idx] ?? null,
+                        )}
                       />
                     ))}
                   </ul>
@@ -379,7 +397,8 @@ export function ItemDetailPane({
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}
                     showRollHints={showModRollHints}
-                    referenceRangeText={item.explicit_mod_range_hints?.[idx] ?? null}
+                    referenceRangeText={refEx?.[idx] ?? null}
+                    typeRollPercent={uniqueTypeRollPercent(mod, refEx?.[idx] ?? null)}
                   />
                 ))}
               </ul>

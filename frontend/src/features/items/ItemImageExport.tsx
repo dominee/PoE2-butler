@@ -7,6 +7,7 @@ import { splitExplicitMods, usefulProperties } from "./itemPaneModel";
 import { ExplicitModLine, ModDivider, ModSection, ModText, itemRollScoreState } from "./ItemModPresentation";
 import { RARITY_NAME_CLASS } from "./itemVisualStyles";
 import { computeItemScore, PercentBar } from "./PercentBar";
+import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 
 const LOG_PREFIX = "[HideoutButler] PNG export";
 
@@ -44,10 +45,17 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
   const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
   const showPrefixSuffix =
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
-  const { modPcts, showAggregate: hasRollData } = itemRollScoreState(item);
-  const itemScore = hasRollData ? computeItemScore(modPcts) : null;
+  const gggRoll = itemRollScoreState(item);
+  const typeRefPcts = itemReferenceRollPcts(item);
+  const hasTypeRefRoll = itemReferenceHasAggregate(typeRefPcts);
+  const hasGggRoll = gggRoll.showAggregate;
+  const hasRollData = hasTypeRefRoll || hasGggRoll;
+  const modPctsForScore = hasTypeRefRoll ? typeRefPcts : gggRoll.modPcts;
+  const itemScore = hasRollData ? computeItemScore(modPctsForScore) : null;
   const showModRollHints = item.rarity !== "Unique";
   const showRunes = variant === "detail" && item.socketed_items.length > 0;
+  const refIm = item.implicit_mod_range_hints;
+  const refEx = item.explicit_mod_range_hints;
   const flavour =
     item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
 
@@ -88,7 +96,9 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
 
       {hasRollData && itemScore != null && (
         <div className="mt-2 flex items-center gap-2 text-xs">
-          <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">Item score</span>
+          <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">
+            {hasTypeRefRoll ? "Item quality" : "Item score"}
+          </span>
           <div className="min-w-0 flex-1">
             <PercentBar pct={itemScore} showValue size="md" />
           </div>
@@ -152,7 +162,8 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                   mod={mod}
                   detail={item.implicit_mod_details[idx]}
                   showRollHints={showModRollHints}
-                  referenceRangeText={item.implicit_mod_range_hints?.[idx] ?? null}
+                  referenceRangeText={refIm?.[idx] ?? null}
+                  typeRollPercent={uniqueTypeRollPercent(mod, refIm?.[idx] ?? null)}
                 />
               ))}
             </ul>
@@ -201,7 +212,8 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
                         showRollHints={showModRollHints}
-                        referenceRangeText={item.explicit_mod_range_hints?.[idx] ?? null}
+                        referenceRangeText={refEx?.[idx] ?? null}
+                        typeRollPercent={uniqueTypeRollPercent(mod, refEx?.[idx] ?? null)}
                       />
                     ))}
                   </ul>
@@ -219,7 +231,11 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
                         showRollHints={showModRollHints}
-                        referenceRangeText={item.explicit_mod_range_hints?.[prefixes.length + idx] ?? null}
+                        referenceRangeText={refEx?.[prefixes.length + idx] ?? null}
+                        typeRollPercent={uniqueTypeRollPercent(
+                          mod,
+                          refEx?.[prefixes.length + idx] ?? null,
+                        )}
                       />
                     ))}
                   </ul>
@@ -243,7 +259,8 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}
                     showRollHints={showModRollHints}
-                    referenceRangeText={item.explicit_mod_range_hints?.[idx] ?? null}
+                    referenceRangeText={refEx?.[idx] ?? null}
+                    typeRollPercent={uniqueTypeRollPercent(mod, refEx?.[idx] ?? null)}
                   />
                 ))}
               </ul>

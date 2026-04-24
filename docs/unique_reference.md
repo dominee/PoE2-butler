@@ -62,6 +62,15 @@ uv run python scripts/ingest_poe2db_uniques.py --from-mock --out app/data/unique
 - **poe2db** content is community wiki material under its own license; this repo stores **processed** snippets for display only, not a mirror of the full site.
 - This product is **not affiliated with** Grinding Gear Games. Roll templates in the JSON are **community / wiki style**, not official definitive rolls.
 
+## Item quality in the app (Type quality)
+
+When a unique has **per-mod** `mod_range_hints`, the **frontend** can parse each `range` string and the rolled value on the mod line and show:
+
+- **Type quality** per mod (0–100%): how close the roll is to the **best** end of the wiki / type range (higher = better for most stats; for lines containing **reduced** the “best” end is the **lower** numeric penalty).
+- **Item quality** (header bar): the **mean** of those per-mod percentages over lines where both a range and a parseable value exist (unchanged GGG “Item score” for rares using extended/T1 data).
+
+Code: `frontend/src/features/items/uniqueReferenceRoll.ts` (parsing and scoring), `ItemDetailPane` / `ItemImageExport` (labels “Item quality” vs “Item score”).
+
 ## Related code
 
 | Piece | Path |
@@ -70,4 +79,4 @@ uv run python scripts/ingest_poe2db_uniques.py --from-mock --out app/data/unique
 | Loader + lookup | `backend/app/services/unique_reference.py` |
 | `parse_item` merge + per-mod columns | `backend/app/domain/item.py` (`implicit_mod_range_hints`, `explicit_mod_range_hints`) |
 | Ingest script | `backend/scripts/ingest_poe2db_uniques.py` |
-| UI (inline range column on uniques) | `frontend/src/features/items/ItemModPresentation.tsx` (`ExplicitModLine` / `referenceRangeText`) |
+| UI (inline range + type roll bars) | `frontend/.../ItemModPresentation.tsx` (`ExplicitModLine`); `uniqueReferenceRoll.ts` |

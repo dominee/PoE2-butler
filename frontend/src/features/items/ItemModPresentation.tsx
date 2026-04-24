@@ -79,11 +79,17 @@ export function ExplicitModLine({
   showRollHints = true,
   /** Wiki-style type range for this mod line, shown right-aligned (uniques with bundled data). */
   referenceRangeText,
+  /**
+   * 0–100: roll position in the type range (wiki); shown when reference data and a parseable value
+   * exist. Mutually independent from GGG tier / T1 bars.
+   */
+  typeRollPercent,
 }: {
   mod: string;
   detail: ModDetail | undefined;
   showRollHints?: boolean;
   referenceRangeText?: string | null;
+  typeRollPercent?: number | null;
 }) {
   const tier = detail?.tier ?? null;
   const mag = detail?.magnitudes?.[0];
@@ -94,8 +100,10 @@ export function ExplicitModLine({
   const showBars =
     showRollHints && (m?.withinTierPct != null || m?.vsT1Pct != null);
   const showRefCol = Boolean(referenceRangeText?.trim());
+  const showTypeQuality = typeRollPercent != null;
   const showMetaRow = hasGggRange || fromModText != null;
-  const showUnderline = tier != null || showMetaRow || showBars || showRefCol;
+  const showUnderline =
+    tier != null || showMetaRow || showBars || showRefCol || showTypeQuality;
 
   return (
     <li className="break-words leading-snug">
@@ -145,6 +153,27 @@ export function ExplicitModLine({
           )}
         </div>
       </div>
+      {showTypeQuality && typeRollPercent != null && (
+        <div className="mt-1.5 pl-0.5">
+          <div className="flex items-center gap-2 text-[10px]">
+            <span
+              className="w-20 shrink-0 text-ink-500"
+              title="How close this roll is to the best end of the wiki / type range for this mod"
+            >
+              Type quality
+            </span>
+            <div className="min-w-0 flex-1">
+              <PercentBar
+                size="md"
+                pct={typeRollPercent}
+                showValue
+                variant="default"
+                tierLabel="0% = type min, 100% = best in wiki range; reduced = lower is better"
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {showBars && (
         <div className="mt-1.5 space-y-1.5 pl-0.5">
           {m && m.withinTierPct != null && m.hasTierRange && (
