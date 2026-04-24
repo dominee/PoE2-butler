@@ -68,6 +68,11 @@ export interface Item {
   icon: string | null;
   /** Normalized from the API (GGG `flavourText` / US `flavorText` parsed in the backend). */
   flavour_text?: string | null;
+  /**
+   * Optional community/wiki note on possible stat roll ranges for this base unique
+   * (e.g. poe2db), when bundled — not a per-snapshot GGG field.
+   */
+  reference_stat_bounds?: string | null;
   /** If present, raw GGG camelCase (some clients); detail pane also reads this. */
   flavourText?: string | null;
   flavorText?: string | null;

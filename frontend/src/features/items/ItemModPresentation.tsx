@@ -69,14 +69,27 @@ export function ModText({ raw }: { raw: string }) {
 /**
  * One mod line: tier chip, GGG string, range/T1 hints, and up to two roll bars
  * (within this affix’s tier range vs % of T1 max).
+ *
+ * For uniques, set ``showRollHints={false}``: GGG magnitudes / regex on mod text
+ * are often a poor match for the item’s possible rolls.
  */
-export function ExplicitModLine({ mod, detail }: { mod: string; detail: ModDetail | undefined }) {
+export function ExplicitModLine({
+  mod,
+  detail,
+  showRollHints = true,
+}: {
+  mod: string;
+  detail: ModDetail | undefined;
+  showRollHints?: boolean;
+}) {
   const tier = detail?.tier ?? null;
   const mag = detail?.magnitudes?.[0];
-  const m = computeModRollMetrics(mod, detail);
-  const hasGggRange = mag?.min != null && mag?.max != null;
-  const fromModText = !hasGggRange ? modTextRangeHint(mod) : null;
-  const showBars = m.withinTierPct != null || m.vsT1Pct != null;
+  const m = showRollHints ? computeModRollMetrics(mod, detail) : null;
+  const hasGggRange = showRollHints && mag?.min != null && mag?.max != null;
+  const fromModText =
+    showRollHints && !hasGggRange ? modTextRangeHint(mod) : null;
+  const showBars =
+    showRollHints && (m?.withinTierPct != null || m?.vsT1Pct != null);
   const showMetaRow = hasGggRange || fromModText != null;
   const showUnderline = tier != null || showMetaRow || showBars;
 
@@ -99,7 +112,7 @@ export function ExplicitModLine({ mod, detail }: { mod: string; detail: ModDetai
                 {mag!.min} – {mag!.max}
                 {mag!.min === mag!.max ? " (fixed in tier)" : ""}
               </span>
-              {m.hasT1 && mag?.t1_max != null && (
+              {m?.hasT1 && mag?.t1_max != null && (
                 <span className="ml-2 text-ink-500">
                   T1 cap: <span className="font-mono text-amber-300/70">{mag.t1_max}</span>
                 </span>
@@ -116,7 +129,7 @@ export function ExplicitModLine({ mod, detail }: { mod: string; detail: ModDetai
       </div>
       {showBars && (
         <div className="mt-1.5 space-y-1.5 pl-0.5">
-          {m.withinTierPct != null && m.hasTierRange && (
+          {m && m.withinTierPct != null && m.hasTierRange && (
             <div className="flex items-center gap-2 text-[10px]">
               <span className="w-20 shrink-0 text-ink-500">Tier roll</span>
               <div className="min-w-0 flex-1">
@@ -129,7 +142,7 @@ export function ExplicitModLine({ mod, detail }: { mod: string; detail: ModDetai
               </div>
             </div>
           )}
-          {m.vsT1Pct != null && (
+          {m && m.vsT1Pct != null && (
             <div className="flex items-center gap-2 text-[10px]">
               <span className="w-20 shrink-0 text-ink-500">vs T1</span>
               <div className="min-w-0 flex-1">

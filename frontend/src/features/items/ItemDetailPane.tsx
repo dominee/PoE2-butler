@@ -67,6 +67,7 @@ export function ItemDetailPane({
   const showPrefixSuffix =
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
   const { modPcts, showAggregate: hasRollData } = itemRollScoreState(item);
+  const showModRollHints = item.rarity !== "Unique";
   const itemScore = hasRollData ? computeItemScore(modPcts) : null;
 
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
@@ -138,6 +139,7 @@ export function ItemDetailPane({
   const borderCol = PANE_RARITY_BORDER[item.rarity as ItemRarity] ?? "rgba(80,80,90,0.45)";
   const flavour =
     item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
+  const referenceBounds = item.reference_stat_bounds?.trim() || "";
 
   return (
     <aside
@@ -202,6 +204,14 @@ export function ItemDetailPane({
         >
           {flavour}
         </blockquote>
+      ) : null}
+      {referenceBounds ? (
+        <section className="rounded border border-ink-700/80 bg-ink-950/40 p-2.5 text-xs leading-relaxed text-ink-300">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+            Type reference
+          </h3>
+          <p className="whitespace-pre-line text-[11px] text-parchment-200/90">{referenceBounds}</p>
+        </section>
       ) : null}
 
       {/* ── Item quality score (implicits + explicits with roll data) ── */}
@@ -280,6 +290,7 @@ export function ItemDetailPane({
                 key={idx}
                 mod={mod}
                 detail={item.implicit_mod_details[idx]}
+                showRollHints={showModRollHints}
               />
             ))}
           </ul>
@@ -332,6 +343,7 @@ export function ItemDetailPane({
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
+                        showRollHints={showModRollHints}
                       />
                     ))}
                   </ul>
@@ -350,6 +362,7 @@ export function ItemDetailPane({
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
+                        showRollHints={showModRollHints}
                       />
                     ))}
                   </ul>
@@ -372,6 +385,7 @@ export function ItemDetailPane({
                     key={idx}
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}
+                    showRollHints={showModRollHints}
                   />
                 ))}
               </ul>

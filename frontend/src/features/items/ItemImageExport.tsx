@@ -46,7 +46,11 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
   const { modPcts, showAggregate: hasRollData } = itemRollScoreState(item);
   const itemScore = hasRollData ? computeItemScore(modPcts) : null;
+  const showModRollHints = item.rarity !== "Unique";
   const showRunes = variant === "detail" && item.socketed_items.length > 0;
+  const flavour =
+    item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
+  const referenceBounds = item.reference_stat_bounds?.trim() || "";
 
   return (
     <div
@@ -91,6 +95,18 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
           </div>
         </div>
       )}
+
+      {flavour ? (
+        <blockquote className="mt-2 whitespace-pre-line border-l-2 border-amber-500/60 pl-2 font-display text-xs italic text-amber-100/90">
+          {flavour}
+        </blockquote>
+      ) : null}
+      {referenceBounds ? (
+        <div className="mt-2 rounded border border-ink-700/80 bg-ink-950/50 p-2 text-[10px] leading-relaxed text-parchment-200/90">
+          <div className="text-[9px] font-semibold uppercase tracking-widest text-ink-500">Type reference</div>
+          <p className="mt-0.5 whitespace-pre-line">{referenceBounds}</p>
+        </div>
+      ) : null}
 
       {visibleProps.length > 0 && (
         <div className="mt-2">
@@ -142,6 +158,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                   key={idx}
                   mod={mod}
                   detail={item.implicit_mod_details[idx]}
+                  showRollHints={showModRollHints}
                 />
               ))}
             </ul>
@@ -189,6 +206,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
+                        showRollHints={showModRollHints}
                       />
                     ))}
                   </ul>
@@ -205,6 +223,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
+                        showRollHints={showModRollHints}
                       />
                     ))}
                   </ul>
@@ -227,6 +246,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                     key={idx}
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}
+                    showRollHints={showModRollHints}
                   />
                 ))}
               </ul>

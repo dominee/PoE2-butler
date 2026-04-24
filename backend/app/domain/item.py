@@ -11,6 +11,7 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from app.services import mod_db as _mod_db
+from app.services import unique_reference as _unique_ref
 
 # ── tag stripping ─────────────────────────────────────────────────────────────
 # GGG item data encodes display tags as [Id|Label] or [Id].
@@ -102,6 +103,10 @@ class Item(BaseModel):
     identified: bool = True
     corrupted: bool = False
     flavour_text: str | None = None
+    reference_stat_bounds: str | None = Field(
+        default=None,
+        description="Wiki-style possible rolls for this base unique; not GGG per-item data.",
+    )
     trailer_note: str | None = None
     properties: list[ItemProperty] = Field(default_factory=list)
     requirements: list[ItemProperty] = Field(default_factory=list)
@@ -202,6 +207,17 @@ def parse_item(raw: dict[str, Any]) -> Item:
     item_class: str | None = ext.get("category") if isinstance(ext.get("category"), str) else None
 
     flavour_text = _flavour_text_from_dict(raw)
+    rarity = str(raw.get("rarity") or _infer_rarity(raw))
+    name = str(raw.get("name", ""))
+    base_type = str(raw.get("baseType", raw.get("typeLine", "")))
+    reference_stat_bounds: str | None = None
+    if rarity == "Unique" and name.strip() and base_type.strip():
+        uref = _unique_ref.lookup_unique_reference(name=name, base_type=base_type)
+        if uref is not None:
+            if (not (flavour_text and flavour_text.strip())) and uref.get("flavour"):
+                flavour_text = (uref["flavour"] or "").strip() or None
+            if uref.get("stat_bounds"):
+                reference_stat_bounds = (uref["stat_bounds"] or "").strip() or None
 
     implicit_mod_details, explicit_mod_details = _parse_mod_details_from_extended(ext)
     socketed_items = [
@@ -219,11 +235,12 @@ def parse_item(raw: dict[str, Any]) -> Item:
         name=str(raw.get("name", "")),
         type_line=str(raw.get("typeLine", "")),
         base_type=str(raw.get("baseType", raw.get("typeLine", ""))),
-        rarity=str(raw.get("rarity") or _infer_rarity(raw)),
+        rarity=rarity,
         ilvl=raw.get("ilvl"),
         identified=bool(raw.get("identified", True)),
         corrupted=bool(raw.get("corrupted", False)),
         flavour_text=flavour_text,
+        reference_stat_bounds=reference_stat_bounds,
         properties=props,
         requirements=reqs,
         implicit_mods=list(raw.get("implicitMods") or []),

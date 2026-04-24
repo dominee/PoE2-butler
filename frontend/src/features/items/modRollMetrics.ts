@@ -104,6 +104,9 @@ export function itemRollScoreState(item: Item): {
   modPcts: (number | null)[];
   showAggregate: boolean;
 } {
+  if (item.rarity === "Unique") {
+    return { modPcts: [], showAggregate: false };
+  }
   const imDetails = item.implicit_mod_details ?? [];
   const exDetails = item.explicit_mod_details ?? [];
   const im = item.implicit_mods.map((m, i) => modQuality(m, imDetails[i]));

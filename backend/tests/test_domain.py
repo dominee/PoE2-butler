@@ -102,6 +102,26 @@ def test_parse_item_unwraps_itemdata_and_flavour() -> None:
     assert "A warrior" in item.flavour_text
 
 
+def test_parse_item_headhunter_unique_reference_flavour_and_bounds() -> None:
+    """Headhunter often has no ``flavourText`` in dev fixtures; we bundle a quote + wiki bounds."""
+    raw = {
+        "id": "hh1",
+        "w": 2,
+        "h": 1,
+        "name": "Headhunter",
+        "typeLine": "Heavy Belt",
+        "baseType": "Heavy Belt",
+        "rarity": "Unique",
+        "explicitMods": ["+1 to maximum Energy Shield"],
+    }
+    item = parse_item(raw)
+    assert item.name == "Headhunter"
+    assert item.flavour_text and "cavern of bone" in item.flavour_text
+    assert item.reference_stat_bounds
+    assert "Charm Slot" in item.reference_stat_bounds
+    assert "20" in item.reference_stat_bounds and "Stun Threshold" in item.reference_stat_bounds
+
+
 def test_parse_item_copies_basic_fields() -> None:
     raw = {
         "id": "item-1",
