@@ -5,11 +5,13 @@ import type {
   ActivityResponse,
   CharacterDetail,
   CharactersResponse,
+  CreateShareResponse,
   Item,
   LeaguesResponse,
   Me,
   Prefs,
   PricingResponse,
+  PublicItemResponse,
   RefreshResponse,
   StashListResponse,
   StashSearchResponse,
@@ -17,6 +19,8 @@ import type {
   ItemTextResponse,
   TradeSearchResponse,
 } from "./types";
+
+export const shareViewPath = (shareId: string) => `/i/${encodeURIComponent(shareId)}`;
 
 export const queryKeys = {
   activity: (league: string | null) => ["activity", league] as const,
@@ -28,7 +32,35 @@ export const queryKeys = {
   stashTab: (league: string | null, tabId: string | null) =>
     ["stash-tab", league, tabId] as const,
   stashSearch: (league: string | null, q: string) => ["stash-search", league, q] as const,
+  publicItem: (shareId: string) => ["public-item", shareId] as const,
 };
+
+export function usePublicItem(shareId: string | null | undefined) {
+  return useQuery<PublicItemResponse>({
+    queryKey: queryKeys.publicItem(shareId ?? ""),
+    queryFn: () =>
+      api.get<PublicItemResponse>(
+        `/api/public/items/${encodeURIComponent(shareId ?? "")}`,
+      ),
+    enabled: Boolean(shareId),
+    retry: false,
+  });
+}
+
+export function useCreateShare() {
+  return useMutation<CreateShareResponse, Error, { league: string; item: Item }>({
+    mutationFn: (args) => api.post<CreateShareResponse>("/api/shares", args),
+  });
+}
+
+export function useRevokeShare() {
+  return useMutation<void, Error, { shareId: string }>({
+    mutationFn: (args) =>
+      api.request<void>(`/api/shares/${encodeURIComponent(args.shareId)}`, {
+        method: "DELETE",
+      }),
+  });
+}
 
 export function useMe() {
   return useQuery<Me>({

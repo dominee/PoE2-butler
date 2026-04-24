@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from app.services import mod_db as _mod_db
 
@@ -138,6 +138,18 @@ def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:  # n
             )
         )
     return details
+
+
+def coerce_item_dict(raw: dict[str, Any]) -> Item:
+    """Build an :class:`Item` from either our API JSON (snake_case) or a GGG stash item dict.
+
+    Used for public share create/read so the SPA can POST normalized items while tests and
+    bots may still send raw GGG-shaped payloads.
+    """
+    try:
+        return Item.model_validate(raw)
+    except ValidationError:
+        return parse_item(raw)
 
 
 def parse_item(raw: dict[str, Any]) -> Item:

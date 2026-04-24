@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.base import get_session
 from app.db.models import ItemShare, User
 from app.deps import get_current_user, get_redis, require_csrf
-from app.domain.item import parse_item
+from app.domain.item import coerce_item_dict
 from app.services.share_ratelimit import enforce_share_create_limit
 
 router = APIRouter(prefix="/api/shares", tags=["shares"])
@@ -41,14 +41,13 @@ async def create_share(
     db: AsyncSession = Depends(get_session),
     redis: Any = Depends(get_redis),
 ) -> CreateShareResponse:
-    # Validate as GGG-shaped item; raises if unusable
-    _ = parse_item(body.item)
+    item = coerce_item_dict(body.item)
     await enforce_share_create_limit(redis, user.id)
     share = ItemShare(
         id=uuid.uuid4(),
         user_id=user.id,
         league=body.league,
-        item_raw=body.item,
+        item_raw=item.model_dump(mode="json"),
     )
     db.add(share)
     await db.commit()

@@ -1,6 +1,14 @@
 import { useState } from "react";
 
-import { useItemText, usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
+import {
+  useCreateShare,
+  useItemText,
+  usePriceLookup,
+  useRevokeShare,
+  useTradeSearch,
+  useUpdatePrefs,
+  shareViewPath,
+} from "@/api/hooks";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
 import {
@@ -22,19 +30,32 @@ export interface ItemDetailPaneProps {
   league: string | null;
   prefs: Prefs | undefined;
   onClose?: () => void;
+  /** In `public` mode, trade, PoE2 text, pricing, and share actions are hidden. */
+  mode?: "app" | "public";
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneProps) {
+export function ItemDetailPane({
+  item,
+  league,
+  prefs,
+  onClose,
+  mode = "app",
+}: ItemDetailPaneProps) {
+  const isApp = mode === "app";
   const tradeSearch = useTradeSearch();
   const itemText = useItemText();
   const updatePrefs = useUpdatePrefs();
+  const createShare = useCreateShare();
+  const revokeShare = useRevokeShare();
   const [localTolerance, setLocalTolerance] = useState<number | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const [lastShareId, setLastShareId] = useState<string | null>(null);
 
-  const priceQ = usePriceLookup(league, item ? [item] : []);
-  const price = item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
+  const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
+  const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
 
   if (!item) {
     return (
@@ -94,11 +115,41 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
     setTimeout(() => setCopyFeedback(null), 3500);
   };
 
+  const onCreateShare = async () => {
+    if (!league?.trim()) {
+      setShareFeedback("Select a league in the app header first.");
+      setTimeout(() => setShareFeedback(null), 4000);
+      return;
+    }
+    try {
+      const { share_id: sid } = await createShare.mutateAsync({ league, item });
+      setLastShareId(sid);
+      const href = `${window.location.origin}${shareViewPath(sid)}`;
+      await copyTextToClipboard(href);
+      setShareFeedback("Public link copied to clipboard");
+    } catch {
+      setShareFeedback("Could not create share (rate limit or server error).");
+    }
+    setTimeout(() => setShareFeedback(null), 4000);
+  };
+
+  const onRevokeShare = async () => {
+    if (!lastShareId) return;
+    try {
+      await revokeShare.mutateAsync({ shareId: lastShareId });
+      setLastShareId(null);
+      setShareFeedback("Link revoked");
+    } catch {
+      setShareFeedback("Could not revoke link");
+    }
+    setTimeout(() => setShareFeedback(null), 4000);
+  };
+
   return (
     <aside
       className="panel flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 text-sm"
       style={{ borderColor: PANE_RARITY_BORDER[item.rarity as ItemRarity] }}
-      aria-label="Item details"
+      aria-label={isApp ? "Item details" : "Shared item"}
     >
       {/* ── Header ── */}
       <header className="flex items-start gap-3">
@@ -135,7 +186,7 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
             </div>
           )}
         </div>
-        {onClose && (
+        {isApp && onClose && (
           <button type="button" onClick={onClose} className="shrink-0 text-ember-400 text-sm">
             ✕
           </button>
@@ -302,71 +353,109 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
 
       <ModSection title="Crafted" mods={item.crafted_mods} tone="text-rarity-unique" />
 
-      <div className="shrink-0">
-        <ItemImageExportActions item={item} />
-      </div>
-
-      <div className="shrink-0 border-t border-ink-700 pt-3">
-        <button
-          type="button"
-          className="btn-ghost w-full text-left text-sm"
-          onClick={() => void onCopyItemText()}
-          disabled={itemText.isPending}
-        >
-          Copy PoE2 item text
-        </button>
-      </div>
-
-      {/* ── Trade controls ── */}
-      <div className="shrink-0 space-y-2 border-t border-ink-700 pt-3">
-        <div className="flex items-center gap-2 text-xs">
-          <label htmlFor="tolerance" className="text-ink-500">
-            Exact tolerance
-          </label>
-          <input
-            id="tolerance"
-            type="number"
-            min={0}
-            max={200}
-            value={tolerance}
-            onChange={(event) =>
-              setLocalTolerance(Number.parseInt(event.target.value, 10) || 0)
-            }
-            className="w-16 rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-right"
-          />
-          <span className="text-ink-500">%</span>
-          <button
-            type="button"
-            onClick={onPersistTolerance}
-            className="ml-auto btn-ghost text-xs"
-            disabled={localTolerance == null || updatePrefs.isPending}
-          >
-            save
-          </button>
+      {isApp && (
+        <div className="shrink-0 space-y-2 border-t border-ink-700 pt-3">
+          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+            Public link
+          </h4>
+          <p className="text-[11px] text-ink-500">
+            Creates a read-only page anyone can open. No GGG account or app login is required to
+            view the snapshot.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => void onCreateShare()}
+              disabled={createShare.isPending}
+            >
+              Create &amp; copy link
+            </button>
+            {lastShareId && (
+              <button
+                type="button"
+                className="btn-ghost text-xs"
+                onClick={() => void onRevokeShare()}
+                disabled={revokeShare.isPending}
+              >
+                Revoke link
+              </button>
+            )}
+          </div>
+          {shareFeedback && <p className="text-xs text-ember-400">{shareFeedback}</p>}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            className="btn-primary flex-1"
-            onClick={() => onSearch("exact")}
-            disabled={tradeSearch.isPending}
-          >
-            Same item on trade
-          </button>
-          <button
-            type="button"
-            className="btn-ghost flex-1"
-            onClick={() => onSearch("upgrade")}
-            disabled={tradeSearch.isPending}
-          >
-            Upgrade search
-          </button>
+      )}
+
+      {isApp && (
+        <div className="shrink-0">
+          <ItemImageExportActions item={item} />
         </div>
-        {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}
-        <p className="text-[11px] text-ink-500">
-          Opens PoE2 Trade for this league and copies the search JSON to your clipboard.
-        </p>
-      </div>
+      )}
+
+      {isApp && (
+        <>
+          <div className="shrink-0 border-t border-ink-700 pt-3">
+            <button
+              type="button"
+              className="btn-ghost w-full text-left text-sm"
+              onClick={() => void onCopyItemText()}
+              disabled={itemText.isPending}
+            >
+              Copy PoE2 item text
+            </button>
+          </div>
+
+          <div className="shrink-0 space-y-2 border-t border-ink-700 pt-3">
+            <div className="flex items-center gap-2 text-xs">
+              <label htmlFor="tolerance" className="text-ink-500">
+                Exact tolerance
+              </label>
+              <input
+                id="tolerance"
+                type="number"
+                min={0}
+                max={200}
+                value={tolerance}
+                onChange={(event) =>
+                  setLocalTolerance(Number.parseInt(event.target.value, 10) || 0)
+                }
+                className="w-16 rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-right"
+              />
+              <span className="text-ink-500">%</span>
+              <button
+                type="button"
+                onClick={onPersistTolerance}
+                className="ml-auto btn-ghost text-xs"
+                disabled={localTolerance == null || updatePrefs.isPending}
+              >
+                save
+              </button>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                className="btn-primary flex-1"
+                onClick={() => onSearch("exact")}
+                disabled={tradeSearch.isPending}
+              >
+                Same item on trade
+              </button>
+              <button
+                type="button"
+                className="btn-ghost flex-1"
+                onClick={() => onSearch("upgrade")}
+                disabled={tradeSearch.isPending}
+              >
+                Upgrade search
+              </button>
+            </div>
+            {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}
+            <p className="text-[11px] text-ink-500">
+              Opens PoE2 Trade for this league and copies the search JSON to your clipboard.
+            </p>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

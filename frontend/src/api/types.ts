@@ -129,6 +129,17 @@ export interface ItemTextResponse {
   text: string;
 }
 
+export interface CreateShareResponse {
+  share_id: string;
+  public_path: string;
+}
+
+/** Response from `GET /api/public/items/{share_id}` (unauthenticated). */
+export interface PublicItemResponse {
+  league: string;
+  item: Item;
+}
+
 export interface Prefs {
   trade_tolerance_pct: number;
   preferred_league: string | null;

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
 from app.db.models import ItemShare
-from app.domain.item import parse_item
+from app.domain.item import coerce_item_dict
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -35,5 +35,5 @@ async def get_public_item(
     row = await db.get(ItemShare, sid)
     if row is None or row.revoked_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="share_not_found")
-    item = parse_item(row.item_raw)
+    item = coerce_item_dict(row.item_raw)
     return PublicItemResponse(league=row.league, item=item.model_dump())
