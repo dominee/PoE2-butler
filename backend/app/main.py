@@ -13,6 +13,7 @@ from app.api import (
     auth_router,
     characters_router,
     health_router,
+    items_router,
     leagues_router,
     me_router,
     prefs_router,
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(characters_router)
     app.include_router(refresh_router)
     app.include_router(trade_router)
+    app.include_router(items_router)
     app.include_router(prefs_router)
     app.include_router(stashes_router)
     app.include_router(pricing_router)

@@ -125,6 +125,10 @@ export interface TradeSearchResponse {
   tolerance_pct?: number | null;
 }
 
+export interface ItemTextResponse {
+  text: string;
+}
+
 export interface Prefs {
   trade_tolerance_pct: number;
   preferred_league: string | null;

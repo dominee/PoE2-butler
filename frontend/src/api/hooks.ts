@@ -14,6 +14,7 @@ import type {
   StashListResponse,
   StashSearchResponse,
   StashTab,
+  ItemTextResponse,
   TradeSearchResponse,
 } from "./types";
 
@@ -103,6 +104,12 @@ export interface TradeSearchArgs {
 export function useTradeSearch() {
   return useMutation<TradeSearchResponse, Error, TradeSearchArgs>({
     mutationFn: (args) => api.post<TradeSearchResponse>("/api/trade/search", args),
+  });
+}
+
+export function useItemText() {
+  return useMutation<ItemTextResponse, Error, { item: Item }>({
+    mutationFn: (args) => api.post<ItemTextResponse>("/api/items/item-text", args),
   });
 }
 

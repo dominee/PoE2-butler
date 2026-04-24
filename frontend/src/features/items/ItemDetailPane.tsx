@@ -1,8 +1,9 @@
 import { useState } from "react";
 
-import { usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
+import { useItemText, usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import type { Item, ItemProperty, ItemRarity, ModDetail, Prefs } from "@/api/types";
+import { copyTextToClipboard } from "@/utils/clipboard";
 import { parseModParts } from "@/utils/modText";
 
 import { PercentBar, computeItemScore } from "./PercentBar";
@@ -225,6 +226,7 @@ function usefulProperties(props: ItemProperty[]): ItemProperty[] {
 
 export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneProps) {
   const tradeSearch = useTradeSearch();
+  const itemText = useItemText();
   const updatePrefs = useUpdatePrefs();
   const [localTolerance, setLocalTolerance] = useState<number | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -265,7 +267,7 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
     });
     window.open(result.url, "_blank", "noopener,noreferrer");
     try {
-      await navigator.clipboard?.writeText(JSON.stringify(result.payload, null, 2));
+      await copyTextToClipboard(JSON.stringify(result.payload, null, 2));
       setCopyFeedback("search JSON copied to clipboard");
     } catch {
       setCopyFeedback("could not copy; see console");
@@ -277,6 +279,17 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
   const onPersistTolerance = () => {
     if (localTolerance == null) return;
     updatePrefs.mutate({ trade_tolerance_pct: localTolerance });
+  };
+
+  const onCopyItemText = async () => {
+    try {
+      const { text } = await itemText.mutateAsync({ item });
+      await copyTextToClipboard(text);
+      setCopyFeedback("PoE2 item text copied to clipboard");
+    } catch {
+      setCopyFeedback("could not copy item text");
+    }
+    setTimeout(() => setCopyFeedback(null), 3500);
   };
 
   return (
@@ -488,6 +501,17 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       <ModSection title="Crafted" mods={item.crafted_mods} tone="text-rarity-unique" />
 
       <ItemImageExportActions item={item} />
+
+      <div className="border-t border-ink-700 pt-3">
+        <button
+          type="button"
+          className="btn-ghost w-full text-left text-sm"
+          onClick={() => void onCopyItemText()}
+          disabled={itemText.isPending}
+        >
+          Copy PoE2 item text
+        </button>
+      </div>
 
       {/* ── Trade controls ── */}
       <div className="mt-auto space-y-2 border-t border-ink-700 pt-3">
