@@ -78,10 +78,32 @@ export interface CharacterSummary {
   experience: number | null;
 }
 
+/** Rolled-up mod line from equipment (template key + one or more numbers). */
+export interface StatRow {
+  key: string;
+  label: string;
+  values: number[];
+  value_shape?: "auto";
+}
+
+export interface StatSection {
+  id: string;
+  label: string;
+  sort_index: number;
+  rows: StatRow[];
+}
+
+/** Per-section mod rollups from the backend; see `stat_summary` domain. */
+export interface EquipmentStatSummary {
+  sections: StatSection[];
+}
+
 export interface CharacterDetail {
   summary: CharacterSummary;
   equipped: Item[];
   inventory: Item[];
+  /** Templated mod rollups (all numeric mod lines, grouped by section heuristics). */
+  stat_summary?: EquipmentStatSummary;
 }
 
 export interface League {

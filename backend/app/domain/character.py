@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.domain.item import Item, parse_item
+from app.domain.stat_summary import EquipmentStatSummary, summarize_equipment
 
 
 class CharacterSummary(BaseModel):
@@ -25,6 +26,8 @@ class CharacterDetail(BaseModel):
     summary: CharacterSummary
     equipped: list[Item] = Field(default_factory=list)
     inventory: list[Item] = Field(default_factory=list)
+    # Cumulative mod rollups; see :mod:`app.domain.stat_summary`.
+    stat_summary: EquipmentStatSummary = Field(default_factory=EquipmentStatSummary)
 
 
 _INVENTORY_SLOTS = {
@@ -85,4 +88,9 @@ def parse_detail(payload: dict[str, Any]) -> CharacterDetail:
             equipped.append(item)
         else:
             inventory.append(item)
-    return CharacterDetail(summary=summary, equipped=equipped, inventory=inventory)
+    return CharacterDetail(
+        summary=summary,
+        equipped=equipped,
+        inventory=inventory,
+        stat_summary=summarize_equipment(equipped),
+    )

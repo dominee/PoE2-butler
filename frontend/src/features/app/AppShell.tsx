@@ -13,6 +13,7 @@ import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
 import { AppFooter } from "@/features/app/AppFooter";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
+import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import { CharacterTable } from "@/features/characters/CharacterTable";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { ItemCard } from "@/features/items/ItemCard";
@@ -174,6 +175,7 @@ export function AppShell() {
                 </div>
               )}
             </div>
+            {characterQ.data && <CharacterStatSummary detail={characterQ.data} />}
             {selectedCharacter && characterQ.isLoading && (
               <p className="text-ink-500">Loading gear&hellip;</p>
             )}

@@ -4,7 +4,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from app.clients.ggg import GGGClient
+from app.clients.ggg import GGGClient, GGGError, ggg_error_implies_reauth
 from app.config import Settings
 
 
@@ -49,3 +49,10 @@ async def test_ggg_client_sends_mandatory_user_agent_header() -> None:
         await ggg.exchange_code(code="abc", code_verifier="verifier")
         profile = await ggg.get_profile("token")
         assert profile["name"] == "ExileOne#1234"
+
+
+def test_ggg_error_implies_reauth_on_invalid_grant() -> None:
+    assert ggg_error_implies_reauth(GGGError(400, {"detail": "invalid_grant"}))
+    assert ggg_error_implies_reauth(GGGError(400, "invalid_grant"))
+    assert not ggg_error_implies_reauth(GGGError(400, "bad request"))
+    assert not ggg_error_implies_reauth(GGGError(401, "nope"))

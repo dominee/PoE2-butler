@@ -14,6 +14,7 @@ networks:
 volumes:
   poe2b_uat_postgres:
   poe2b_uat_redis:
+  poe2b_uat_mock_ggg_tokens:
 
 services:
   traefik:
@@ -80,6 +81,11 @@ services:
       context: ../../mock-ggg
     container_name: poe2b-uat-mock-ggg
     restart: unless-stopped
+    user: "0:0"
+    environment:
+      MOCK_GGG_TOKEN_FILE: /data/tokens.json
+    volumes:
+      - poe2b_uat_mock_ggg_tokens:/data
     networks:
       - uat_edge
       - uat_internal

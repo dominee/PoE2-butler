@@ -11,6 +11,7 @@ This service MUST NOT be exposed outside development networks.
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import time
 from pathlib import Path
@@ -38,6 +39,51 @@ STASHES = _load("stashes.json")
 PENDING_AUTH: dict[str, dict[str, Any]] = {}
 ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
 REFRESH_TOKENS: dict[str, dict[str, Any]] = {}
+
+# If set, persist access/refresh maps so a mock container restart does not invalidate
+# app sessions that still hold tokens in the real DB.
+_token_path = (os.environ.get("MOCK_GGG_TOKEN_FILE") or "").strip()
+_TOKEN_FILE: str | None = _token_path or None
+
+
+def _persist_token_maps() -> None:
+    if not _TOKEN_FILE:
+        return
+    try:
+        path = Path(_TOKEN_FILE)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"access": ACCESS_TOKENS, "refresh": REFRESH_TOKENS}
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    except OSError:
+        # Dev-only: ignore disk errors; in-memory state still works for the process lifetime.
+        pass
+
+
+def _load_token_maps() -> None:
+    if not _TOKEN_FILE:
+        return
+    path = Path(_TOKEN_FILE)
+    if not path.is_file():
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return
+    a = data.get("access")
+    r = data.get("refresh")
+    if isinstance(a, dict):
+        ACCESS_TOKENS.clear()
+        for k, v in a.items():
+            if isinstance(k, str) and isinstance(v, dict):
+                ACCESS_TOKENS[k] = v
+    if isinstance(r, dict):
+        REFRESH_TOKENS.clear()
+        for k, v in r.items():
+            if isinstance(k, str) and isinstance(v, dict):
+                REFRESH_TOKENS[k] = v
+
+
+_load_token_maps()
 
 # Per-tab call counter: first call returns prev_contents (if present), later
 # calls return the full contents.  Simulates items arriving between snapshots,
@@ -161,6 +207,7 @@ async def token(
         ACCESS_TOKENS[access] = {"user": pending["user"], "expires_at": time.time() + 3600}
         REFRESH_TOKENS[refresh] = {"user": pending["user"], "scope": pending["scope"]}
 
+        _persist_token_maps()
         return JSONResponse(
             {
                 "access_token": access,
@@ -177,6 +224,7 @@ async def token(
         rt = REFRESH_TOKENS[refresh_token]
         access = secrets.token_urlsafe(32)
         ACCESS_TOKENS[access] = {"user": rt["user"], "expires_at": time.time() + 3600}
+        _persist_token_maps()
         return JSONResponse(
             {
                 "access_token": access,
@@ -193,6 +241,7 @@ async def token(
 async def revoke(token: str = Form(...)) -> JSONResponse:
     ACCESS_TOKENS.pop(token, None)
     REFRESH_TOKENS.pop(token, None)
+    _persist_token_maps()
     return JSONResponse({"revoked": True})
 
 

@@ -68,7 +68,13 @@ def test_parse_summaries_and_detail() -> None:
     detail_payload = {
         "character": {"id": "c1", "name": "A", "class": "Ranger", "level": 90, "league": "L"},
         "items": [
-            {"id": "i1", "inventoryId": "Weapon", "typeLine": "Bow", "rarity": "Rare"},
+            {
+                "id": "i1",
+                "inventoryId": "Weapon",
+                "typeLine": "Bow",
+                "rarity": "Rare",
+                "explicitMods": ["+45 to maximum Life", "+5% to all Elemental Resistances"],
+            },
             {"id": "i2", "inventoryId": "MainInventory", "typeLine": "Quiver"},
         ],
     }
@@ -77,3 +83,10 @@ def test_parse_summaries_and_detail() -> None:
     assert len(detail.equipped) == 1
     assert detail.equipped[0].type_line == "Bow"
     assert len(detail.inventory) == 1
+    sm = {s.id: s for s in detail.stat_summary.sections}
+    life = next(
+        r for r in sm["resources"].rows if "maximum Life" in r.label or "maximum" in r.label
+    )
+    assert life.values == [45.0]
+    tri = next(r for r in sm["resistances"].rows if "Elemental" in r.label and "Resist" in r.label)
+    assert tri.values == [5.0]

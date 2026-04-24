@@ -28,6 +28,20 @@ class GGGError(Exception):
         self.payload = payload
 
 
+def ggg_error_implies_reauth(exc: GGGError) -> bool:
+    """True when the refresh token is no longer valid (e.g. IdP lost state, user revoked)."""
+    if exc.status_code != 400:
+        return False
+    p = exc.payload
+    if isinstance(p, dict):
+        d = p.get("detail")
+        if isinstance(d, str) and "invalid_grant" in d:
+            return True
+    if isinstance(p, str) and "invalid_grant" in p:
+        return True
+    return "invalid_grant" in repr(p)
+
+
 @dataclass
 class TokenResponse:
     access_token: str

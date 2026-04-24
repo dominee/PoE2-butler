@@ -9,6 +9,7 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  poe2b_dev_mock_ggg_tokens:
 
 services:
   traefik:
@@ -73,6 +74,13 @@ services:
       context: ../../mock-ggg
     container_name: poe2b-mock-ggg
     restart: unless-stopped
+    # Named volume is root-owned; run as root so OAuth token persistence can write.
+    user: "0:0"
+    environment:
+      # Survive container restarts so backend DB session tokens still match the mock.
+      MOCK_GGG_TOKEN_FILE: /data/tokens.json
+    volumes:
+      - poe2b_dev_mock_ggg_tokens:/data
     networks:
       - edge
       - internal

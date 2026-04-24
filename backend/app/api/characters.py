@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.clients.ggg import GGGClient, GGGError
+from app.clients.ggg import GGGClient, GGGError, ggg_error_implies_reauth
 from app.db.base import get_session
 from app.db.models import SnapshotKind, User
 from app.deps import get_cipher, get_current_user, get_ggg_client
@@ -57,6 +57,8 @@ async def get_character(
     except GGGError as exc:
         if exc.status_code == 404:
             raise HTTPException(status_code=404, detail="character_not_found") from exc
+        if ggg_error_implies_reauth(exc):
+            raise HTTPException(status_code=401, detail="ggg_reauth_required") from exc
         raise HTTPException(status_code=502, detail="ggg_upstream_error") from exc
     await db.commit()
     return parse_detail(payload)
