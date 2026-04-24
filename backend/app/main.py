@@ -11,6 +11,7 @@ from app import __version__
 from app.api import (
     activity_router,
     auth_router,
+    cdn_proxy_router,
     characters_router,
     health_router,
     items_router,
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(cdn_proxy_router)
     app.include_router(public_item_router)
     app.include_router(auth_router)
     app.include_router(shares_router)

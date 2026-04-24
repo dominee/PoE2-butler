@@ -294,7 +294,7 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
 
   return (
     <aside
-      className="panel flex h-full flex-col gap-3 overflow-y-auto p-4 text-sm"
+      className="panel flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 text-sm"
       style={{ borderColor: RARITY_BORDER[item.rarity as ItemRarity] }}
       aria-label="Item details"
     >
@@ -500,9 +500,11 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
 
       <ModSection title="Crafted" mods={item.crafted_mods} tone="text-rarity-unique" />
 
-      <ItemImageExportActions item={item} />
+      <div className="shrink-0">
+        <ItemImageExportActions item={item} />
+      </div>
 
-      <div className="border-t border-ink-700 pt-3">
+      <div className="shrink-0 border-t border-ink-700 pt-3">
         <button
           type="button"
           className="btn-ghost w-full text-left text-sm"
@@ -514,7 +516,7 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       </div>
 
       {/* ── Trade controls ── */}
-      <div className="mt-auto space-y-2 border-t border-ink-700 pt-3">
+      <div className="shrink-0 space-y-2 border-t border-ink-700 pt-3">
         <div className="flex items-center gap-2 text-xs">
           <label htmlFor="tolerance" className="text-ink-500">
             Exact tolerance
