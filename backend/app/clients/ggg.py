@@ -52,10 +52,7 @@ class GGGClient:
     def authorize_url(self, *, state: str, code_challenge: str) -> str:
         # Use the browser-facing base URL if explicitly configured (needed in
         # dev where the IdP internal hostname is unreachable from the browser).
-        base = (
-            self._settings.ggg_oauth_authorize_base_url
-            or self._settings.ggg_oauth_base_url
-        )
+        base = self._settings.ggg_oauth_authorize_base_url or self._settings.ggg_oauth_base_url
         params = {
             "client_id": self._settings.ggg_client_id,
             "response_type": "code",
@@ -127,9 +124,7 @@ class GGGClient:
     async def get_stash_list(self, access_token: str, league: str) -> dict[str, Any]:
         return await self._get(f"/account/stashes/{league}", access_token)
 
-    async def get_stash_tab(
-        self, access_token: str, league: str, tab_id: str
-    ) -> dict[str, Any]:
+    async def get_stash_tab(self, access_token: str, league: str, tab_id: str) -> dict[str, Any]:
         return await self._get(f"/account/stashes/{league}/{tab_id}", access_token)
 
     async def _get(self, path: str, access_token: str) -> dict[str, Any]:

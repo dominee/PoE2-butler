@@ -1,0 +1,23 @@
+Item Class: Belts
+Rarity: Unique
+Headhunter
+Heavy Belt
+--------
+Requires: Level 50
+--------
+Item Level: 82
+--------
+26% increased Stun Threshold (implicit)
+Has 3 Charm Slots (implicit)
+--------
++53 to maximum Life
++27 to Strength
++21 to Dexterity
+When you kill a Rare monster, you gain its Modifiers for 60 seconds
+--------
+"A man's soul rules from a cavern of bone, learns and
+judges through flesh-born windows. The heart is meat.
+The head is where the Man is."
+- Lavianga, Advisor to Kaom
+--------
+Corrupted

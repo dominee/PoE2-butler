@@ -1,0 +1,30 @@
+Item Class: Gloves
+Rarity: Unique
+Painter's Servant
+Torn Gloves
+--------
+Quality: +20% (augmented)
+Energy Shield: 11 (augmented)
+--------
+Requires: Level 50
+--------
+Sockets: S S 
+--------
+Item Level: 69
+--------
+Adds 5 to 12 Physical Damage to Attacks (rune)
+30% increased Magnitude of Non-Damaging Ailments you inflict (rune)
+--------
+Gain 10% of Elemental Damage as Extra Cold Damage
+Gain 10% of Elemental Damage as Extra Fire Damage
+Gain 10% of Elemental Damage as Extra Lightning Damage
+33% of Elemental Damage Converted to Cold Damage
+33% of Elemental Damage Converted to Fire Damage
+33% of Elemental Damage Converted to Lightning Damage
+--------
+Bloodshed on the crimson shores,
+longing for the endless sea.
+Treasures, life, I'd give it all
+just to capture thee.
+--------
+Corrupted

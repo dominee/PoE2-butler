@@ -22,6 +22,7 @@ _TAG_PLAIN = re.compile(r"\[([^\]]+)\]")
 def _strip_tags(text: str) -> str:
     return _TAG_PLAIN.sub(lambda m: m.group(1), _TAG_LABELED.sub(lambda m: m.group(2), text))
 
+
 class ItemProperty(BaseModel):
     name: str
     value: str | None = None
@@ -67,6 +68,7 @@ class Item(BaseModel):
     h: int = 1
     x: int | None = None
     y: int | None = None
+    item_class: str | None = None
     name: str = ""
     type_line: str = ""
     base_type: str = ""
@@ -74,6 +76,8 @@ class Item(BaseModel):
     ilvl: int | None = None
     identified: bool = True
     corrupted: bool = False
+    flavour_text: str | None = None
+    trailer_note: str | None = None
     properties: list[ItemProperty] = Field(default_factory=list)
     requirements: list[ItemProperty] = Field(default_factory=list)
     implicit_mods: list[str] = Field(default_factory=list)
@@ -145,11 +149,21 @@ def parse_item(raw: dict[str, Any]) -> Item:
         for s in raw.get("sockets", []) or []
         if isinstance(s, dict)
     ]
+    extended = raw.get("extended")
+    ext: dict[str, Any] = extended if isinstance(extended, dict) else {}
+    item_class: str | None = ext.get("category") if isinstance(ext.get("category"), str) else None
+
+    fl_raw = raw.get("flavourText")
+    if isinstance(fl_raw, list):
+        flavour_text: str | None = "\n".join(_strip_tags(str(x)) for x in fl_raw) or None
+    elif isinstance(fl_raw, str):
+        flavour_text = _strip_tags(fl_raw) or None
+    else:
+        flavour_text = None
+
     explicit_mod_details = _parse_mod_details(raw.get("extended"))
     socketed_items = [
-        parse_item(si)
-        for si in (raw.get("socketedItems") or [])
-        if isinstance(si, dict)
+        parse_item(si) for si in (raw.get("socketedItems") or []) if isinstance(si, dict)
     ]
 
     return Item(
@@ -159,6 +173,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         h=int(raw.get("h", 1)),
         x=raw.get("x"),
         y=raw.get("y"),
+        item_class=item_class,
         name=str(raw.get("name", "")),
         type_line=str(raw.get("typeLine", "")),
         base_type=str(raw.get("baseType", raw.get("typeLine", ""))),
@@ -166,6 +181,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         ilvl=raw.get("ilvl"),
         identified=bool(raw.get("identified", True)),
         corrupted=bool(raw.get("corrupted", False)),
+        flavour_text=flavour_text,
         properties=props,
         requirements=reqs,
         implicit_mods=list(raw.get("implicitMods") or []),

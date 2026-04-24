@@ -1,0 +1,23 @@
+Item Class: Helmets
+Rarity: Rare
+Mind Glance
+Gladiatorial Helm
+--------
+Quality: +20% (augmented)
+Armour: 526 (augmented)
+Evasion Rating: 481 (augmented)
+--------
+Requires: Level 80, 63 Str, 63 Dex
+--------
+Sockets: S 
+--------
+Item Level: 81
+--------
++11% to Chaos Resistance (rune)
+--------
+152% increased Armour and Evasion
++44 to maximum Life
++36 to maximum Mana
++32 to Strength
++33% to Lightning Resistance
++25% to Chaos Resistance

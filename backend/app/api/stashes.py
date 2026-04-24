@@ -43,6 +43,7 @@ async def list_stashes(
 # NOTE: must be declared BEFORE the /{tab_id} route so FastAPI doesn't
 # match the literal string "search" as a tab_id path parameter.
 
+
 class SearchResult(BaseModel):
     tab_id: str
     tab_name: str
@@ -131,6 +132,7 @@ async def search_stash(
 
 # ── Tab contents ─────────────────────────────────────────────────────────────
 
+
 @router.get("/{tab_id}", summary="Stash tab contents")
 async def get_stash_tab(
     tab_id: str,
@@ -155,6 +157,7 @@ async def get_stash_tab(
 
 
 # ── Stash refresh ────────────────────────────────────────────────────────────
+
 
 class RefreshStashesRequest(BaseModel):
     league: str

@@ -34,6 +34,19 @@ Per the [GGG API reference (stashes)](https://www.pathofexile.com/developer/docs
 
 **Implication for this product:** live stash data for **PoE2** from the real GGG API **cannot** be used in production until GGG adds a PoE2 stash (or equivalent) scope. The app is implemented so stash browsing works end-to-end when that API exists; **today**, development and demos rely on **`mock-ggg/`** and fixtures. The same limitations are recorded in `INSTRUCTIONS.md` (§ Limitations). The expectation is that GGG will extend the official API for PoE2; until then, treat real-GGG stash integration as **blocked on upstream**.
 
+### 1.2 Product extensions and delivery policy (INSTRUCTIONS §Product extensions)
+
+Authoritative detail: [INSTRUCTIONS.md](INSTRUCTIONS.md) section **“Product extensions (Phase 2+) — analysis and acceptance”**. Locked decisions for implementers:
+
+- **TDD:** New features follow test-first: derive cases from `INSTRUCTIONS.md`, then implement until tests pass (see INSTRUCTIONS §Implementation approach).
+- **Clipboard text:** PoE2-style block strings; goldens in `mock-ggg/samples/*.txt`; [`backend/app/domain/item_text.py`](backend/app/domain/item_text.py); optional `item_class` / `flavour_text` / `trailer_note` on `Item` in [`backend/app/domain/item.py`](backend/app/domain/item.py).
+- **Public share links:** `share_id` UUID, **world-readable**; warn in UI; revoke + rate limit on create. `POST/DELETE /api/shares` (CSRF), `GET /api/public/items/{id}`; model `ItemShare` in [`backend/app/db/models.py`](backend/app/db/models.py); limiter in [`backend/app/services/share_ratelimit.py`](backend/app/services/share_ratelimit.py).
+- **Image export:** Client-side PNG (two layouts) in [`frontend/src/features/items/ItemImageExport.tsx`](frontend/src/features/items/ItemImageExport.tsx) (`html-to-image`); no mandatory server render on small VM.
+- **Stat summary:** [`backend/app/domain/stat_summary.py`](backend/app/domain/stat_summary.py) (heuristic MVP); expand data files later.
+- **Queue:** **Redis + arq** for background work; per–API throttling in [`backend/app/services/third_party_ratelimit.py`](backend/app/services/third_party_ratelimit.py); job `refresh_trade_filter_catalog` in worker. No RabbitMQ unless requirements outgrow this.
+- **Pricing phase 1:** Aggregators (e.g. poe.ninja) + trade **links**; label as aggregate, not live market; **no** GGG trade scraping.
+- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) + stat ids in [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py) (bundled map for now); weighted/sum filters later.
+
 ---
 
 ## 2. Repository layout

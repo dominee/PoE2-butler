@@ -1,0 +1,28 @@
+Item Class: Body Armours
+Rarity: Unique
+Morior Invictus
+Grand Regalia
+--------
+Quality: +20% (augmented)
+Armour: 804 (augmented)
+Evasion Rating: 732 (augmented)
+Energy Shield: 274 (augmented)
+--------
+Requires: Level 65, 41 Str, 41 Dex, 41 Int
+--------
+Sockets: S S S S S 
+--------
+Item Level: 84
+--------
+12% increased maximum Life (rune)
+15% of Damage is taken from Mana before Life (rune)
+--------
+396% increased Armour, Evasion and Energy Shield
+8.2 Life Regeneration per second per Socket filled
++10% to all Elemental Resistances per Socket filled
++14 to Spirit per Socket filled
+--------
+The Unblinking Eye did not cower and wail.
+They stood against the end.
+--------
+Corrupted

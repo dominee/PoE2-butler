@@ -42,6 +42,8 @@ export interface Item {
   h: number;
   x: number | null;
   y: number | null;
+  /** GGG / extended: armour class, ring, etc. (PoE2 item text) */
+  item_class?: string | null;
   name: string;
   type_line: string;
   base_type: string;
@@ -62,6 +64,8 @@ export interface Item {
   stack_size: number | null;
   max_stack_size: number | null;
   icon: string | null;
+  flavour_text?: string | null;
+  trailer_note?: string | null;
 }
 
 export interface CharacterSummary {

@@ -4,9 +4,16 @@ Entry point for the ``arq`` CLI::
 
     uv run arq app.workers.arq_worker.WorkerSettings
 
-Currently exposes one job: ``refresh_user`` which takes a user id (UUID str)
-and re-fetches their GGG snapshots.  Later milestones add ``warm_prices`` and
-``fetch_stash_tab``.
+**Jobs (INSTRUCTIONS: queue + pricing background work)**:
+
+* ``refresh_user`` — re-fetch GGG snapshots for a user.
+* ``warm_prices`` — pre-fill pricing cache (poe.ninja or static) with
+  :func:`app.services.third_party_ratelimit.throttle` around hot loops.
+* ``refresh_trade_filter_catalog`` — download/cache PoE2 trade filter metadata
+  (used by :mod:`app.services.trade_stat_catalog`).
+
+``arq`` uses Redis; per-vendor throttling uses separate Redis keys (see
+``third_party_ratelimit``) — not a second message broker.
 """
 
 from __future__ import annotations
@@ -28,6 +35,7 @@ from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.static import StaticPriceSource
 from app.services.snapshot import get_latest_snapshot, refresh_user_snapshot
+from app.services.third_party_ratelimit import KEY_POE_NINJA, throttle
 
 
 async def refresh_user(ctx: dict, user_id: str) -> dict:
@@ -69,6 +77,7 @@ async def warm_prices(ctx: dict, user_id: str, league: str) -> dict:
     )
     cache = PriceCache(redis)
     pricing = PricingService(source, cache)
+    await throttle(redis, KEY_POE_NINJA)
 
     priced = 0
     try:
@@ -87,6 +96,7 @@ async def warm_prices(ctx: dict, user_id: str, league: str) -> dict:
 
             tab_ids = [t.get("id") for t in list_snap.payload.get("tabs", []) if t.get("id")]
             for tab_id in tab_ids:
+                await throttle(redis, KEY_POE_NINJA)
                 snap = await get_latest_snapshot(
                     session, user.id, SnapshotKind.STASH_TAB, key=f"{league}:{tab_id}"
                 )
@@ -97,6 +107,7 @@ async def warm_prices(ctx: dict, user_id: str, league: str) -> dict:
 
             char_snaps = await _all_character_snapshots(session, user.id)
             for payload in char_snaps:
+                await throttle(redis, KEY_POE_NINJA)
                 items = [parse_item(i) for i in payload.get("equipment", [])]
                 priced += await pricing.warm(league, items)
         return {"ok": True, "priced": priced}
@@ -104,6 +115,24 @@ async def warm_prices(ctx: dict, user_id: str, league: str) -> dict:
         await redis.aclose()
         if hasattr(source, "aclose"):
             await source.aclose()  # type: ignore[attr-defined]
+
+
+async def refresh_trade_filter_catalog(ctx: dict) -> dict:
+    """Background refresh of GGG trade filter / stat metadata (see trade_stat_catalog)."""
+    from app.services import trade_stat_catalog as tsc
+
+    settings = get_settings()
+    redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    try:
+        n = await tsc.refresh_if_stale(redis, settings)
+        return {"ok": True, "stat_entries": n}
+    except Exception as exc:  # noqa: BLE001
+        get_logger("app.workers.refresh_trade_filter_catalog").warning(
+            "refresh_failed", error=str(exc)
+        )
+        return {"ok": False, "error": str(exc)}
+    finally:
+        await redis.aclose()
 
 
 async def _all_character_snapshots(session, user_id):
@@ -130,7 +159,7 @@ async def shutdown(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    functions = [refresh_user, warm_prices]
+    functions = [refresh_user, warm_prices, refresh_trade_filter_catalog]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

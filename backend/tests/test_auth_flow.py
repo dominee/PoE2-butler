@@ -30,9 +30,7 @@ def _load_mock_ggg_app():
     # Add mock-ggg to sys.path so we can import its `app` package as `mock_ggg_app`.
     mock_dir = Path(__file__).resolve().parent.parent.parent / "mock-ggg"
     pkg_root = mock_dir
-    spec = importlib.util.spec_from_file_location(
-        "mock_ggg_app_main", pkg_root / "app" / "main.py"
-    )
+    spec = importlib.util.spec_from_file_location("mock_ggg_app_main", pkg_root / "app" / "main.py")
     if spec is None or spec.loader is None:
         raise RuntimeError("failed to load mock-ggg")
     module = importlib.util.module_from_spec(spec)

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { usePriceLookup, useTradeSearch, useUpdatePrefs } from "@/api/hooks";
+import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import type { Item, ItemProperty, ItemRarity, ModDetail, Prefs } from "@/api/types";
 import { parseModParts } from "@/utils/modText";
 
@@ -485,6 +486,8 @@ export function ItemDetailPane({ item, league, prefs, onClose }: ItemDetailPaneP
       )}
 
       <ModSection title="Crafted" mods={item.crafted_mods} tone="text-rarity-unique" />
+
+      <ItemImageExportActions item={item} />
 
       {/* ── Trade controls ── */}
       <div className="mt-auto space-y-2 border-t border-ink-700 pt-3">

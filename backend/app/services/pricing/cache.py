@@ -25,10 +25,7 @@ class PriceCache:
 
     @staticmethod
     def key(league: str, key: ItemKey) -> str:
-        return (
-            f"{league}:{key.category}:{key.base_type}"
-            f":{key.name}:{key.rarity}"
-        ).lower()
+        return (f"{league}:{key.category}:{key.base_type}:{key.name}:{key.rarity}").lower()
 
     async def get(self, league: str, key: ItemKey) -> PriceEstimate | None | str:
         """Return an estimate, ``None`` for cache miss, ``"miss"`` for negative cache."""

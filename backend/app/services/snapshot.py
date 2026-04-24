@@ -47,9 +47,7 @@ async def upsert_snapshot(
     existing = await get_latest_snapshot(session, user_id, kind, key)
     now = datetime.now(UTC)
     if existing is None:
-        session.add(
-            Snapshot(user_id=user_id, kind=kind, key=key, payload=payload, fetched_at=now)
-        )
+        session.add(Snapshot(user_id=user_id, kind=kind, key=key, payload=payload, fetched_at=now))
     else:
         # Preserve current payload as previous before overwriting — this is the
         # basis for the activity log diff on the next refresh.

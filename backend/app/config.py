@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     pricing_base_url: str = "https://poe.ninja/api/data"
     default_valuable_threshold_chaos: int = 100
 
+    # PoE2 trade site public filter metadata (optional; used by trade_stat_catalog).
+    trade_filter_data_url: str = "https://www.pathofexile.com/api/trade2/data/filters"
+
     cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://app.localhost"])
 
     @property

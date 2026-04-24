@@ -25,6 +25,7 @@ from typing import Any
 from urllib.parse import quote
 
 from app.domain.item import Item
+from app.services.trade_stat_catalog import BUNDLED_TEMPLATE_TO_STAT_ID
 
 TRADE_BASE = "https://www.pathofexile.com/trade2/search/poe2"
 
@@ -120,14 +121,16 @@ def _stat_filters_for_exact(
         # wants similar rolls, not two independent windows.
         baseline = sum(parsed.values) / len(parsed.values)
         lo, hi = _window(baseline, tolerance_pct)
-        filters.append(
-            {
-                "bucket": bucket,
-                "text": parsed.text,
-                "template": parsed.template,
-                "value": {"min": _floor_int(lo), "max": _ceil_int(hi)},
-            }
-        )
+        row: dict[str, Any] = {
+            "bucket": bucket,
+            "text": parsed.text,
+            "template": parsed.template,
+            "value": {"min": _floor_int(lo), "max": _ceil_int(hi)},
+        }
+        sid = BUNDLED_TEMPLATE_TO_STAT_ID.get(parsed.template)
+        if sid:
+            row["id"] = sid
+        filters.append(row)
     return filters
 
 
@@ -139,14 +142,16 @@ def _stat_filters_for_upgrade(pairs: list[tuple[str, str]]) -> list[dict[str, An
             continue  # upgrade only cares about numeric mods
         baseline = sum(parsed.values) / len(parsed.values)
         floor_min = _floor_int(baseline * 0.95)
-        filters.append(
-            {
-                "bucket": bucket,
-                "text": parsed.text,
-                "template": parsed.template,
-                "value": {"min": floor_min},
-            }
-        )
+        row: dict[str, Any] = {
+            "bucket": bucket,
+            "text": parsed.text,
+            "template": parsed.template,
+            "value": {"min": floor_min},
+        }
+        sid = BUNDLED_TEMPLATE_TO_STAT_ID.get(parsed.template)
+        if sid:
+            row["id"] = sid
+        filters.append(row)
     return filters
 
 

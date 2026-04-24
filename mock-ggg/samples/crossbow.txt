@@ -1,0 +1,31 @@
+Item Class: Crossbows
+Rarity: Rare
+Kraken Core
+Desolate Crossbow
+--------
+Quality: +20% (augmented)
+Physical Damage: 216-593 (augmented)
+Cold Damage: 56-78 (cold)
+Critical Hit Chance: 5.00%
+Attacks per Second: 1.60
+Reload Time: 0.80
+--------
+Requires: Level 77, 89 Str, 89 Dex
+--------
+Sockets: S S S 
+--------
+Item Level: 79
+--------
+18% increased Physical Damage (rune)
+Attacks with this Weapon Penetrate 15% Elemental Resistances (rune)
+Gain 5% of Damage as Extra Damage of all Elements (rune)
+--------
+163% increased Physical Damage
+Adds 31 to 44 Physical Damage
++5 to Level of all Attack Skills
+Leeches 7.48% of Physical Damage as Life
+25% chance to gain Onslaught on Killing Hits with this Weapon
+Adds 56 to 78 Cold Damage (desecrated)
+--------
+Corrupted
+

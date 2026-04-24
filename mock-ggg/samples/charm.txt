@@ -1,0 +1,19 @@
+Item Class: Charms
+Rarity: Magic
+Evergreen Golden Charm of the Doctor
+--------
+Lasts 1 Second
+Consumes 80 of 80 Charges on use
+Currently has 80 Charges
+15% increased Rarity of Items found
+--------
+Requires: Level 60
+--------
+Item Level: 79
+--------
+Used when you kill a Rare or Unique enemy (implicit)
+--------
+Recover 303 Life when Used
+27% Chance to gain a Charge when you kill an enemy
+--------
+Used automatically when condition is met. Can only hold charges while in belt. Refill at Wells or by killing monsters.

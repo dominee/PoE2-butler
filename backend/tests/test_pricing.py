@@ -51,9 +51,7 @@ def test_match_item_currency_uses_type_line() -> None:
 
 
 def test_match_item_unique_uses_name() -> None:
-    key = match_item(
-        _item(rarity="Unique", name="Headhunter", base_type="Leather Belt")
-    )
+    key = match_item(_item(rarity="Unique", name="Headhunter", base_type="Leather Belt"))
     assert key.category == "unique"
     assert key.name == "Headhunter"
 

@@ -24,9 +24,7 @@ def _settings() -> Settings:
 
 @pytest.mark.asyncio
 async def test_ggg_client_sends_mandatory_user_agent_header() -> None:
-    expected_user_agent = (
-        "OAuth mypoeapp/1.0.0 (contact: dev@hell.sk) SomeOptionalThingHere"
-    )
+    expected_user_agent = "OAuth mypoeapp/1.0.0 (contact: dev@hell.sk) SomeOptionalThingHere"
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("User-Agent") == expected_user_agent
@@ -51,4 +49,3 @@ async def test_ggg_client_sends_mandatory_user_agent_header() -> None:
         await ggg.exchange_code(code="abc", code_verifier="verifier")
         profile = await ggg.get_profile("token")
         assert profile["name"] == "ExileOne#1234"
-

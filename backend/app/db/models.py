@@ -54,9 +54,7 @@ class User(Base):
     preferred_league: Mapped[str | None] = mapped_column(String(200), nullable=True)
     trade_tolerance_pct: Mapped[int] = mapped_column(default=10)
     valuable_threshold_chaos: Mapped[int] = mapped_column(default=100)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_refreshed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -66,6 +64,9 @@ class User(Base):
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
     snapshots: Mapped[list[Snapshot]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    item_shares: Mapped[list[ItemShare]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -89,9 +90,7 @@ class UserToken(Base):
 
 class Snapshot(Base):
     __tablename__ = "snapshots"
-    __table_args__ = (
-        UniqueConstraint("user_id", "kind", "key", name="uq_snapshot_user_kind_key"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "kind", "key", name="uq_snapshot_user_kind_key"),)
 
     id: Mapped[int] = mapped_column(SnapshotIdType, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -109,8 +108,25 @@ class Snapshot(Base):
     key: Mapped[str] = mapped_column(String(200), default="")
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
     prev_payload: Mapped[dict | None] = mapped_column(JSONType, nullable=True, default=None)
-    fetched_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="snapshots")
+
+
+class ItemShare(Base):
+    """World-readable public link to a snapshot of an item (see INSTRUCTIONS § share links)."""
+
+    __tablename__ = "item_shares"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    league: Mapped[str] = mapped_column(String(200), default="")
+    item_raw: Mapped[dict] = mapped_column(JSONType, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+
+    user: Mapped[User] = relationship(back_populates="item_shares")

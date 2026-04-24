@@ -41,9 +41,7 @@ async def trade_search(
     user: User = Depends(get_current_user),
 ) -> TradeSearchResponse:
     tolerance = (
-        body.tolerance_pct
-        if body.tolerance_pct is not None
-        else float(user.trade_tolerance_pct)
+        body.tolerance_pct if body.tolerance_pct is not None else float(user.trade_tolerance_pct)
     )
     if body.mode == "exact":
         result = build_exact_search(body.item, tolerance_pct=tolerance, league=body.league)

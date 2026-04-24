@@ -8,7 +8,9 @@ from app.api.leagues import router as leagues_router
 from app.api.me import router as me_router
 from app.api.prefs import router as prefs_router
 from app.api.pricing import router as pricing_router
+from app.api.public_item import router as public_item_router
 from app.api.refresh import router as refresh_router
+from app.api.shares import router as shares_router
 from app.api.stashes import router as stashes_router
 from app.api.trade import router as trade_router
 
@@ -19,6 +21,8 @@ __all__ = [
     "health_router",
     "leagues_router",
     "me_router",
+    "public_item_router",
+    "shares_router",
     "prefs_router",
     "pricing_router",
     "refresh_router",

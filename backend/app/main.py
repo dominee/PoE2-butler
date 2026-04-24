@@ -17,7 +17,9 @@ from app.api import (
     me_router,
     prefs_router,
     pricing_router,
+    public_item_router,
     refresh_router,
+    shares_router,
     stashes_router,
     trade_router,
 )
@@ -50,13 +52,15 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_allow_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-CSRF-Token"],
         max_age=600,
     )
 
     app.include_router(health_router)
+    app.include_router(public_item_router)
     app.include_router(auth_router)
+    app.include_router(shares_router)
     app.include_router(activity_router)
     app.include_router(me_router)
     app.include_router(leagues_router)
