@@ -103,3 +103,78 @@ jobs:
         run: |
           npm install --package-lock-only
           npm audit --omit=dev --audit-level=high || true
+
+  e2e:
+    name: Playwright (docker dev stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Traefik hostnames
+        run: |
+          echo "127.0.0.1 app.dev.hideoutbutler.com api.dev.hideoutbutler.com ggg.dev.hideoutbutler.com" | sudo tee -a /etc/hosts
+      - name: E2E env for compose
+        run: cp deploy/env/.env.e2e deploy/env/.env.dev
+      - name: Build and start stack
+        run: |
+          docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e up -d --build
+      - name: Wait for API, then migrate
+        run: |
+          set -e
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS -H "Host: api.dev.hideoutbutler.com" "http://127.0.0.1/healthz" >/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "API did not become ready"
+            docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e ps
+            exit 1
+          fi
+          docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e exec -T backend alembic upgrade head
+      - name: Wait for app
+        run: |
+          set -e
+          ok=0
+          for i in $(seq 1 90); do
+            if curl -fsS -H "Host: app.dev.hideoutbutler.com" "http://127.0.0.1/" -o /tmp/e2e-app.html; then
+              if [ -s /tmp/e2e-app.html ]; then
+                ok=1
+                break
+              fi
+            fi
+            sleep 2
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "App (Traefik → Vite) did not become ready"
+            docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e ps
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run Playwright
+        working-directory: frontend
+        env:
+          PLAYWRIGHT_BASE_URL: http://app.dev.hideoutbutler.com
+          CI: "true"
+        run: npm run test:e2e
+      - name: Compose status (on failure)
+        if: failure()
+        run: docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e ps
+      - name: Compose logs (on failure)
+        if: failure()
+        run: |
+          docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e logs --tail=200
+      - name: Stop stack
+        if: always()
+        run: |
+          docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e down -v

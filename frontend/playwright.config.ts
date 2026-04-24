@@ -14,7 +14,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://app.localhost",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://app.dev.hideoutbutler.com",
     trace: "retain-on-failure",
   },
   projects: [

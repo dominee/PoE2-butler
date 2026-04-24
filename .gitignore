@@ -4,6 +4,7 @@
 !.env.example
 !*/env/.env.example
 !deploy/env/.env.uat.example
+!deploy/env/.env.e2e
 
 # Python
 __pycache__/
