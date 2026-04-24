@@ -234,12 +234,31 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
   );
 }
 
+function downloadIconSvg() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 export function ItemImageExportActions({ item }: { item: Item }) {
   const compactRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const run = async (r: React.RefObject<HTMLDivElement | null>, label: string) => {
+  const baseName = `item-${item.id?.slice(0, 8) ?? "item"}`;
+
+  const runCopy = async (r: React.RefObject<HTMLDivElement | null>, label: string) => {
     const el = r.current;
     if (!el) {
       setMsg("nothing to capture");
@@ -280,9 +299,38 @@ export function ItemImageExportActions({ item }: { item: Item }) {
       }
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `item-${item.id?.slice(0, 8) ?? "item"}.png`;
+      a.download = `${baseName}.png`;
       a.click();
       setMsg("downloaded PNG");
+    } catch (e) {
+      setMsg("could not export image");
+      console.error(
+        `${LOG_PREFIX}: Could not build or read the image (CORS, canvas taint, or other).`,
+        e instanceof Error ? e.message : e,
+      );
+      if (e instanceof Error && e.stack) {
+        console.error(`${LOG_PREFIX}: stack`, e.stack);
+      }
+    }
+  };
+
+  const runDownload = async (
+    r: React.RefObject<HTMLDivElement | null>,
+    fileSuffix: "compact" | "detail",
+  ) => {
+    const el = r.current;
+    if (!el) {
+      setMsg("nothing to capture");
+      return;
+    }
+    setMsg("rendering…");
+    try {
+      const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `${baseName}-${fileSuffix}.png`;
+      a.click();
+      setMsg(`Downloaded ${fileSuffix} PNG`);
     } catch (e) {
       setMsg("could not export image");
       console.error(
@@ -298,21 +346,43 @@ export function ItemImageExportActions({ item }: { item: Item }) {
   return (
     <div className="shrink-0 space-y-1">
       <p className="text-[10px] uppercase tracking-widest text-ink-500">Image export (Discord)</p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="btn-ghost text-xs"
-          onClick={() => void run(compactRef, "Compact")}
-        >
-          Copy PNG (compact)
-        </button>
-        <button
-          type="button"
-          className="btn-ghost text-xs"
-          onClick={() => void run(detailRef, "Detail")}
-        >
-          Copy PNG (detail)
-        </button>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="inline-flex items-stretch gap-0.5">
+          <button
+            type="button"
+            className="btn-ghost rounded-r-none pr-2 text-xs sm:pr-2.5"
+            onClick={() => void runCopy(compactRef, "Compact")}
+          >
+            Copy PNG (compact)
+          </button>
+          <button
+            type="button"
+            className="inline-flex w-7 shrink-0 items-center justify-center rounded-md rounded-l-none border border-ink-600 border-l-0 bg-ink-800 text-ember-300 hover:border-ember-400/40 hover:text-ember-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400/60"
+            onClick={() => void runDownload(compactRef, "compact")}
+            title="Download PNG (compact)"
+            aria-label="Download PNG (compact)"
+          >
+            {downloadIconSvg()}
+          </button>
+        </div>
+        <div className="inline-flex items-stretch gap-0.5">
+          <button
+            type="button"
+            className="btn-ghost rounded-r-none pr-2 text-xs sm:pr-2.5"
+            onClick={() => void runCopy(detailRef, "Detail")}
+          >
+            Copy PNG (detail)
+          </button>
+          <button
+            type="button"
+            className="inline-flex w-7 shrink-0 items-center justify-center rounded-md rounded-l-none border border-ink-600 border-l-0 bg-ink-800 text-ember-300 hover:border-ember-400/40 hover:text-ember-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400/60"
+            onClick={() => void runDownload(detailRef, "detail")}
+            title="Download PNG (detail)"
+            aria-label="Download PNG (detail)"
+          >
+            {downloadIconSvg()}
+          </button>
+        </div>
       </div>
       {msg && <p className="text-[11px] text-ink-500">{msg}</p>}
       <div className="pointer-events-none fixed -left-[10000px] top-0 z-0" aria-hidden>
