@@ -1,16 +1,243 @@
 {
   "entries": [
     {
+      "name": "Blistering Bond",
+      "base_type": "Ruby Ring",
+      "flavour": "\"The Brotherhood of Silence does not set out to torture our targets.\nExcruciating pain is simply a byproduct of certain... necessary methods.\"",
+      "mod_range_hints": [
+        {
+          "when_contains": "to fire resistance",
+          "range": "+(20—30)%"
+        },
+        {
+          "when_contains": "to maximum life",
+          "range": "+(40—60)"
+        }
+      ]
+    },
+    {
+      "name": "Controlled Metamorphosis",
+      "base_type": "Diamond",
+      "flavour": "Our world was dying, but we chose to survive.\nWe broke free from the chains within."
+    },
+    {
+      "name": "Defiance of Destiny",
+      "base_type": "Jade Amulet",
+      "flavour": "The respect of Karui warriors is hard to earn,\nbut lasts a lifetime... and beyond.",
+      "mod_range_hints": [
+        {
+          "when_contains": "increased mana regeneration rate",
+          "range": "(25—40)%"
+        },
+        {
+          "when_contains": "increased maximum life",
+          "range": "(6—10)%"
+        },
+        {
+          "when_contains": "to dexterity",
+          "range": "+(10—15)"
+        },
+        {
+          "when_contains": "to strength",
+          "range": "+(10—20)"
+        }
+      ]
+    },
+    {
+      "name": "From Nothing",
+      "base_type": "Diamond",
+      "flavour": "They clawed their way up from the agonising depths of nonexistence,\nbreathing deep with joy the exquisite light of meaning."
+    },
+    {
+      "name": "Fury of the King",
+      "base_type": "Ashbark Talisman",
+      "flavour": "Gruthkul was the Mother of Despair...\nbut one day, the Father will return,\nand discover the fate of his children.",
+      "mod_range_hints": [
+        {
+          "when_contains": "reduced attack speed",
+          "range": "(15—20)%"
+        },
+        {
+          "when_contains": "to strength",
+          "range": "+(30—40)"
+        }
+      ]
+    },
+    {
+      "name": "Goregirdle",
+      "base_type": "Plate Belt",
+      "flavour": "Bleeding just means you're still alive.",
+      "mod_range_hints": [
+        {
+          "when_contains": "life regeneration per second",
+          "range": "(10—20)"
+        },
+        {
+          "when_contains": "to strength",
+          "range": "+(20—30)"
+        },
+        {
+          "when_contains": "to armour",
+          "range": "+(100—140)"
+        },
+        {
+          "when_contains": "charm",
+          "range": "(1—3) Slots"
+        }
+      ]
+    },
+    {
       "name": "Headhunter",
       "base_type": "Heavy Belt",
       "flavour": "\"A man's soul rules from a cavern of bone, learns and\njudges through flesh-born windows. The heart is meat.\nThe head is where the Man is.\"\n- Lavianga, Advisor to Kaom",
       "mod_range_hints": [
-        { "when_contains": "stun threshold", "range": "(20—30)%" },
-        { "when_contains": "charm", "range": "(1—3) Slots" },
-        { "when_contains": "maximum life", "range": "+(40—60)" },
-        { "when_contains": "strength", "range": "+(20—40)" },
-        { "when_contains": "dexterity", "range": "+(20—40)" }
+        {
+          "when_contains": "increased stun threshold",
+          "range": "(20—30)%"
+        },
+        {
+          "when_contains": "to maximum life",
+          "range": "+(40—60)"
+        },
+        {
+          "when_contains": "to dexterity",
+          "range": "+(20—40)"
+        },
+        {
+          "when_contains": "to strength",
+          "range": "+(20—40)"
+        },
+        {
+          "when_contains": "charm",
+          "range": "(1—3) Slots"
+        }
       ]
+    },
+    {
+      "name": "Heart of the Well",
+      "base_type": "Diamond",
+      "flavour": "Countless souls scream in agonising harmony,\nforever sinking under the weight of the newly dead."
+    },
+    {
+      "name": "Hoghunt",
+      "base_type": "Felled Greatclub",
+      "flavour": "There was a very clear and delicious\nreason why the Ezomytes chose to\nstop their flight and settle in Phaaryl."
+    },
+    {
+      "name": "Maligaro's Virtuosity",
+      "base_type": "Fine Bracers",
+      "flavour": "Maligaro operated effortlessly,\nwith great speed and terrible consequences.",
+      "mod_range_hints": [
+        {
+          "when_contains": "increased critical hit chance",
+          "range": "(20—30)%"
+        },
+        {
+          "when_contains": "increased evasion rating",
+          "range": "(60—80)%"
+        },
+        {
+          "when_contains": "to dexterity",
+          "range": "+(10—20)"
+        }
+      ]
+    },
+    {
+      "name": "Midnight Braid",
+      "base_type": "Rawhide Belt",
+      "flavour": "Adversity is the soil in\nwhich persistence grows.",
+      "mod_range_hints": [
+        {
+          "when_contains": "increased life recovery from flasks",
+          "range": "(20—30)%"
+        },
+        {
+          "when_contains": "to all elemental resistances",
+          "range": "+(5—10)%"
+        },
+        {
+          "when_contains": "to maximum mana",
+          "range": "+(30—50)"
+        },
+        {
+          "when_contains": "charm",
+          "range": "(1—3) Slots"
+        }
+      ]
+    },
+    {
+      "name": "Morior Invictus",
+      "base_type": "Grand Regalia",
+      "flavour": "The Unblinking Eye did not cower and wail.\nThey stood against the end.",
+      "mod_range_hints": [
+        {
+          "when_contains": "increased armour, evasion and energy shield",
+          "range": "(300—400)%"
+        }
+      ]
+    },
+    {
+      "name": "Painter's Servant",
+      "base_type": "Torn Gloves",
+      "flavour": "Bloodshed on the crimson shores,\nlonging for the endless sea.\nTreasures, life, I'd give it all\njust to capture thee."
+    },
+    {
+      "name": "Sire of Shards",
+      "base_type": "Chiming Staff",
+      "flavour": "That which was broken may yet break.",
+      "mod_range_hints": [
+        {
+          "when_contains": "to all elemental resistances",
+          "range": "+(5—10)%"
+        },
+        {
+          "when_contains": "increased spell damage",
+          "range": "(80—120)%"
+        },
+        {
+          "when_contains": "increased cast speed",
+          "range": "(10—20)%"
+        }
+      ]
+    },
+    {
+      "name": "The Burrower",
+      "base_type": "Topaz Ring",
+      "flavour": "It coils deeper and deeper\nIt slithers between thoughts\nIt lies beneath the valley\nIt lies in our minds",
+      "mod_range_hints": [
+        {
+          "when_contains": "increased mana regeneration rate",
+          "range": "(30—50)%"
+        },
+        {
+          "when_contains": "to lightning resistance",
+          "range": "+(20—30)%"
+        }
+      ]
+    },
+    {
+      "name": "The Vertex",
+      "base_type": "Tribal Mask",
+      "flavour": "\"A queen should be seen, admired, but never touched.\"\n- Atziri, Queen of the Vaal",
+      "mod_range_hints": [
+        {
+          "when_contains": "increased evasion and energy shield",
+          "range": "(100—150)%"
+        },
+        {
+          "when_contains": "increased critical hit chance",
+          "range": "(20—30)%"
+        },
+        {
+          "when_contains": "to chaos resistance",
+          "range": "+(13—17)%"
+        }
+      ]
+    },
+    {
+      "name": "Undying Hate",
+      "base_type": "Timeless Jewel",
+      "flavour": "They believed themselves driven by necessity,\nbut that desperation made them monstrous."
     }
   ]
 }

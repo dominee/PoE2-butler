@@ -184,6 +184,7 @@ class Snapshot(Base):
 - `_strip_tags(text)` removes `[Label|Short]` or `[Plain]` GGG markdown tags.
 - `ModDetail` / `ModMagnitude` capture tier + roll ranges from `item.extended.mods`.
 - `socketed_items: list[Item]` recursively parsed from `item.socketedItems` (runes, soul cores).
+- **Bundled unique extras:** `backend/app/data/unique_reference.json` supplies missing **flavour** and **per-mod “type” roll** hints (wiki-style) for specific `name` + `baseType`; `unique_reference.py` + `parse_item` map those to `implicit_mod_range_hints` / `explicit_mod_range_hints`. Maintainer ingest from poe2db: see [docs/unique_reference.md](docs/unique_reference.md).
 
 ### Frontend
 

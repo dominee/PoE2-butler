@@ -125,6 +125,7 @@ npm run test:e2e
 - [GGG_API.md](GGG_API.md) — GGG OAuth2 setup, scopes, rate-limits.
 - [DEPLOY.md](DEPLOY.md) — build and deploy procedure.
 - [SECURITY.md](SECURITY.md) — cross-cutting security checklist.
+- [docs/unique_reference.md](docs/unique_reference.md) — bundled unique flavour + poe2db-style roll hint data and how to refresh it.
 - [docs/BOT_API.md](docs/BOT_API.md) — frozen contract for external API consumers (e.g. Discord bot).
 - [docs/openapi.json](docs/openapi.json) — pinned OpenAPI 3.1 schema.
 
