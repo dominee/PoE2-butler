@@ -1,8 +1,4 @@
-"""Bundled flavour + community stat-bound notes for specific uniques.
-
-Used when the GGG payload omits ``flavourText`` (common in some snapshots) or when
-per-mod GGG ``magnitudes`` reflect an instance’s roll rather than the item type’s
-possible range — the app surface makes that distinction in the UI."""
+"""Bundled flavour + per-mod community roll ranges for specific uniques."""
 
 from __future__ import annotations
 
@@ -26,8 +22,22 @@ def _load() -> list[dict[str, Any]]:
     return [e for e in entries if isinstance(e, dict)] if isinstance(entries, list) else []
 
 
-def lookup_unique_reference(*, name: str, base_type: str) -> dict[str, str] | None:
-    """Return ``flavour`` and/or ``stat_bounds`` when this unique is documented."""
+def _normalize_hints(raw: Any) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for h in raw:
+        if not isinstance(h, dict):
+            continue
+        w = str(h.get("when_contains", "")).strip()
+        r = str(h.get("range", "")).strip()
+        if w and r:
+            out.append({"when_contains": w, "range": r})
+    return out
+
+
+def lookup_unique_reference(*, name: str, base_type: str) -> dict[str, Any] | None:
+    """Return ``flavour`` and/or ``mod_range_hints`` when this unique is documented."""
     n = (name or "").strip()
     b = (base_type or "").strip()
     if not n or not b:
@@ -37,10 +47,11 @@ def lookup_unique_reference(*, name: str, base_type: str) -> dict[str, str] | No
         en = str(e.get("name", "")).strip().lower()
         eb = str(e.get("base_type", "")).strip().lower()
         if n_l == en and b_l == eb:
-            out: dict[str, str] = {}
+            out: dict[str, Any] = {}
             if isinstance(e.get("flavour"), str) and e["flavour"].strip():
                 out["flavour"] = e["flavour"].strip()
-            if isinstance(e.get("stat_bounds"), str) and e["stat_bounds"].strip():
-                out["stat_bounds"] = e["stat_bounds"].strip()
+            hints = _normalize_hints(e.get("mod_range_hints"))
+            if hints:
+                out["mod_range_hints"] = hints
             return out or None
     return None

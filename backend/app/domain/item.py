@@ -49,6 +49,30 @@ def _flavour_text_from_dict(raw: dict[str, Any]) -> str | None:
     return None
 
 
+def _reference_range_for_mod_line(
+    mod: str, hints: list[dict[str, str]]
+) -> str | None:
+    """Pick a wiki-style range string; longest ``when_contains`` match wins (after tag strip)."""
+    if not mod.strip() or not hints:
+        return None
+    line = _strip_tags(mod).lower()
+    best: str | None = None
+    best_w = 0
+    for h in sorted(hints, key=lambda d: -len(d.get("when_contains", ""))):
+        w = h.get("when_contains", "").lower().strip()
+        r = (h.get("range") or "").strip()
+        if w and r and w in line and len(w) > best_w:
+            best = r
+            best_w = len(w)
+    return best
+
+
+def _reference_range_columns(
+    mods: list[str], hints: list[dict[str, str]]
+) -> list[str | None]:
+    return [_reference_range_for_mod_line(m, hints) for m in mods]
+
+
 class ItemProperty(BaseModel):
     name: str
     value: str | None = None
@@ -103,9 +127,13 @@ class Item(BaseModel):
     identified: bool = True
     corrupted: bool = False
     flavour_text: str | None = None
-    reference_stat_bounds: str | None = Field(
-        default=None,
-        description="Wiki-style possible rolls for this base unique; not GGG per-item data.",
+    implicit_mod_range_hints: list[str | None] = Field(
+        default_factory=list,
+        description="Wiki/match per implicit line; parallel to implicit_mods.",
+    )
+    explicit_mod_range_hints: list[str | None] = Field(
+        default_factory=list,
+        description="Wiki/match per explicit line; parallel to explicit_mods.",
     )
     trailer_note: str | None = None
     properties: list[ItemProperty] = Field(default_factory=list)
@@ -210,16 +238,29 @@ def parse_item(raw: dict[str, Any]) -> Item:
     rarity = str(raw.get("rarity") or _infer_rarity(raw))
     name = str(raw.get("name", ""))
     base_type = str(raw.get("baseType", raw.get("typeLine", "")))
-    reference_stat_bounds: str | None = None
+    mod_range_hints: list[dict[str, str]] = []
     if rarity == "Unique" and name.strip() and base_type.strip():
         uref = _unique_ref.lookup_unique_reference(name=name, base_type=base_type)
         if uref is not None:
             if (not (flavour_text and flavour_text.strip())) and uref.get("flavour"):
                 flavour_text = (uref["flavour"] or "").strip() or None
-            if uref.get("stat_bounds"):
-                reference_stat_bounds = (uref["stat_bounds"] or "").strip() or None
+            raw_hints = uref.get("mod_range_hints")
+            if isinstance(raw_hints, list):
+                mod_range_hints = [h for h in raw_hints if isinstance(h, dict)]
 
     implicit_mod_details, explicit_mod_details = _parse_mod_details_from_extended(ext)
+    implicit_mods_list = list(raw.get("implicitMods") or [])
+    explicit_mods_list = list(raw.get("explicitMods") or [])
+    implicit_mod_range_hints = (
+        _reference_range_columns([str(m) for m in implicit_mods_list], mod_range_hints)
+        if mod_range_hints
+        else []
+    )
+    explicit_mod_range_hints = (
+        _reference_range_columns([str(m) for m in explicit_mods_list], mod_range_hints)
+        if mod_range_hints
+        else []
+    )
     socketed_items = [
         parse_item(si) for si in (raw.get("socketedItems") or []) if isinstance(si, dict)
     ]
@@ -240,13 +281,14 @@ def parse_item(raw: dict[str, Any]) -> Item:
         identified=bool(raw.get("identified", True)),
         corrupted=bool(raw.get("corrupted", False)),
         flavour_text=flavour_text,
-        reference_stat_bounds=reference_stat_bounds,
         properties=props,
         requirements=reqs,
-        implicit_mods=list(raw.get("implicitMods") or []),
+        implicit_mods=implicit_mods_list,
         implicit_mod_details=implicit_mod_details,
-        explicit_mods=list(raw.get("explicitMods") or []),
+        implicit_mod_range_hints=implicit_mod_range_hints,
+        explicit_mods=explicit_mods_list,
         explicit_mod_details=explicit_mod_details,
+        explicit_mod_range_hints=explicit_mod_range_hints,
         socketed_items=socketed_items,
         rune_mods=list(raw.get("runeMods") or []),
         enchant_mods=list(raw.get("enchantMods") or []),

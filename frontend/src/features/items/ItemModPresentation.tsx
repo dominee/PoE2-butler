@@ -77,10 +77,13 @@ export function ExplicitModLine({
   mod,
   detail,
   showRollHints = true,
+  /** Wiki-style type range for this mod line, shown right-aligned (uniques with bundled data). */
+  referenceRangeText,
 }: {
   mod: string;
   detail: ModDetail | undefined;
   showRollHints?: boolean;
+  referenceRangeText?: string | null;
 }) {
   const tier = detail?.tier ?? null;
   const mag = detail?.magnitudes?.[0];
@@ -90,8 +93,9 @@ export function ExplicitModLine({
     showRollHints && !hasGggRange ? modTextRangeHint(mod) : null;
   const showBars =
     showRollHints && (m?.withinTierPct != null || m?.vsT1Pct != null);
+  const showRefCol = Boolean(referenceRangeText?.trim());
   const showMetaRow = hasGggRange || fromModText != null;
-  const showUnderline = tier != null || showMetaRow || showBars;
+  const showUnderline = tier != null || showMetaRow || showBars || showRefCol;
 
   return (
     <li className="break-words leading-snug">
@@ -102,8 +106,22 @@ export function ExplicitModLine({
       >
         {tier != null && <TierBadge tier={tier} />}
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] leading-relaxed tracking-[0.01em] text-parchment-100/95">
-            <ModText raw={mod} />
+          <div
+            className={`flex w-full min-w-0 items-baseline gap-3 ${
+              referenceRangeText?.trim() ? "justify-between" : ""
+            }`}
+          >
+            <div className="min-w-0 flex-1 text-[13px] leading-relaxed tracking-[0.01em] text-parchment-100/95">
+              <ModText raw={mod} />
+            </div>
+            {referenceRangeText?.trim() ? (
+              <span
+                className="shrink-0 whitespace-nowrap text-right font-mono text-[11px] text-ink-500 tabular-nums"
+                title="Community-sourced type roll range (not a snapshot of this one item)"
+              >
+                {referenceRangeText.trim()}
+              </span>
+            ) : null}
           </div>
           {hasGggRange && (
             <div className="mt-0.5 text-[10px] text-ink-500">

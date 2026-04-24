@@ -50,7 +50,6 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
   const showRunes = variant === "detail" && item.socketed_items.length > 0;
   const flavour =
     item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
-  const referenceBounds = item.reference_stat_bounds?.trim() || "";
 
   return (
     <div
@@ -100,12 +99,6 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
         <blockquote className="mt-2 whitespace-pre-line border-l-2 border-amber-500/60 pl-2 font-display text-xs italic text-amber-100/90">
           {flavour}
         </blockquote>
-      ) : null}
-      {referenceBounds ? (
-        <div className="mt-2 rounded border border-ink-700/80 bg-ink-950/50 p-2 text-[10px] leading-relaxed text-parchment-200/90">
-          <div className="text-[9px] font-semibold uppercase tracking-widest text-ink-500">Type reference</div>
-          <p className="mt-0.5 whitespace-pre-line">{referenceBounds}</p>
-        </div>
       ) : null}
 
       {visibleProps.length > 0 && (
@@ -159,6 +152,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                   mod={mod}
                   detail={item.implicit_mod_details[idx]}
                   showRollHints={showModRollHints}
+                  referenceRangeText={item.implicit_mod_range_hints?.[idx] ?? null}
                 />
               ))}
             </ul>
@@ -207,6 +201,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
                         showRollHints={showModRollHints}
+                        referenceRangeText={item.explicit_mod_range_hints?.[idx] ?? null}
                       />
                     ))}
                   </ul>
@@ -224,6 +219,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
                         showRollHints={showModRollHints}
+                        referenceRangeText={item.explicit_mod_range_hints?.[prefixes.length + idx] ?? null}
                       />
                     ))}
                   </ul>
@@ -247,6 +243,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}
                     showRollHints={showModRollHints}
+                    referenceRangeText={item.explicit_mod_range_hints?.[idx] ?? null}
                   />
                 ))}
               </ul>

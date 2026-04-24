@@ -112,14 +112,23 @@ def test_parse_item_headhunter_unique_reference_flavour_and_bounds() -> None:
         "typeLine": "Heavy Belt",
         "baseType": "Heavy Belt",
         "rarity": "Unique",
-        "explicitMods": ["+1 to maximum Energy Shield"],
+        "implicitMods": [
+            "26% increased [StunThreshold|Stun Threshold]",
+            "Has 3 [Charm] Slots",
+        ],
+        "explicitMods": [
+            "+53 to maximum Life",
+            "+1 to maximum Energy Shield",
+        ],
     }
     item = parse_item(raw)
     assert item.name == "Headhunter"
     assert item.flavour_text and "cavern of bone" in item.flavour_text
-    assert item.reference_stat_bounds
-    assert "Charm Slot" in item.reference_stat_bounds
-    assert "20" in item.reference_stat_bounds and "Stun Threshold" in item.reference_stat_bounds
+    assert item.implicit_mod_range_hints
+    assert item.explicit_mod_range_hints
+    assert any(h == "+(40—60)" for h in item.explicit_mod_range_hints)
+    assert any(h and "(20—30)%" in h for h in item.implicit_mod_range_hints if h)
+    assert any(h and "(1—3)" in h for h in item.implicit_mod_range_hints if h)
 
 
 def test_parse_item_copies_basic_fields() -> None:

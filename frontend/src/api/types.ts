@@ -69,10 +69,14 @@ export interface Item {
   /** Normalized from the API (GGG `flavourText` / US `flavorText` parsed in the backend). */
   flavour_text?: string | null;
   /**
-   * Optional community/wiki note on possible stat roll ranges for this base unique
-   * (e.g. poe2db), when bundled — not a per-snapshot GGG field.
+   * Wiki / community “type” roll range, parallel to each implicit (same order). Empty when
+   * unknown or not a bundled unique. Not a per-snapshot GGG field.
    */
-  reference_stat_bounds?: string | null;
+  implicit_mod_range_hints?: (string | null)[];
+  /**
+   * Same for explicit mods, parallel to explicit_mods.
+   */
+  explicit_mod_range_hints?: (string | null)[];
   /** If present, raw GGG camelCase (some clients); detail pane also reads this. */
   flavourText?: string | null;
   flavorText?: string | null;
