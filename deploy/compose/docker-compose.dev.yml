@@ -115,13 +115,19 @@ services:
       dockerfile: Dockerfile.dev
     container_name: poe2b-frontend
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
     environment:
-      VITE_API_PROXY_TARGET: http://backend:8000
+      # poe2b-dev-api-proxy: resolvable in Docker; POE2B_ avoids Vite .env clobbering VITE_*; see frontend/vite.config.ts
+      POE2B_DEV_API_PROXY: http://poe2b-backend:8000
+      VITE_API_PROXY_TARGET: http://poe2b-backend:8000
     volumes:
       - ../../frontend:/app
       - /app/node_modules
     networks:
       - edge
+      - internal
     labels:
       - "traefik.enable=false"   # routing handled by static dynamic.dev.yml
 

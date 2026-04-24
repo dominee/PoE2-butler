@@ -5,6 +5,16 @@ import { defineConfig } from "vitest/config";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
+/** Vite /api → FastAPI. Prefer POE2B_DEV_API_PROXY (set in deploy compose); VITE_ can be overridden by empty .env.mounted files. */
+const devApiProxy = (() => {
+  for (const key of ["POE2B_DEV_API_PROXY", "VITE_API_PROXY_TARGET"] as const) {
+    const v = process.env[key]?.trim();
+    if (v) return v;
+  }
+  // Local `npm run dev` with API on the host; avoid `http://backend` (ENOTFOUND outside compose DNS).
+  return "http://127.0.0.1:8000";
+})();
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -25,7 +35,7 @@ export default defineConfig({
     ],
     proxy: {
       "/api": {
-        target: process.env.VITE_API_PROXY_TARGET ?? "http://backend:8000",
+        target: devApiProxy,
         changeOrigin: false,
       },
     },

@@ -13,11 +13,12 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.clients.ggg import GGGClient
-from app.db.models import Snapshot, SnapshotKind, User, UserToken
+from app.clients.ggg import GGGClient, GGGError
+from app.db.models import Snapshot, SnapshotKind, User
 from app.domain.league import parse_leagues, pick_current_league
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
+from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_access
 
 log = get_logger("app.services.snapshot")
 
@@ -85,12 +86,11 @@ async def refresh_user_snapshot(
     """
     outcome = SnapshotOutcome(errors=[])
 
-    tokens = await session.get(UserToken, user.id)
-    if tokens is None:
+    try:
+        access = await get_valid_ggg_access(session, user, ggg, cipher)
+    except RuntimeError:
         outcome.errors.append("no_tokens")
         return outcome
-
-    access = cipher.decrypt_str(tokens.access_token_enc)
 
     try:
         profile = await ggg.get_profile(access)
@@ -182,10 +182,7 @@ async def _refresh_stashes(
 async def refresh_stashes(
     *, session: AsyncSession, user: User, ggg: GGGClient, cipher: TokenCipher, league: str
 ) -> None:
-    tokens = await session.get(UserToken, user.id)
-    if tokens is None:
-        raise RuntimeError("user_has_no_tokens")
-    access = cipher.decrypt_str(tokens.access_token_enc)
+    access = await get_valid_ggg_access(session, user, ggg, cipher)
     await _refresh_stashes(session, user=user, ggg=ggg, access=access, league=league)
 
 
@@ -204,11 +201,15 @@ async def ensure_character_detail(
         if age.total_seconds() < 60:
             return existing.payload
 
-    tokens = await session.get(UserToken, user.id)
-    if tokens is None:
-        raise RuntimeError("user_has_no_tokens")
-    access = cipher.decrypt_str(tokens.access_token_enc)
-    payload = await ggg.get_character(access, name)
+    access = await get_valid_ggg_access(session, user, ggg, cipher)
+    try:
+        payload = await ggg.get_character(access, name)
+    except GGGError as exc:
+        if exc.status_code == 401:
+            access = await force_refresh_ggg_access(session, user, ggg, cipher)
+            payload = await ggg.get_character(access, name)
+        else:
+            raise
     await upsert_snapshot(
         session, user_id=user.id, kind=SnapshotKind.CHARACTER, key=name, payload=payload
     )
