@@ -4,7 +4,7 @@ import type { Item, ItemRarity } from "@/api/types";
 import { itemIconForCanvasProxy } from "@/utils/poecdnIcon";
 
 import { splitExplicitMods, usefulProperties } from "./itemPaneModel";
-import { modQuality, ExplicitModLine, ModDivider, ModSection, ModText } from "./ItemModPresentation";
+import { ExplicitModLine, ModDivider, ModSection, ModText, itemRollScoreState } from "./ItemModPresentation";
 import { RARITY_NAME_CLASS } from "./itemVisualStyles";
 import { computeItemScore, PercentBar } from "./PercentBar";
 
@@ -34,7 +34,9 @@ const RARITY_CARD_BORDER: Record<ItemRarity, string> = {
  */
 function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" | "detail" }) {
   const b = RARITY_CARD_BORDER[item.rarity] ?? "border-ink-600";
-  const iconSrc = itemIconForCanvasProxy(item.icon) ?? item.icon;
+  const resolvedIcon = item.icon
+    ? (itemIconForCanvasProxy(item.icon) ?? item.icon)
+    : null;
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
   const visibleProps = usefulProperties(item.properties);
@@ -42,11 +44,8 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
   const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
   const showPrefixSuffix =
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
-  const hasTierData = item.explicit_mod_details.some((d) => d.tier != null);
-  const modPcts = item.explicit_mods.map((mod, idx) =>
-    modQuality(mod, item.explicit_mod_details[idx]),
-  );
-  const itemScore = hasTierData ? computeItemScore(modPcts) : null;
+  const { modPcts, showAggregate: hasRollData } = itemRollScoreState(item);
+  const itemScore = hasRollData ? computeItemScore(modPcts) : null;
   const showRunes = variant === "detail" && item.socketed_items.length > 0;
 
   return (
@@ -54,11 +53,11 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
       className={`${b} w-[400px] rounded-md border-2 bg-ink-900 p-3 text-left text-sm text-parchment-100 shadow-lg`}
     >
       <div className="font-display text-sm font-semibold text-ember-200/90">PoE2 Hideout Butler</div>
-      {item.icon && (
+      {resolvedIcon && (
         <div className="mt-2 flex items-start gap-2">
           <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
             <img
-              src={iconSrc}
+              src={resolvedIcon}
               alt=""
               className="object-contain"
               style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
@@ -84,11 +83,11 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
         </div>
       )}
 
-      {hasTierData && itemScore != null && (
+      {hasRollData && itemScore != null && (
         <div className="mt-2 flex items-center gap-2 text-xs">
           <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">Item score</span>
           <div className="min-w-0 flex-1">
-            <PercentBar pct={itemScore} showValue />
+            <PercentBar pct={itemScore} showValue size="md" />
           </div>
         </div>
       )}
@@ -133,7 +132,21 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
 
       <div className="mt-1 space-y-1">
         <ModSection title="Enchant" mods={item.enchant_mods} tone="text-rarity-rare" />
-        <ModSection title="Implicit" mods={item.implicit_mods} tone="text-rarity-magic" />
+        {item.implicit_mods.length > 0 && (
+          <div>
+            <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Implicit</h4>
+            <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
+              {item.implicit_mods.map((mod, idx) => (
+                <ExplicitModLine
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={idx}
+                  mod={mod}
+                  detail={item.implicit_mod_details[idx]}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
         <ModSection title="Rune" mods={item.rune_mods} tone="text-rarity-gem" />
       </div>
 
@@ -175,7 +188,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         // eslint-disable-next-line react/no-array-index-key
                         key={idx}
                         mod={mod}
-                        detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                        detail={item.explicit_mod_details[idx]}
                       />
                     ))}
                   </ul>
@@ -191,11 +204,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                         // eslint-disable-next-line react/no-array-index-key
                         key={idx}
                         mod={mod}
-                        detail={
-                          hasTierData
-                            ? item.explicit_mod_details[prefixes.length + idx]
-                            : undefined
-                        }
+                        detail={item.explicit_mod_details[prefixes.length + idx]}
                       />
                     ))}
                   </ul>
@@ -217,7 +226,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                     // eslint-disable-next-line react/no-array-index-key
                     key={idx}
                     mod={mod}
-                    detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                    detail={item.explicit_mod_details[idx]}
                   />
                 ))}
               </ul>

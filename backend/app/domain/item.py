@@ -23,6 +23,31 @@ def _strip_tags(text: str) -> str:
     return _TAG_PLAIN.sub(lambda m: m.group(1), _TAG_LABELED.sub(lambda m: m.group(2), text))
 
 
+def _unwrap_ggg_item_dict(raw: dict[str, Any]) -> dict[str, Any]:
+    """Path of Exile 2 character payloads often put the item under ``itemData``; flavour and
+    ``extended`` live there while ``inventoryId`` / slot metadata stay on the outer object."""
+    inner = raw.get("itemData")
+    if not isinstance(inner, dict):
+        return raw
+    out: dict[str, Any] = {**inner}
+    for k, v in raw.items():
+        if k == "itemData" or v is None:
+            continue
+        if k not in out or out[k] in (None, "", []):
+            out[k] = v
+    return out
+
+
+def _flavour_text_from_dict(raw: dict[str, Any]) -> str | None:
+    for key in ("flavourText", "flavorText"):
+        fl_raw = raw.get(key)
+        if isinstance(fl_raw, list):
+            return "\n".join(_strip_tags(str(x)) for x in fl_raw) or None
+        if isinstance(fl_raw, str) and fl_raw.strip():
+            return _strip_tags(fl_raw) or None
+    return None
+
+
 class ItemProperty(BaseModel):
     name: str
     value: str | None = None
@@ -81,6 +106,7 @@ class Item(BaseModel):
     properties: list[ItemProperty] = Field(default_factory=list)
     requirements: list[ItemProperty] = Field(default_factory=list)
     implicit_mods: list[str] = Field(default_factory=list)
+    implicit_mod_details: list[ModDetail] = Field(default_factory=list)
     explicit_mods: list[str] = Field(default_factory=list)
     explicit_mod_details: list[ModDetail] = Field(default_factory=list)
     rune_mods: list[str] = Field(default_factory=list)
@@ -97,14 +123,9 @@ class Item(BaseModel):
 _TIER_RE = re.compile(r"\d+")
 
 
-def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:  # noqa: PLR0912
-    if not isinstance(extended, dict):
-        return []
-    mods = extended.get("mods")
-    if not isinstance(mods, dict):
-        return []
-    details = []
-    for raw_mod in mods.get("explicit") or []:
+def _parse_mod_group(mods: dict[str, Any], key: str) -> list[ModDetail]:  # noqa: PLR0912
+    details: list[ModDetail] = []
+    for raw_mod in mods.get(key) or []:
         if not isinstance(raw_mod, dict):
             continue
         tier: int | None = None
@@ -140,6 +161,20 @@ def _parse_mod_details(extended: dict[str, Any] | None) -> list[ModDetail]:  # n
     return details
 
 
+def _parse_mod_details_from_extended(
+    extended: dict[str, Any] | None,
+) -> tuple[list[ModDetail], list[ModDetail]]:
+    if not isinstance(extended, dict):
+        return ([], [])
+    mods = extended.get("mods")
+    if not isinstance(mods, dict):
+        return ([], [])
+    return (
+        _parse_mod_group(mods, "implicit"),
+        _parse_mod_group(mods, "explicit"),
+    )
+
+
 def coerce_item_dict(raw: dict[str, Any]) -> Item:
     """Build an :class:`Item` from either our API JSON (snake_case) or a GGG stash item dict.
 
@@ -154,6 +189,7 @@ def coerce_item_dict(raw: dict[str, Any]) -> Item:
 
 def parse_item(raw: dict[str, Any]) -> Item:
     """Convert a GGG item dict into an :class:`Item`."""
+    raw = _unwrap_ggg_item_dict(raw)
     props = [ItemProperty.from_ggg(p) for p in raw.get("properties", []) or []]
     reqs = [ItemProperty.from_ggg(p) for p in raw.get("requirements", []) or []]
     sockets = [
@@ -165,15 +201,9 @@ def parse_item(raw: dict[str, Any]) -> Item:
     ext: dict[str, Any] = extended if isinstance(extended, dict) else {}
     item_class: str | None = ext.get("category") if isinstance(ext.get("category"), str) else None
 
-    fl_raw = raw.get("flavourText")
-    if isinstance(fl_raw, list):
-        flavour_text: str | None = "\n".join(_strip_tags(str(x)) for x in fl_raw) or None
-    elif isinstance(fl_raw, str):
-        flavour_text = _strip_tags(fl_raw) or None
-    else:
-        flavour_text = None
+    flavour_text = _flavour_text_from_dict(raw)
 
-    explicit_mod_details = _parse_mod_details(raw.get("extended"))
+    implicit_mod_details, explicit_mod_details = _parse_mod_details_from_extended(ext)
     socketed_items = [
         parse_item(si) for si in (raw.get("socketedItems") or []) if isinstance(si, dict)
     ]
@@ -197,6 +227,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         properties=props,
         requirements=reqs,
         implicit_mods=list(raw.get("implicitMods") or []),
+        implicit_mod_details=implicit_mod_details,
         explicit_mods=list(raw.get("explicitMods") or []),
         explicit_mod_details=explicit_mod_details,
         socketed_items=socketed_items,

@@ -35,6 +35,73 @@ def test_parse_item_infers_rarity_from_frame_type() -> None:
     assert item.type_line == "Divine Orb"
 
 
+def test_parse_item_extended_implicit_and_explicit_mod_details() -> None:
+    raw = {
+        "id": "x",
+        "typeLine": "Test",
+        "w": 1,
+        "h": 1,
+        "extended": {
+            "mods": {
+                "implicit": [
+                    {
+                        "name": "TestImplicit",
+                        "tier": 2,
+                        "magnitudes": [
+                            {
+                                "hash": "h_imp",
+                                "min": 1.0,
+                                "max": 3.0,
+                            }
+                        ],
+                    }
+                ],
+                "explicit": [
+                    {
+                        "name": "TestExplicit",
+                        "tier": 1,
+                        "magnitudes": [
+                            {
+                                "hash": "h_exp",
+                                "min": 10.0,
+                                "max": 20.0,
+                            }
+                        ],
+                    }
+                ],
+            }
+        },
+    }
+    item = parse_item(raw)
+    assert len(item.implicit_mod_details) == 1
+    assert item.implicit_mod_details[0].tier == 2
+    assert len(item.explicit_mod_details) == 1
+    assert item.explicit_mod_details[0].tier == 1
+
+
+def test_parse_item_unwraps_itemdata_and_flavour() -> None:
+    """Real GGG character items nest fields under itemData; flavour lives there too."""
+    raw = {
+        "inventoryId": "Belt",
+        "itemData": {
+            "id": "uid-belt",
+            "w": 2,
+            "h": 1,
+            "name": "Gore",
+            "typeLine": "Plate Belt",
+            "baseType": "Plate Belt",
+            "rarity": "Unique",
+            "flavourText": ["A warrior's last thought,", "is often his sharpest."],
+        },
+    }
+    item = parse_item(raw)
+    assert item.id == "uid-belt"
+    assert item.name == "Gore"
+    assert item.inventory_id == "Belt"
+    assert item.flavour_text and "warrior" in item.flavour_text
+    assert "A warrior" in item.flavour_text
+
+
 def test_parse_item_copies_basic_fields() -> None:
     raw = {
         "id": "item-1",

@@ -54,6 +54,8 @@ export interface Item {
   properties: ItemProperty[];
   requirements: ItemProperty[];
   implicit_mods: string[];
+  /** Per implicit when GGG returns ``extended.mods.implicit`` (same shape as explicit). */
+  implicit_mod_details: ModDetail[];
   explicit_mods: string[];
   explicit_mod_details: ModDetail[];
   socketed_items: Item[];
@@ -64,7 +66,11 @@ export interface Item {
   stack_size: number | null;
   max_stack_size: number | null;
   icon: string | null;
+  /** Normalized from the API (GGG `flavourText` / US `flavorText` parsed in the backend). */
   flavour_text?: string | null;
+  /** If present, raw GGG camelCase (some clients); detail pane also reads this. */
+  flavourText?: string | null;
+  flavorText?: string | null;
   trailer_note?: string | null;
 }
 

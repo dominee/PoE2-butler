@@ -23,6 +23,7 @@ const testItem: Item = {
   properties: [{ name: "Physical Damage", value: "120-280" }],
   requirements: [{ name: "Level", value: "72" }],
   implicit_mods: [],
+  implicit_mod_details: [],
   explicit_mods: ["+100 to maximum Life"],
   explicit_mod_details: [],
   socketed_items: [],

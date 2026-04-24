@@ -100,6 +100,7 @@ _MIN_ITEM_API = {
     "properties": [],
     "requirements": [],
     "implicit_mods": ["+10 to life"],
+    "implicit_mod_details": [],
     "explicit_mods": ["+20 to Strength"],
     "explicit_mod_details": [],
     "socketed_items": [],

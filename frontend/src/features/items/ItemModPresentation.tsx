@@ -5,15 +5,27 @@
 import type { ModDetail } from "@/api/types";
 import { parseModParts } from "@/utils/modText";
 
+import { computeModRollMetrics } from "./modRollMetrics";
+import { modTextRangeHint } from "./modTextRange";
 import { PercentBar } from "./PercentBar";
+
+export { modQuality, computeModRollMetrics, itemRollScoreState } from "./modRollMetrics";
 
 // ── tier badge ──────────────────────────────────────────────────────────────
 
 function tierBadgeClass(tier: number): string {
-  if (tier === 1) return "bg-amber-500/25 text-amber-300 border-amber-500/50";
-  if (tier === 2) return "bg-yellow-600/20 text-yellow-300 border-yellow-500/40";
-  if (tier <= 4) return "bg-lime-900/25 text-lime-400/80 border-lime-700/40";
-  if (tier <= 6) return "bg-ink-600/60 text-ink-300 border-ink-500";
+  if (tier === 1) {
+    return "bg-amber-500/30 text-amber-200 border-amber-400/50 shadow-[0_0_6px_rgba(245,158,11,0.2)]";
+  }
+  if (tier === 2) {
+    return "bg-yellow-600/25 text-yellow-200 border-yellow-500/45";
+  }
+  if (tier <= 4) {
+    return "bg-lime-900/30 text-lime-300/90 border-lime-600/40";
+  }
+  if (tier <= 6) {
+    return "bg-ink-600/60 text-ink-300 border-ink-500";
+  }
   return "bg-ink-700/60 text-ink-500 border-ink-600";
 }
 
@@ -21,7 +33,7 @@ function TierBadge({ tier }: { tier: number }) {
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded border px-1 py-px text-[9px] font-bold leading-none ${tierBadgeClass(tier)}`}
-      title={`Tier ${tier}`}
+      title={`Affix tier ${tier} (1 = best)`}
     >
       T{tier}
     </span>
@@ -30,7 +42,7 @@ function TierBadge({ tier }: { tier: number }) {
 
 // ── mod text ────────────────────────────────────────────────────────────────
 
-/** Render a mod string with numeric values highlighted in parchment-50. */
+/** Render a mod string with numeric values highlighted. */
 export function ModText({ raw }: { raw: string }) {
   const parts = parseModParts(raw);
   return (
@@ -38,102 +50,111 @@ export function ModText({ raw }: { raw: string }) {
       {parts.map((part, i) =>
         part.isNum ? (
           // eslint-disable-next-line react/no-array-index-key
-          <strong key={i} className="font-semibold text-parchment-50">
+          <strong key={i} className="font-semibold text-parchment-100">
             {part.text}
           </strong>
         ) : (
           // eslint-disable-next-line react/no-array-index-key
-          <span key={i}>{part.text}</span>
+          <span key={i} className="text-parchment-200/95">
+            {part.text}
+          </span>
         ),
       )}
     </span>
   );
 }
 
-function extractModValue(modText: string): number | null {
-  const parts = parseModParts(modText);
-  const numPart = parts.find((p) => p.isNum);
-  if (!numPart) return null;
-  const n = parseFloat(numPart.text.replace("%", ""));
-  return Number.isFinite(n) ? Math.abs(n) : null;
-}
-
-function rollQuality(value: number, min: number, max: number): number {
-  if (max <= min) return 100;
-  return Math.round(((value - min) / (max - min)) * 100);
-}
-
-export function modQuality(mod: string, detail: ModDetail | undefined): number | null {
-  const mag = detail?.magnitudes?.[0];
-  if (!mag) return null;
-  const value = extractModValue(mod);
-  if (value == null) return null;
-
-  if (mag.t1_max != null && mag.t1_max > 0) {
-    return Math.round((value / mag.t1_max) * 100);
-  }
-
-  if (mag.min == null || mag.max == null) return null;
-  return rollQuality(value, mag.min, mag.max);
-}
+// ── explicit (and detailed implicit) line ─────────────────────────────────
 
 /**
- * Renders one explicit mod line with an optional tier badge, roll range, and
- * quality bar.
+ * One mod line: tier chip, GGG string, range/T1 hints, and up to two roll bars
+ * (within this affix’s tier range vs % of T1 max).
  */
-export function ExplicitModLine({
-  mod,
-  detail,
-}: {
-  mod: string;
-  detail: ModDetail | undefined;
-}) {
+export function ExplicitModLine({ mod, detail }: { mod: string; detail: ModDetail | undefined }) {
   const tier = detail?.tier ?? null;
   const mag = detail?.magnitudes?.[0];
-  const hasRange = mag?.min != null && mag?.max != null && mag.min !== mag.max;
-  const hasCrossTier = mag?.t1_max != null;
-  const pct = modQuality(mod, detail);
+  const m = computeModRollMetrics(mod, detail);
+  const hasGggRange = mag?.min != null && mag?.max != null;
+  const fromModText = !hasGggRange ? modTextRangeHint(mod) : null;
+  const showBars = m.withinTierPct != null || m.vsT1Pct != null;
+  const showMetaRow = hasGggRange || fromModText != null;
+  const showUnderline = tier != null || showMetaRow || showBars;
 
   return (
     <li className="break-words leading-snug">
-      <div className="flex items-start gap-1.5">
+      <div
+        className={`flex items-start gap-1.5 pb-1.5 pl-0.5 ${
+          showUnderline ? "border-b border-ink-800/40" : ""
+        }`}
+      >
         {tier != null && <TierBadge tier={tier} />}
-        <span className="min-w-0 flex-1">
-          <ModText raw={mod} />
-          {hasRange && (
-            <span className="ml-1 text-[10px] text-ink-500">
-              [{mag!.min}–{mag!.max}]
-            </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] leading-relaxed tracking-[0.01em] text-parchment-100/95">
+            <ModText raw={mod} />
+          </div>
+          {hasGggRange && (
+            <div className="mt-0.5 text-[10px] text-ink-500">
+              <span className="text-ink-500">This affix band: </span>
+              <span className="font-mono text-amber-200/90">
+                {mag!.min} – {mag!.max}
+                {mag!.min === mag!.max ? " (fixed in tier)" : ""}
+              </span>
+              {m.hasT1 && mag?.t1_max != null && (
+                <span className="ml-2 text-ink-500">
+                  T1 cap: <span className="font-mono text-amber-300/70">{mag.t1_max}</span>
+                </span>
+              )}
+            </div>
           )}
-          {hasCrossTier && (
-            <span className="ml-1 text-[10px] text-parchment-100/40">T1 max: {mag!.t1_max}</span>
+          {!hasGggRange && fromModText && (
+            <div className="mt-0.5 text-[10px] text-ink-500">
+              <span className="text-ink-500">Rolled values: </span>
+              <span className="font-mono text-amber-200/85">{fromModText}</span>
+            </div>
           )}
-        </span>
+        </div>
       </div>
-      {detail != null && (
-        <PercentBar
-          pct={pct}
-          tierLabel={
-            hasCrossTier
-              ? `vs T1 max (${mag!.t1_max})`
-              : tier != null
-                ? `T${tier} roll quality`
-                : undefined
-          }
-          showValue={pct != null}
-        />
+      {showBars && (
+        <div className="mt-1.5 space-y-1.5 pl-0.5">
+          {m.withinTierPct != null && m.hasTierRange && (
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="w-20 shrink-0 text-ink-500">Tier roll</span>
+              <div className="min-w-0 flex-1">
+                <PercentBar
+                  variant="withinTier"
+                  size="md"
+                  pct={m.withinTierPct}
+                  tierLabel="Within this affix band"
+                />
+              </div>
+            </div>
+          )}
+          {m.vsT1Pct != null && (
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="w-20 shrink-0 text-ink-500">vs T1</span>
+              <div className="min-w-0 flex-1">
+                <PercentBar
+                  variant="t1"
+                  size="md"
+                  pct={m.vsT1Pct}
+                  tierLabel="Compared to best tier value"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </li>
   );
 }
 
 export function ModSection({ title, mods, tone }: { title: string; mods: string[]; tone: string }) {
-  if (mods.length === 0) return null;
+  if (mods.length === 0) {
+    return null;
+  }
   return (
     <div>
-      <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-        {title}
-      </h4>
+      <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">{title}</h4>
       <ul className={`mt-1 space-y-0.5 text-sm ${tone}`}>
         {mods.map((mod, idx) => (
           // eslint-disable-next-line react/no-array-index-key
@@ -147,5 +168,5 @@ export function ModSection({ title, mods, tone }: { title: string; mods: string[
 }
 
 export function ModDivider() {
-  return <div className="my-0.5 border-t border-ink-600/50" />;
+  return <div className="my-1 border-t border-amber-950/20" />;
 }

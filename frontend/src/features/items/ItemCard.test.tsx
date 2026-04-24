@@ -22,6 +22,7 @@ const baseItem: Item = {
   properties: [],
   requirements: [],
   implicit_mods: [],
+  implicit_mod_details: [],
   explicit_mods: ["+45 to maximum Life", "60% increased Physical Damage"],
   explicit_mod_details: [],
   socketed_items: [],

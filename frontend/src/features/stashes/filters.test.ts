@@ -21,6 +21,7 @@ function makeItem(partial: Partial<Item> = {}): Item {
     properties: [],
     requirements: [],
     implicit_mods: [],
+    implicit_mod_details: [],
     explicit_mods: partial.explicit_mods ?? [],
     explicit_mod_details: [],
     rune_mods: [],

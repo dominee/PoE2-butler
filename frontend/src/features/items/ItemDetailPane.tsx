@@ -11,17 +11,12 @@ import {
 } from "@/api/hooks";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
-import {
-  ExplicitModLine,
-  ModDivider,
-  ModSection,
-  ModText,
-  modQuality,
-} from "@/features/items/ItemModPresentation";
+import { ExplicitModLine, ModDivider, ModSection, ModText } from "@/features/items/ItemModPresentation";
 import { PANE_RARITY_BORDER, RARITY_NAME_CLASS } from "@/features/items/itemVisualStyles";
 import type { Item, ItemRarity, Prefs } from "@/api/types";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
+import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar, computeItemScore } from "./PercentBar";
 import { PriceBadge } from "./PriceBadge";
 
@@ -71,13 +66,8 @@ export function ItemDetailPane({
   const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
   const showPrefixSuffix =
     item.rarity === "Rare" || (item.rarity === "Magic" && item.explicit_mods.length >= 2);
-  const hasTierData = item.explicit_mod_details.some((d) => d.tier != null);
-
-  // Per-mod quality percentages and item score
-  const modPcts = item.explicit_mods.map((mod, idx) =>
-    modQuality(mod, item.explicit_mod_details[idx]),
-  );
-  const itemScore = hasTierData ? computeItemScore(modPcts) : null;
+  const { modPcts, showAggregate: hasRollData } = itemRollScoreState(item);
+  const itemScore = hasRollData ? computeItemScore(modPcts) : null;
 
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
@@ -145,10 +135,19 @@ export function ItemDetailPane({
     setTimeout(() => setShareFeedback(null), 4000);
   };
 
+  const borderCol = PANE_RARITY_BORDER[item.rarity as ItemRarity] ?? "rgba(80,80,90,0.45)";
+  const flavour =
+    item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
+
   return (
     <aside
-      className="panel flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 text-sm"
-      style={{ borderColor: PANE_RARITY_BORDER[item.rarity as ItemRarity] }}
+      className="panel relative flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 text-sm ring-1 ring-amber-200/10"
+      style={{
+        borderWidth: 1,
+        borderColor: borderCol,
+        background: "linear-gradient(180deg, rgba(22,20,16,0.75) 0%, rgba(8,8,10,0.97) 100%)",
+        boxShadow: "inset 0 1px 0 rgba(212,168,60,0.12), 0 0 20px rgba(0,0,0,0.4)",
+      }}
       aria-label={isApp ? "Item details" : "Shared item"}
     >
       {/* ── Header ── */}
@@ -193,14 +192,29 @@ export function ItemDetailPane({
         )}
       </header>
 
-      {/* ── Item quality score ── */}
-      {hasTierData && (
+      {flavour ? (
+        <blockquote
+          className={`whitespace-pre-line border-l-2 pl-3 font-display text-sm italic leading-relaxed ${
+            item.rarity === "Unique"
+              ? "border-amber-500/70 text-amber-100/95"
+              : "border-ink-600 text-parchment-200/90"
+          }`}
+        >
+          {flavour}
+        </blockquote>
+      ) : null}
+
+      {/* ── Item quality score (implicits + explicits with roll data) ── */}
+      {hasRollData && itemScore != null && (
         <div className="flex items-center gap-2 text-xs">
-          <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">
+          <span
+            className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500"
+            title="Mean of per-mod roll% (T1% when known, else tier roll)"
+          >
             Item score
           </span>
-          <div className="flex-1">
-            <PercentBar pct={itemScore} showValue />
+          <div className="min-w-0 flex-1">
+            <PercentBar pct={itemScore} showValue size="md" />
           </div>
         </div>
       )}
@@ -214,9 +228,12 @@ export function ItemDetailPane({
           <ul className="mt-1 space-y-0.5 text-sm text-parchment-100/90">
             {visibleProps.map((p, idx) => (
               // eslint-disable-next-line react/no-array-index-key
-              <li key={idx} className="flex justify-between gap-2">
-                <span className="text-ink-500">{p.name}</span>
-                <span className="text-right font-semibold text-parchment-50">
+              <li
+                key={idx}
+                className="flex justify-between gap-2 border-b border-ink-800/30 pb-0.5 last:border-b-0"
+              >
+                <span className="shrink-0 text-ink-500">{p.name}</span>
+                <span className="min-w-0 text-right font-mono text-[13px] font-semibold tabular-nums text-amber-100/95">
                   <ModText raw={p.value!} />
                 </span>
               </li>
@@ -251,7 +268,23 @@ export function ItemDetailPane({
 
       {/* ── Enchant / Implicit / Rune ── */}
       <ModSection title="Enchant" mods={item.enchant_mods} tone="text-rarity-rare" />
-      <ModSection title="Implicit" mods={item.implicit_mods} tone="text-rarity-magic" />
+      {item.implicit_mods.length > 0 && (
+        <div>
+          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+            Implicit
+          </h4>
+          <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
+            {item.implicit_mods.map((mod, idx) => (
+              <ExplicitModLine
+                // eslint-disable-next-line react/no-array-index-key
+                key={idx}
+                mod={mod}
+                detail={item.implicit_mod_details[idx]}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
       <ModSection title="Rune" mods={item.rune_mods} tone="text-rarity-gem" />
 
       {/* ── Socketed items (runes, soul cores) ── */}
@@ -292,13 +325,13 @@ export function ItemDetailPane({
                   <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
                     Prefixes
                   </h4>
-                  <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
+                  <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
                     {prefixes.map((mod, idx) => (
                       <ExplicitModLine
                         // eslint-disable-next-line react/no-array-index-key
                         key={idx}
                         mod={mod}
-                        detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                        detail={item.explicit_mod_details[idx]}
                       />
                     ))}
                   </ul>
@@ -310,17 +343,13 @@ export function ItemDetailPane({
                   <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
                     Suffixes
                   </h4>
-                  <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
+                  <ul className="mt-1 list-none space-y-2.5 text-sm text-rarity-magic">
                     {suffixes.map((mod, idx) => (
                       <ExplicitModLine
                         // eslint-disable-next-line react/no-array-index-key
                         key={idx}
                         mod={mod}
-                        detail={
-                          hasTierData
-                            ? item.explicit_mod_details[prefixes.length + idx]
-                            : undefined
-                        }
+                        detail={item.explicit_mod_details[prefixes.length + idx]}
                       />
                     ))}
                   </ul>
@@ -333,7 +362,7 @@ export function ItemDetailPane({
                 {item.rarity === "Unique" ? "Unique mods" : "Mods"}
               </h4>
               <ul
-                className={`mt-1 space-y-0.5 text-sm ${
+                className={`mt-1 list-none space-y-2.5 text-sm ${
                   item.rarity === "Unique" ? "text-rarity-unique" : "text-rarity-magic"
                 }`}
               >
@@ -342,7 +371,7 @@ export function ItemDetailPane({
                     // eslint-disable-next-line react/no-array-index-key
                     key={idx}
                     mod={mod}
-                    detail={hasTierData ? item.explicit_mod_details[idx] : undefined}
+                    detail={item.explicit_mod_details[idx]}
                   />
                 ))}
               </ul>

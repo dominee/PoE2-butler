@@ -24,6 +24,7 @@ const minimalItem: Item = {
   properties: [],
   requirements: [],
   implicit_mods: [],
+  implicit_mod_details: [],
   explicit_mods: ["+10 to maximum Life"],
   explicit_mod_details: [],
   socketed_items: [],
