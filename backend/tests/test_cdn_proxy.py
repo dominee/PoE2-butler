@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from httpx import Response
+
 from tests.test_auth_flow import _full_login
 
 OK_URL = (

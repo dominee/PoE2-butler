@@ -83,7 +83,7 @@ GitHub Actions runs on push/PR to `main` via `.github/workflows/ci.yml`.
 
 ## Local test checklist (before push)
 
-Run local tests before pushing so CI failures are caught earlier.
+Run local tests before pushing so CI failures are caught earlier. From the repository root, **`make test`** runs the full non-E2E suite (Ruff, pytest, ESLint, `tsc`, Vitest); see [TESTS.md](TESTS.md) and **`make help`**.
 
 ```bash
 # Backend lint + tests

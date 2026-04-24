@@ -4,6 +4,8 @@ This document describes the automated tests in the repository and how to run the
 
 CI mirrors most of this in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Dependency audits in that workflow are informational and not treated as a required “test suite” here.
 
+The repository root [Makefile](Makefile) wraps the same commands: `make test` (all non-E2E checks by category), `make test-e2e`, `make up` / `make down` for the dev stack, and `make help` for a full list.
+
 ---
 
 ## What is covered
@@ -23,7 +25,7 @@ CI mirrors most of this in [`.github/workflows/ci.yml`](.github/workflows/ci.yml
 ## Prerequisites (local)
 
 - **Python 3.12+** and **[uv](https://docs.astral.sh/uv/)** for `backend/`, `admin/`, and `mock-ggg/`.
-- **Node.js 22** and `npm` for `frontend/`.
+- **Node.js 22** and `npm` for `frontend/`. A plain `make test` from an IDE or a non-interactive environment may not see the same `PATH` as your shell (for example, Homebrew is often under `/opt/homebrew/bin`). The root [Makefile](Makefile) prepends that path and includes a `require-npm` check; if you use **nvm**, run `source ~/.nvm/nvm.sh` in the terminal, then `make` again, or set `PATH` to include the directory that contains `npm`.
 - **Docker** and Docker Compose, only if you want to run the **Playwright** flows against the full dev stack.
 - For browser tests: resolve Traefik dev hostnames to your machine (e.g. `/etc/hosts` or DNS), as in [README.md](README.md).
 
