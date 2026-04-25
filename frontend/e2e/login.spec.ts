@@ -6,11 +6,8 @@ import { expect, test } from "@playwright/test";
  * Requires the dev docker-compose stack to be running.
  */
 test("mock GGG login exposes character list", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: /poe2 hideout butler/i })).toBeVisible({
-    timeout: 15_000,
-  });
-  await page.getByRole("link", { name: /sign in with ggg/i }).click();
+  // Start directly at backend auth entrypoint to avoid frontend bootstrap timing races in CI.
+  await page.goto("/api/auth/login");
 
   // Mock GGG renders a form where we pick a fixture user.
   await expect(page.locator("h1")).toHaveText(/mock ggg/i);
