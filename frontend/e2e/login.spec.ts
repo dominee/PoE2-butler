@@ -7,7 +7,9 @@ import { expect, test } from "@playwright/test";
  */
 test("mock GGG login exposes character list", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /poe2 hideout butler/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /poe2 hideout butler/i })).toBeVisible({
+    timeout: 15_000,
+  });
   await page.getByRole("link", { name: /sign in with ggg/i }).click();
 
   // Mock GGG renders a form where we pick a fixture user.

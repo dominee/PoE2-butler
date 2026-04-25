@@ -141,7 +141,10 @@ jobs:
           ok=0
           for i in $(seq 1 90); do
             if curl -fsS -H "Host: app.dev.hideoutbutler.com" "http://127.0.0.1/" -o /tmp/e2e-app.html; then
-              if [ -s /tmp/e2e-app.html ]; then
+              # Ensure this is the actual frontend shell (not a proxy/default page).
+              if [ -s /tmp/e2e-app.html ] \
+                && grep -q "<title>PoE2 Hideout Butler</title>" /tmp/e2e-app.html \
+                && grep -q '<div id="root"></div>' /tmp/e2e-app.html; then
                 ok=1
                 break
               fi
@@ -150,6 +153,8 @@ jobs:
           done
           if [ "$ok" -ne 1 ]; then
             echo "App (Traefik → Vite) did not become ready"
+            echo "Last fetched app HTML:"
+            sed -n '1,120p' /tmp/e2e-app.html || true
             docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e ps
             exit 1
           fi

@@ -9,7 +9,9 @@ test("mock GGG login: browse stash and open item detail", async ({ page }) => {
   test.setTimeout(120_000);
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /poe2 hideout butler/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /poe2 hideout butler/i })).toBeVisible({
+    timeout: 15_000,
+  });
   await page.getByRole("link", { name: /sign in with ggg/i }).click();
   await expect(page.locator("h1")).toHaveText(/mock ggg/i);
   await page.locator("select#user").selectOption("exile_one");
