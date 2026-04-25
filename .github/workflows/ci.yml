@@ -162,8 +162,8 @@ jobs:
         run: |
           # Docker services may create root-owned files in the bind-mounted repo.
           # Ensure npm can write frontend/node_modules as the runner user.
+          sudo rm -rf frontend/node_modules
           sudo chown -R "$USER:$USER" frontend
-          rm -rf frontend/node_modules
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
