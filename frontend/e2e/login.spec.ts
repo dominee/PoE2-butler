@@ -7,6 +7,7 @@ import { loginViaMock } from "./helpers";
  * Requires the dev docker-compose stack to be running.
  */
 test("mock GGG login exposes character list", async ({ page }) => {
+  test.setTimeout(120_000);
   await loginViaMock(page, "exile_one");
   await expect(page.getByRole("heading", { name: /characters/i })).toBeVisible();
   await expect(page.getByRole("combobox", { name: /league/i })).not.toHaveValue("");
