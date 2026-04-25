@@ -342,6 +342,7 @@ The first entry in `users.json` is auto-selected on the mock login form.
 - **Admin templates**: for dicts passed to Jinja, avoid a key named `keys` (use e.g. `key_count`); `{{ d.keys }}` prints the method object, not a count.
 - **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`.
 - **Frontend CI cache key**: `actions/cache` uses `frontend/package.json` (no root lockfile in repo for npm).
+- **UAT → PROD parity rule**: any bug found in UAT must be verified against production config/code paths too. Fixes should either (a) apply to both environments, or (b) be intentionally environment-scoped with an explicit note explaining why prod is unaffected.
 
 ---
 
