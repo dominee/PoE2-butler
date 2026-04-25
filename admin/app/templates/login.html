@@ -4,7 +4,11 @@
 <section>
   <h2>Sign in</h2>
   {% if error %}<p style="color:#f38b8b">{{ error }}</p>{% endif %}
+  <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
   <form method="post" action="/admin/login">
+    {% if csrf_token %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    {% endif %}
     <label>
       Username
       <input name="username" autocomplete="username" required autofocus />

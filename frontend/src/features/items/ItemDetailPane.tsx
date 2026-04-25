@@ -16,8 +16,9 @@ import { PANE_RARITY_BORDER, RARITY_NAME_CLASS } from "@/features/items/itemVisu
 import type { Item, ItemRarity, Prefs } from "@/api/types";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
+import { computeItemScore } from "./itemMetrics";
 import { itemRollScoreState } from "./modRollMetrics";
-import { PercentBar, computeItemScore } from "./PercentBar";
+import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
 
@@ -239,7 +240,7 @@ export function ItemDetailPane({
           </h4>
           <ul className="mt-1 space-y-0.5 text-sm text-parchment-100/90">
             {visibleProps.map((p, idx) => (
-              // eslint-disable-next-line react/no-array-index-key
+               
               <li
                 key={idx}
                 className="flex justify-between gap-2 border-b border-ink-800/30 pb-0.5 last:border-b-0"
@@ -267,7 +268,7 @@ export function ItemDetailPane({
           <span className="text-[10px] uppercase tracking-widest text-ink-500">Sockets</span>
           {item.sockets.map((s, idx) => (
             <span
-              // eslint-disable-next-line react/no-array-index-key
+               
               key={idx}
               className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-ink-600 text-[9px] uppercase text-rarity-gem"
               title={s.type}
@@ -288,7 +289,7 @@ export function ItemDetailPane({
           <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
             {item.implicit_mods.map((mod, idx) => (
               <ExplicitModLine
-                // eslint-disable-next-line react/no-array-index-key
+                 
                 key={idx}
                 mod={mod}
                 detail={item.implicit_mod_details[idx]}
@@ -317,7 +318,7 @@ export function ItemDetailPane({
                 {si.explicit_mods.length > 0 && (
                   <ul className="mt-0.5 space-y-0.5 text-[11px] text-parchment-100/70">
                     {si.explicit_mods.map((mod, idx) => (
-                      // eslint-disable-next-line react/no-array-index-key
+                       
                       <li key={idx} className="break-words leading-snug">
                         <ModText raw={mod} />
                       </li>
@@ -343,7 +344,7 @@ export function ItemDetailPane({
                   <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
                     {prefixes.map((mod, idx) => (
                       <ExplicitModLine
-                        // eslint-disable-next-line react/no-array-index-key
+                         
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
@@ -364,7 +365,7 @@ export function ItemDetailPane({
                   <ul className="mt-1 list-none space-y-2.5 text-sm text-rarity-magic">
                     {suffixes.map((mod, idx) => (
                       <ExplicitModLine
-                        // eslint-disable-next-line react/no-array-index-key
+                         
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
@@ -392,7 +393,7 @@ export function ItemDetailPane({
               >
                 {item.explicit_mods.map((mod, idx) => (
                   <ExplicitModLine
-                    // eslint-disable-next-line react/no-array-index-key
+                     
                     key={idx}
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}

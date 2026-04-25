@@ -1,5 +1,5 @@
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
-import { formatChaos } from "@/features/items/PriceBadge";
+import { formatChaos } from "@/features/items/itemMetrics";
 import { stripTags } from "@/utils/modText";
 
 const RARITY_BG: Record<ItemRarity, string> = {

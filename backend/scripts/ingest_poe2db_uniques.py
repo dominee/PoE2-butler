@@ -20,8 +20,9 @@ import re
 import sys
 import time
 import urllib.parse
-import urllib.request
 from pathlib import Path
+
+import httpx
 
 D = "\u2014"  # em dash as used on poe2db for item rolls
 
@@ -33,11 +34,13 @@ def slug(name: str) -> str:
 
 
 def http_get(url: str) -> str:
-    r = urllib.request.Request(  # noqa: S310
-        url, headers={"User-Agent": UA}
-    )
-    with urllib.request.urlopen(r, timeout=50) as resp:  # noqa: S310
-        return resp.read().decode("utf-8", "replace")
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != "https" or parsed.netloc != "poe2db.tw":
+        raise OSError(f"unsupported URL for scrape: {url}")
+    with httpx.Client(timeout=50.0, follow_redirects=False, headers={"User-Agent": UA}) as client:
+        resp = client.get(url)
+        resp.raise_for_status()
+        return resp.text
 
 
 def extract_json(html: str) -> dict | None:

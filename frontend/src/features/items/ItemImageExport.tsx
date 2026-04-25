@@ -4,9 +4,11 @@ import type { Item, ItemRarity } from "@/api/types";
 import { itemIconForCanvasProxy } from "@/utils/poecdnIcon";
 
 import { splitExplicitMods, usefulProperties } from "./itemPaneModel";
-import { ExplicitModLine, ModDivider, ModSection, ModText, itemRollScoreState } from "./ItemModPresentation";
 import { RARITY_NAME_CLASS } from "./itemVisualStyles";
-import { computeItemScore, PercentBar } from "./PercentBar";
+import { computeItemScore } from "./itemMetrics";
+import { itemRollScoreState } from "./modRollMetrics";
+import { ExplicitModLine, ModDivider, ModSection, ModText } from "./ItemModPresentation";
+import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 
 const LOG_PREFIX = "[HideoutButler] PNG export";
@@ -116,7 +118,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
           <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Stats</h4>
           <ul className="mt-1 space-y-0.5 text-sm text-parchment-100/90">
             {visibleProps.map((p, idx) => (
-              // eslint-disable-next-line react/no-array-index-key
+               
               <li key={idx} className="flex justify-between gap-2">
                 <span className="text-ink-500">{p.name}</span>
                 <span className="text-right font-semibold text-parchment-50">
@@ -139,7 +141,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
           <span className="text-[10px] uppercase tracking-widest text-ink-500">Sockets</span>
           {item.sockets.map((s, idx) => (
             <span
-              // eslint-disable-next-line react/no-array-index-key
+               
               key={idx}
               className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-ink-600 text-[9px] uppercase text-rarity-gem"
             >
@@ -157,7 +159,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
             <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
               {item.implicit_mods.map((mod, idx) => (
                 <ExplicitModLine
-                  // eslint-disable-next-line react/no-array-index-key
+                   
                   key={idx}
                   mod={mod}
                   detail={item.implicit_mod_details[idx]}
@@ -184,7 +186,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                 {si.explicit_mods.length > 0 && (
                   <ul className="mt-0.5 space-y-0.5 text-[11px] text-parchment-100/70">
                     {si.explicit_mods.map((mod, idx) => (
-                      // eslint-disable-next-line react/no-array-index-key
+                       
                       <li key={idx} className="break-words leading-snug">
                         <ModText raw={mod} />
                       </li>
@@ -207,7 +209,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                   <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
                     {prefixes.map((mod, idx) => (
                       <ExplicitModLine
-                        // eslint-disable-next-line react/no-array-index-key
+                         
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[idx]}
@@ -226,7 +228,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
                   <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
                     {suffixes.map((mod, idx) => (
                       <ExplicitModLine
-                        // eslint-disable-next-line react/no-array-index-key
+                         
                         key={idx}
                         mod={mod}
                         detail={item.explicit_mod_details[prefixes.length + idx]}
@@ -254,7 +256,7 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
               >
                 {item.explicit_mods.map((mod, idx) => (
                   <ExplicitModLine
-                    // eslint-disable-next-line react/no-array-index-key
+                     
                     key={idx}
                     mod={mod}
                     detail={item.explicit_mod_details[idx]}

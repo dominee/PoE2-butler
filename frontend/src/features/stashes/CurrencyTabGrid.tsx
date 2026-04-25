@@ -7,7 +7,7 @@
  */
 
 import type { Item, PriceEstimate } from "@/api/types";
-import { formatChaos } from "@/features/items/PriceBadge";
+import { formatChaos } from "@/features/items/itemMetrics";
 
 export interface CurrencyTabGridProps {
   items: Item[];

@@ -117,12 +117,3 @@ export function PercentBar({
     </div>
   );
 }
-
-/** Mean of mod lines that have a roll percentage (implicit + explicit). */
-export function computeItemScore(pcts: (number | null)[]): number | null {
-  const valid = pcts.filter((p): p is number => p != null);
-  if (valid.length === 0) {
-    return null;
-  }
-  return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
-}

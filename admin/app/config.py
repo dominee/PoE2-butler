@@ -17,10 +17,10 @@ class AdminSettings(BaseSettings):
     log_level: str = "INFO"
 
     username: str = "admin"
-    # bcrypt hash generated via `passlib`. The default here hashes "admin".
-    # Override via env ADMIN_PASSWORD_HASH in every non-dev deployment.
+    # Must be provided via env (ADMIN_PASSWORD_HASH). Keep default intentionally
+    # non-sensitive to avoid committing a reusable hash to source control.
     password_hash: SecretStr = SecretStr(
-        "$2b$12$kf1Sh4imysin12trFxWc6uhSuXCR4JUySGOwKgYR9Kn8y4obxEiYu"
+        "CHANGE_ME"
     )
     totp_secret: SecretStr | None = None
     session_secret: SecretStr = SecretStr("admin-session-secret-change-me")

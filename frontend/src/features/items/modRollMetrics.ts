@@ -22,7 +22,7 @@ export function primaryStatValueFromMod(modText: string): number | null {
     if (!p.isNum) {
       continue;
     }
-    const raw = p.text.replace("%", "");
+    const raw = p.text.replaceAll("%", "");
     if (raw.includes("-") && /^\d/.test(raw) && !raw.includes(" to ")) {
       const bits = raw.split("-");
       if (bits.length === 2) {

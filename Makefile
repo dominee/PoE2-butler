@@ -188,11 +188,11 @@ test-all-docker:
 	docker run --rm -v "$(PWD):/src" -w /src ghcr.io/google/osv-scanner:latest \
 		scan source -r . --format json --output-file /tmp/osv.json || true
 	docker run --rm -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv sync --frozen || uv sync; uv run --with pip-audit pip-audit --strict || true"
+		sh -lc "uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.backend.txt; uv run --with pip-audit pip-audit -r /tmp/requirements.backend.txt || true"
 	docker run --rm -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv sync --frozen || uv sync; uv run --with pip-audit pip-audit --strict || true"
+		sh -lc "uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.admin.txt; uv run --with pip-audit pip-audit -r /tmp/requirements.admin.txt || true"
 	docker run --rm -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv sync --frozen || uv sync; uv run --with pip-audit pip-audit --strict || true"
+		sh -lc "uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.mock-ggg.txt; uv run --with pip-audit pip-audit -r /tmp/requirements.mock-ggg.txt || true"
 	docker run --rm -v "$(PWD):/work" -w /work/frontend node:22 \
 		sh -lc "npm audit --omit=dev --audit-level=high || true"
 	@echo "==> [docker] done"

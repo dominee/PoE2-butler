@@ -9,8 +9,6 @@ import { computeModRollMetrics } from "./modRollMetrics";
 import { modTextRangeHint } from "./modTextRange";
 import { PercentBar } from "./PercentBar";
 
-export { modQuality, computeModRollMetrics, itemRollScoreState } from "./modRollMetrics";
-
 // ── tier badge ──────────────────────────────────────────────────────────────
 
 function tierBadgeClass(tier: number): string {
@@ -49,12 +47,12 @@ export function ModText({ raw }: { raw: string }) {
     <span>
       {parts.map((part, i) =>
         part.isNum ? (
-          // eslint-disable-next-line react/no-array-index-key
+           
           <strong key={i} className="font-semibold text-parchment-100">
             {part.text}
           </strong>
         ) : (
-          // eslint-disable-next-line react/no-array-index-key
+           
           <span key={i} className="text-parchment-200/95">
             {part.text}
           </span>
@@ -217,7 +215,7 @@ export function ModSection({ title, mods, tone }: { title: string; mods: string[
       <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">{title}</h4>
       <ul className={`mt-1 space-y-0.5 text-sm ${tone}`}>
         {mods.map((mod, idx) => (
-          // eslint-disable-next-line react/no-array-index-key
+           
           <li key={idx} className="break-words leading-snug">
             <ModText raw={mod} />
           </li>

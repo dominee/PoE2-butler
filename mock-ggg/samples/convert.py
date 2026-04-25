@@ -58,7 +58,7 @@ CURRENCY_ICONS: dict[str, str] = {
 
 def stable_id(name: str) -> str:
     """Deterministic fake UUID from a string."""
-    h = hashlib.sha1(name.encode()).hexdigest()
+    h = hashlib.sha256(name.encode()).hexdigest()
     return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
 
 

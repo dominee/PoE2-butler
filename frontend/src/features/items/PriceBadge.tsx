@@ -1,16 +1,10 @@
 import type { PriceEstimate } from "@/api/types";
+import { formatChaos } from "./itemMetrics";
 
 export interface PriceBadgeProps {
   price: PriceEstimate | null | undefined;
   threshold?: number;
   compact?: boolean;
-}
-
-export function formatChaos(value: number): string {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
-  if (value >= 100) return value.toFixed(0);
-  if (value >= 10) return value.toFixed(1);
-  return value.toFixed(2);
 }
 
 export function PriceBadge({ price, threshold, compact }: PriceBadgeProps) {

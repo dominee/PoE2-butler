@@ -65,10 +65,10 @@ export function StashBrowser({
     }
   }, [tabsQ.data, selectedTab, setSelectedTab]);
 
-  const items = tabQ.data?.items ?? [];
+  const items = useMemo(() => tabQ.data?.items ?? [], [tabQ.data?.items]);
   const filtered = useMemo(() => applyFilters(items, filters), [items, filters]);
   const pricesQ = usePriceLookup(league, items);
-  const prices = pricesQ.data?.prices ?? {};
+  const prices = useMemo(() => pricesQ.data?.prices ?? {}, [pricesQ.data?.prices]);
   const valuableIds = useMemo(() => {
     if (valuableThreshold == null) return undefined;
     const ids = new Set<string>();

@@ -1,7 +1,12 @@
 function getCookie(name: string): string | null {
-  const pattern = new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]*)`);
-  const match = document.cookie.match(pattern);
-  return match ? decodeURIComponent(match[1]) : null;
+  const cookiePrefix = `${encodeURIComponent(name)}=`;
+  for (const segment of document.cookie.split(";")) {
+    const cookie = segment.trim();
+    if (cookie.startsWith(cookiePrefix)) {
+      return decodeURIComponent(cookie.slice(cookiePrefix.length));
+    }
+  }
+  return null;
 }
 
 export class ApiError extends Error {
