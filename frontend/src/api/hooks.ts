@@ -66,7 +66,10 @@ export function useMe() {
   return useQuery<Me>({
     queryKey: queryKeys.me,
     queryFn: () => api.get<Me>("/api/me"),
-    retry: false,
+    // OAuth callback -> /app can race with session cookie propagation in CI/proxy
+    // setups. A couple of short retries avoids a sticky signed-out UI state.
+    retry: 2,
+    retryDelay: 1_000,
   });
 }
 
