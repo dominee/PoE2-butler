@@ -178,6 +178,7 @@ export function useRefreshStashes() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.stashes(vars.league) });
       qc.invalidateQueries({ queryKey: ["stash-tab", vars.league] });
+      qc.invalidateQueries({ queryKey: queryKeys.activity(vars.league) });
     },
   });
 }

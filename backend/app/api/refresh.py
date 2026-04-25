@@ -46,7 +46,15 @@ async def refresh(
             headers={"Retry-After": str(retry_in)},
         )
 
-    outcome = await refresh_user_snapshot(session=db, user=user, ggg=ggg, cipher=cipher)
+    # Keep stash snapshots in sync with the manual refresh button so the
+    # activity panel (diff against prev_payload) gets fresh data too.
+    outcome = await refresh_user_snapshot(
+        session=db,
+        user=user,
+        ggg=ggg,
+        cipher=cipher,
+        include_stashes_for_league=user.preferred_league,
+    )
     await db.commit()
     return RefreshResponse(
         profile=outcome.profile,
