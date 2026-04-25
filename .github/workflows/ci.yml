@@ -160,11 +160,12 @@ jobs:
             docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e ps
             exit 1
           fi
-      - name: Verify frontend container @babel/types install
+      - name: Verify Vite can serve /src/main.tsx (no dev transform 500)
         run: |
           set -e
-          docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e exec -T frontend \
-            sh -lc 'test -f node_modules/@babel/types/lib/definitions/index.js && test -f node_modules/@babel/types/lib/builders/generated/index.js'
+          curl -fsS -H "Host: app.dev.hideoutbutler.com" \
+            "http://127.0.0.1/src/main.tsx" -o /tmp/e2e-main-tsx.out
+          test -s /tmp/e2e-main-tsx.out
       - name: Reset frontend workspace ownership for npm ci
         run: |
           # Docker services may create root-owned files in the bind-mounted repo.
