@@ -8,6 +8,7 @@ RUN chmod +x /usr/local/bin/poe2b-frontend-dev-entrypoint.sh
 
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN if [ -f package-lock.json ]; then md5sum package-lock.json | cut -d" " -f1 > node_modules/.poe2b_lock_md5; fi
 
 COPY . .
 EXPOSE 5173

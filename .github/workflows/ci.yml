@@ -115,6 +115,8 @@ jobs:
           echo "127.0.0.1 app.dev.hideoutbutler.com api.dev.hideoutbutler.com ggg.dev.hideoutbutler.com" | sudo tee -a /etc/hosts
       - name: E2E env for compose
         run: cp deploy/env/.env.e2e deploy/env/.env.dev
+      - name: Reset compose state
+        run: docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e down -v --remove-orphans || true
       - name: Build and start stack
         run: |
           docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e up -d --build
