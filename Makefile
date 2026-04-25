@@ -50,6 +50,7 @@ help:
 	@echo "Tests (by category; unit tests do not need Docker):"
 	@echo "  make test-backend|test-admin|test-mock|test-frontend"
 	@echo "  make test            All of the above (incl. lint and tsc for the frontend)"
+	@echo "  make test-all-docker Run all tests + security checks in Docker only (no host npm/uv needed)"
 	@echo "  make test-e2e        Playwright (dev stack and hostnames must be up; see TESTS.md)"
 	@echo "  make playwright-install  npx playwright install (Chromium + system deps, esp. on Linux)"
 	@echo ""
@@ -141,7 +142,7 @@ format:
 # Unit / integration tests
 # ---------------------------------------------------------------------------
 
-.PHONY: test test-backend test-admin test-mock test-frontend check
+.PHONY: test test-backend test-admin test-mock test-frontend check test-all-docker
 test: test-backend test-admin test-mock test-frontend
 
 test-backend:
@@ -161,6 +162,40 @@ check: ensure-node-modules
 	cd backend && uv run pytest -ra
 	cd admin && uv run pytest -ra
 	cd $(FRONTEND) && npm test
+
+# Full host-tool-independent gate:
+# - Runs backend/admin/mock/frontend checks in Docker containers.
+# - Runs security scans used by security-review.yml in Docker as visibility-only
+#   (scan findings do not fail this target yet, matching current CI policy).
+test-all-docker:
+	@echo "==> [docker] backend lint + tests"
+	docker run --rm -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "uv sync --frozen || uv sync; uv run ruff check .; uv run pytest -ra"
+	@echo "==> [docker] admin lint + tests"
+	docker run --rm -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "uv sync --frozen || uv sync; uv run ruff check .; uv run pytest -ra"
+	@echo "==> [docker] mock-ggg lint"
+	docker run --rm -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "uv sync --frozen || uv sync; uv run ruff check ."
+	@echo "==> [docker] frontend lint + typecheck + unit tests"
+	docker run --rm -v "$(PWD):/work" -w /work/frontend node:22 \
+		sh -lc "npm install && npm run lint && npx tsc -b && npm test"
+	@echo "==> [docker] security scans (visibility-only)"
+	docker run --rm -v "$(PWD):/src" -w /src semgrep/semgrep:latest \
+		semgrep scan --config auto --error --json --output /tmp/semgrep.json || true
+	docker run --rm -v "$(PWD):/repo" zricethezav/gitleaks:latest \
+		detect --source /repo --report-format json --report-path /tmp/gitleaks.json || true
+	docker run --rm -v "$(PWD):/src" -w /src ghcr.io/google/osv-scanner:latest \
+		scan source -r . --format json --output-file /tmp/osv.json || true
+	docker run --rm -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "uv sync --frozen || uv sync; uv run pip-audit --strict || true"
+	docker run --rm -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "uv sync --frozen || uv sync; uv run pip-audit --strict || true"
+	docker run --rm -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "uv sync --frozen || uv sync; uv run pip-audit --strict || true"
+	docker run --rm -v "$(PWD):/work" -w /work/frontend node:22 \
+		sh -lc "npm audit --omit=dev --audit-level=high || true"
+	@echo "==> [docker] done"
 
 # ---------------------------------------------------------------------------
 # E2E
