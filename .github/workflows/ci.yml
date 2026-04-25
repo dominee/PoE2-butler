@@ -153,6 +153,12 @@ jobs:
             docker compose -f deploy/compose/docker-compose.dev.yml --env-file deploy/env/.env.e2e ps
             exit 1
           fi
+      - name: Reset frontend workspace ownership for npm ci
+        run: |
+          # Docker services may create root-owned files in the bind-mounted repo.
+          # Ensure npm can write frontend/node_modules as the runner user.
+          sudo chown -R "$USER:$USER" frontend
+          rm -rf frontend/node_modules
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
