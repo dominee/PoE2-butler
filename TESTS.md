@@ -134,6 +134,21 @@ npx playwright install --with-deps chromium
 
 On Linux, `--with-deps` installs system libraries the browser needs.
 
+If you run Playwright inside a Docker image, keep the image tag aligned with the
+installed Playwright version in `frontend/package-lock.json` (currently `1.59.1`):
+
+```bash
+docker run --rm \
+  --add-host app.dev.hideoutbutler.com:host-gateway \
+  --add-host api.dev.hideoutbutler.com:host-gateway \
+  --add-host ggg.dev.hideoutbutler.com:host-gateway \
+  -v "$PWD:/work" -w /work/frontend \
+  mcr.microsoft.com/playwright:v1.59.1-noble \
+  sh -lc "npm ci && PLAYWRIGHT_BASE_URL=http://app.dev.hideoutbutler.com CI=true npx playwright test"
+```
+
+> If Playwright is upgraded, update this image tag to the same major/minor/patch.
+
 ### 4. Run E2E tests
 
 ```bash

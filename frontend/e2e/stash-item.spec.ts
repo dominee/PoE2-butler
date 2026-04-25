@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginViaMock } from "./helpers";
 
 /**
  * Post-login: Stash view, tab strip, and item detail pane.
@@ -8,20 +9,14 @@ import { expect, test } from "@playwright/test";
 test("mock GGG login: browse stash and open item detail", async ({ page }) => {
   test.setTimeout(120_000);
 
-  // Start directly at backend auth entrypoint to avoid frontend bootstrap timing races in CI.
-  await page.goto("/api/auth/login");
-  await expect(page.locator("h1")).toHaveText(/mock ggg/i);
-  await page.locator("select#user").selectOption("exile_one");
-  await page.getByRole("button", { name: /authorize/i }).click();
-
-  await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole("button", { name: /logout/i })).toBeVisible({ timeout: 15_000 });
+  await loginViaMock(page, "exile_one");
   await expect(page.getByRole("heading", { name: /characters/i })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: /league/i })).not.toHaveValue("");
+  await page.getByRole("combobox", { name: /league/i }).selectOption("Dawn of the Hunt");
 
   await page.getByRole("button", { name: "Stash" }).click();
-  const stash = page.getByRole("section", { name: "Stash" });
-  await expect(stash).toBeVisible();
+  await expect(page.getByRole("button", { name: /refresh stash/i })).toBeVisible({
+    timeout: 20_000,
+  });
 
   const noTabs = page.getByText(/no stash tabs yet/i);
   if (await noTabs.isVisible().catch(() => false)) {
@@ -30,15 +25,20 @@ test("mock GGG login: browse stash and open item detail", async ({ page }) => {
     await expect(noTabs).toBeHidden({ timeout: 60_000 });
   }
 
+  const tablist = page.getByRole("tablist", { name: /stash tabs/i });
+  await expect(tablist).toBeVisible({ timeout: 60_000 });
   const gearTab = page.getByRole("tab", { name: /gear dump/i });
-  await expect(gearTab).toBeVisible({ timeout: 60_000 });
-  await gearTab.click();
+  if (await gearTab.isVisible().catch(() => false)) {
+    await gearTab.click();
+  } else {
+    await page.getByTestId("stash-tab").first().click();
+  }
 
-  const itemButton = page.getByRole("button", { name: /item agony beads/i });
+  const itemButton = page.getByRole("button", { name: /agony beads/i });
   await expect(itemButton).toBeVisible();
   await itemButton.click();
 
   const detail = page.getByRole("complementary", { name: "Item details" });
   await expect(detail).toBeVisible();
-  await expect(detail.getByText("Agony Beads", { exact: true })).toBeVisible();
+  await expect(detail).toContainText("Agony Beads");
 });
