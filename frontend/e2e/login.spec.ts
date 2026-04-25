@@ -16,6 +16,7 @@ test("mock GGG login exposes character list", async ({ page }) => {
 
   // Back on the app.
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText(/exileone/i)).toBeVisible();
-  await expect(page.getByText("Pewpewer")).toBeVisible();
+  await expect(page.getByRole("button", { name: /logout/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /characters/i })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /league/i })).not.toHaveValue("");
 });

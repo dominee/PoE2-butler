@@ -15,7 +15,9 @@ test("mock GGG login: browse stash and open item detail", async ({ page }) => {
   await page.getByRole("button", { name: /authorize/i }).click();
 
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText("Pewpewer")).toBeVisible();
+  await expect(page.getByRole("button", { name: /logout/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /characters/i })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /league/i })).not.toHaveValue("");
 
   await page.getByRole("button", { name: "Stash" }).click();
   const stash = page.getByRole("section", { name: "Stash" });
