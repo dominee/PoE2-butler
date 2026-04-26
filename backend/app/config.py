@@ -68,6 +68,8 @@ class Settings(BaseSettings):
 
     # PoE2 trade site public filter metadata (optional; used by trade_stat_catalog).
     trade_filter_data_url: str = "https://www.pathofexile.com/api/trade2/data/filters"
+    # Base URL for POSTing a search; path is ``/{league}`` (league URL-encoded).
+    trade_search_api_base: str = "https://www.pathofexile.com/api/trade2/search"
 
     cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://app.localhost"])
 

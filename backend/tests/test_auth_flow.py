@@ -207,7 +207,14 @@ async def test_logout_clears_cookie_and_session(app_stack) -> None:
     assert resp.status_code == 401
 
 
-async def test_trade_search_returns_payload_and_url(app_stack) -> None:
+async def test_trade_search_returns_payload_and_url(app_stack, monkeypatch) -> None:
+    async def _fake_submit(_settings, league: str, payload: dict) -> str:
+        assert league == "Dawn of the Hunt"
+        assert "query" in payload
+        return "DeterministicSearchId"
+
+    monkeypatch.setattr("app.api.trade.submit_trade_search", _fake_submit)
+
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)
     item = {
@@ -243,7 +250,7 @@ async def test_trade_search_returns_payload_and_url(app_stack) -> None:
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["mode"] == "exact"
-    assert body["url"].endswith("Dawn%20of%20the%20Hunt")
+    assert body["url"].endswith("Dawn%20of%20the%20Hunt/DeterministicSearchId")
     assert body["payload"]["query"]["stats"][0]["filters"][0]["value"] == {
         "min": 90,
         "max": 110,

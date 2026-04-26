@@ -9,6 +9,7 @@ from app.services.trade_url import (
     TRADE_BASE,
     build_exact_search,
     build_trade_url,
+    build_trade_url_with_search_id,
     build_upgrade_search,
     parse_mod_line,
 )
@@ -140,16 +141,17 @@ def test_exact_search_covers_all_mod_buckets() -> None:
 def test_exact_search_includes_type_and_rarity_filters() -> None:
     item = make_item()
     result = build_exact_search(item, tolerance_pct=10)
-    type_filters = result["payload"]["query"]["filters"]["type_filters"]["filters"]
-    assert type_filters["type"]["option"] == "Spine Bow"
-    assert type_filters["rarity"]["option"] == "rare"
+    q = result["payload"]["query"]
+    assert q["type"] == "Spine Bow"
+    assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "rare"
 
 
 def test_exact_search_unique_item_omits_rarity_filter() -> None:
     item = make_item(rarity="Unique", base_type="Spine Bow")
     result = build_exact_search(item, tolerance_pct=10)
-    type_filters = result["payload"]["query"]["filters"]["type_filters"]["filters"]
-    assert "rarity" not in type_filters
+    q = result["payload"]["query"]
+    assert q["type"] == "Spine Bow"
+    assert "filters" not in q
 
 
 def test_exact_search_rejects_negative_tolerance() -> None:
@@ -199,8 +201,9 @@ def test_upgrade_two_value_mod_uses_average_for_min() -> None:
 def test_upgrade_keeps_base_type_filter() -> None:
     item = make_item()
     result = build_upgrade_search(item)
-    type_filters = result["payload"]["query"]["filters"]["type_filters"]["filters"]
-    assert type_filters["type"]["option"] == "Spine Bow"
+    q = result["payload"]["query"]
+    assert q["type"] == "Spine Bow"
+    assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "rare"
 
 
 # --- build_trade_url ----------------------------------------------------------
@@ -212,3 +215,28 @@ def test_build_trade_url_empty_league_returns_base() -> None:
 
 def test_build_trade_url_encodes_spaces() -> None:
     assert build_trade_url("Dawn of the Hunt") == f"{TRADE_BASE}/Dawn%20of%20the%20Hunt"
+
+
+def test_build_trade_url_with_search_id_appends_segment() -> None:
+    assert (
+        build_trade_url_with_search_id("Dawn of the Hunt", "Ab12cd")
+        == f"{TRADE_BASE}/Dawn%20of%20the%20Hunt/Ab12cd"
+    )
+
+
+def test_build_trade_url_with_search_id_empty_id_returns_league_url() -> None:
+    assert build_trade_url_with_search_id("Std", "") == f"{TRADE_BASE}/Std"
+
+
+def test_explicit_life_mod_uses_poe2_explicit_stat_id() -> None:
+    item = make_item(explicit_mods=["+100 to maximum Life"])
+    result = build_exact_search(item, tolerance_pct=10)
+    f = result["payload"]["query"]["stats"][0]["filters"][0]
+    assert f["id"] == "explicit.stat_3299347043"
+
+
+def test_implicit_life_mod_uses_implicit_stat_id() -> None:
+    item = make_item(implicit_mods=["+50 to maximum Life"])
+    result = build_exact_search(item, tolerance_pct=10)
+    f = result["payload"]["query"]["stats"][0]["filters"][0]
+    assert f["id"] == "implicit.stat_3299347043"

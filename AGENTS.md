@@ -45,7 +45,7 @@ Authoritative detail: [INSTRUCTIONS.md](INSTRUCTIONS.md) section **“Product ex
 - **Stat summary:** [`backend/app/domain/stat_summary.py`](backend/app/domain/stat_summary.py) (heuristic MVP); expand data files later.
 - **Queue:** **Redis + arq** for background work; per–API throttling in [`backend/app/services/third_party_ratelimit.py`](backend/app/services/third_party_ratelimit.py); job `refresh_trade_filter_catalog` in worker. No RabbitMQ unless requirements outgrow this.
 - **Pricing phase 1:** Aggregators (e.g. poe.ninja) + trade **links**; label as aggregate, not live market; **no** GGG trade scraping.
-- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) + stat ids in [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py) (bundled map for now); weighted/sum filters later.
+- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) (bundled template→stat hash map) + [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py); deep link POST in [`backend/app/services/trade_search_submit.py`](backend/app/services/trade_search_submit.py); see [docs/trade_deeplinks.md](docs/trade_deeplinks.md); weighted/sum filters later.
 
 ---
 
