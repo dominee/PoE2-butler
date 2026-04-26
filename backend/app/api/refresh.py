@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient
+from app.config import get_settings
 from app.db.base import get_session
 from app.db.models import User
 from app.deps import (
@@ -46,6 +47,12 @@ async def refresh(
             headers={"Retry-After": str(retry_in)},
         )
 
+    settings = get_settings()
+    api = settings.ggg_api_base_url.lower()
+    # Poe.ninja full-list revalidate can run many minutes per account; the local mock
+    # already serves summaries without ?revalidate=1, and character detail refills on GET.
+    revalidate_list = "mock-ggg" not in api and "127.0.0.1" not in api
+
     # Keep stash snapshots in sync with the manual refresh button so the
     # activity panel (diff against prev_payload) gets fresh data too.
     outcome = await refresh_user_snapshot(
@@ -54,7 +61,7 @@ async def refresh(
         ggg=ggg,
         cipher=cipher,
         include_stashes_for_league=user.preferred_league,
-        revalidate_character_list=True,
+        revalidate_character_list=revalidate_list,
     )
     await delete_character_snapshots(db, user.id)
     await db.commit()

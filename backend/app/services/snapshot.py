@@ -9,11 +9,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient, GGGError
+from app.config import get_settings
 from app.db.models import Snapshot, SnapshotKind, User
 from app.domain.league import parse_leagues, pick_current_league
 from app.logging import get_logger
@@ -200,6 +202,24 @@ async def refresh_stashes(
     await _refresh_stashes(session, user=user, ggg=ggg, access=access, league=league)
 
 
+def _character_detail_snapshot_ttl_seconds(payload: dict[str, Any]) -> float:
+    """Use a short TTL for empty gear when the backend talks to the local mock.
+
+    The mock seeds a minimal character (no items) then warms full Poe.ninja data in
+    the background; without this, the 60s snapshot cache keeps the empty doll.
+    """
+    settings = get_settings()
+    api = settings.ggg_api_base_url.lower()
+    if "mock-ggg" not in api and "127.0.0.1" not in api:
+        return 60.0
+    items = payload.get("items")
+    if items is None:
+        return 5.0
+    if isinstance(items, (list, tuple)) and len(items) == 0:
+        return 5.0
+    return 60.0
+
+
 async def ensure_character_detail(
     *,
     session: AsyncSession,
@@ -212,7 +232,8 @@ async def ensure_character_detail(
     existing = await get_latest_snapshot(session, user.id, SnapshotKind.CHARACTER, key=name)
     if existing is not None:
         age = datetime.now(UTC) - existing.fetched_at
-        if age.total_seconds() < 60:
+        ttl = _character_detail_snapshot_ttl_seconds(existing.payload)
+        if age.total_seconds() < ttl:
             return existing.payload
 
     access = await get_valid_ggg_access(session, user, ggg, cipher)

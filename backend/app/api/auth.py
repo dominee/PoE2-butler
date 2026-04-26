@@ -161,7 +161,13 @@ async def callback(
         snap_user = await snap_db.get(User, user.id)
         if snap_user is None:
             snap_user = await snap_db.merge(user)
-        await refresh_user_snapshot(session=snap_db, user=snap_user, ggg=ggg, cipher=cipher)
+        await refresh_user_snapshot(
+            session=snap_db,
+            user=snap_user,
+            ggg=ggg,
+            cipher=cipher,
+            revalidate_character_list=False,
+        )
         await snap_db.commit()
 
     # Reload user so preferred_league written by refresh_user_snapshot is visible

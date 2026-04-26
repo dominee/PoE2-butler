@@ -8,11 +8,20 @@ http:
         idleConnTimeout: 900s
 
   routers:
+    # Browser calls /api on the app host; do not send those through Vite — its http-proxy
+    # still returns 499 on long OAuth callbacks and Poe.ninja mock scrapes (~30–90s+).
+    app-api:
+      rule: Host(`app.dev.hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints:
+        - web
+      service: api
+      priority: 100
     app:
       rule: Host(`app.dev.hideoutbutler.com`)
       entryPoints:
         - web
       service: app
+      priority: 1
     api:
       rule: Host(`api.dev.hideoutbutler.com`)
       entryPoints:

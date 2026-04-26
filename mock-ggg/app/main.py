@@ -8,6 +8,7 @@ This service MUST NOT be exposed outside development networks.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -34,9 +35,11 @@ from ninja_convert import stable_id
 from ninja_urls import NinjaCharacterRef
 from poe_ninja import (
     account_slug_to_user_id,
+    build_leagues_payload,
     build_user_blob_from_ggg,
     character_summary,
     fetch_character_ggg_and_account,
+    league_name_from_url_slug,
     poe_ninja_read_timeout,
     synthetic_character_summaries,
 )
@@ -69,8 +72,11 @@ if os.environ.get("MOCK_GGG_SKIP_POE_NINJA") == "1":
     NINJA_REFS_BY_USER = {}
 
 USERS: dict[str, Any] = dict(_load("static_users.json"))
-CHARACTERS: dict[str, Any] = _load("characters.json")
+# Fixture-only detail blobs (exile_one); ninja-backed accounts use _character_detail_by_user.
+FIXTURE_CHARACTERS: dict[str, Any] = _load("characters.json")
 STASHES: dict[str, Any] = _load("stashes.json")
+# OAuth user id -> character name -> GGG-style detail (never share across mock users).
+_character_detail_by_user: dict[str, dict[str, Any]] = {}
 
 for _nuid in NINJA_REFS_BY_USER:
     if _nuid not in USERS:
@@ -81,6 +87,9 @@ for _nuid in NINJA_REFS_BY_USER:
         }
 
 PENDING_AUTH: dict[str, dict[str, Any]] = {}
+# Idempotent authorize POST: double-submit / back+resubmit reuses the same redirect briefly.
+_RECENT_AUTHORIZE_REDIRECT: dict[str, str] = {}
+_authorize_post_lock = asyncio.Lock()
 ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
 REFRESH_TOKENS: dict[str, dict[str, Any]] = {}
 # Coalesce concurrent GETs for the same (user, character) while Poe.ninja runs once.
@@ -95,6 +104,79 @@ def _character_fetch_lock(uid: str, char_name: str) -> asyncio.Lock:
         _character_fetch_locks[key] = lock
     return lock
 
+
+def _character_detail_for_user(uid: str, name: str) -> Any | None:
+    per = _character_detail_by_user.get(uid)
+    if per is not None and name in per:
+        return per[name]
+    if uid == "exile_one":
+        return FIXTURE_CHARACTERS.get(name)
+    return None
+
+
+def _put_character_detail(uid: str, name: str, ggg: dict[str, Any]) -> None:
+    _character_detail_by_user.setdefault(uid, {})[name] = ggg
+
+
+def _has_character_detail(uid: str, name: str) -> bool:
+    return _character_detail_for_user(uid, name) is not None
+
+
+def _character_needs_poe_ninja_fill(uid: str, name: str) -> bool:
+    """True when detail is missing or still the empty-gear bootstrap stub.
+
+    Bootstrap seeds ``items: []`` so ``_has_character_detail`` is true; without this,
+    GET /account/characters/{name} would never scrape Poe.ninja and the doll stays empty.
+    """
+    d = _character_detail_for_user(uid, name)
+    if d is None:
+        return True
+    items = d.get("items") if isinstance(d, dict) else None
+    return isinstance(items, list) and len(items) == 0
+
+
+def _minimal_ggg_character(ref: NinjaCharacterRef) -> dict[str, Any]:
+    """Valid empty-gear payload until Poe.ninja warm or on-demand fetch replaces it."""
+    league = league_name_from_url_slug(ref.league_slug)
+    return {
+        "character": {
+            "id": stable_id(f"{ref.account}:{ref.character_name}"),
+            "name": ref.character_name,
+            "realm": "pc",
+            "class": "Scion",
+            "level": 1,
+            "league": league,
+            "experience": 0,
+        },
+        "items": [],
+    }
+
+
+def _bootstrap_ninja_mock_users() -> None:
+    """Synthetic leagues + character detail seeds so dev works before background Poe.ninja warm.
+
+    - ``/account/leagues`` is non-empty (GGG snapshot + UI league dropdown).
+    - Character detail GET returns immediately (fixture copy or minimal stub); warm overwrites.
+    """
+    if not NINJA_REFS_BY_USER:
+        return
+    for uid, refs in NINJA_REFS_BY_USER.items():
+        league_ids = {league_name_from_url_slug(r.league_slug) for r in refs}
+        rows = build_leagues_payload(league_ids)
+        if rows:
+            USERS[uid]["leagues"] = rows
+
+        for ref in refs:
+            if _has_character_detail(uid, ref.character_name):
+                continue
+            blob = FIXTURE_CHARACTERS.get(ref.character_name)
+            if blob is not None:
+                _put_character_detail(uid, ref.character_name, copy.deepcopy(blob))
+            else:
+                _put_character_detail(uid, ref.character_name, _minimal_ggg_character(ref))
+
+
+_bootstrap_ninja_mock_users()
 
 _token_path = (os.environ.get("MOCK_GGG_TOKEN_FILE") or "").strip()
 _TOKEN_FILE: str | None = _token_path or None
@@ -117,9 +199,9 @@ def _sync_ninja_user_with_client(uid: str, refs: list[NinjaCharacterRef], client
         ggg, acct = fetch_character_ggg_and_account(client, ref)
         poe_name = str(ggg.get("character", {}).get("name") or ref.character_name)
         _apply_ninja_slug_identity(ref, ggg)
-        CHARACTERS[ref.character_name] = ggg
+        _put_character_detail(uid, ref.character_name, ggg)
         if poe_name != ref.character_name:
-            CHARACTERS[poe_name] = ggg
+            _put_character_detail(uid, poe_name, ggg)
         summaries.append(character_summary(ggg))
         league_ids.add(str(ggg["character"]["league"]))
         if acct:
@@ -152,9 +234,9 @@ def _sync_ninja_character_detail(
     ggg, _ = fetch_character_ggg_and_account(client, ref)
     poe_name = str(ggg.get("character", {}).get("name") or ref.character_name)
     _apply_ninja_slug_identity(ref, ggg)
-    CHARACTERS[ref.character_name] = ggg
+    _put_character_detail(uid, ref.character_name, ggg)
     if poe_name != ref.character_name:
-        CHARACTERS[poe_name] = ggg
+        _put_character_detail(uid, poe_name, ggg)
     blob = USERS.get(uid)
     chars = blob.get("characters") if isinstance(blob, dict) else None
     if isinstance(chars, list):
@@ -323,19 +405,32 @@ async def authorize(
     return HTMLResponse(html)
 
 
+async def _expire_recent_authorize_redirect(request_id: str, delay: float) -> None:
+    await asyncio.sleep(delay)
+    _RECENT_AUTHORIZE_REDIRECT.pop(request_id, None)
+
+
 @app.post("/oauth/authorize")
 async def authorize_submit(request_id: str = Form(...), user: str = Form(...)) -> RedirectResponse:
-    pending = PENDING_AUTH.pop(request_id, None)
-    if pending is None:
-        raise HTTPException(400, "unknown_or_expired_request")
-    if user not in USERS:
-        raise HTTPException(400, "unknown_user")
+    async with _authorize_post_lock:
+        pending = PENDING_AUTH.get(request_id)
+        if pending is None:
+            replay = _RECENT_AUTHORIZE_REDIRECT.get(request_id)
+            if replay is not None:
+                return RedirectResponse(replay, status_code=302)
+            raise HTTPException(400, "unknown_or_expired_request")
+        if user not in USERS:
+            raise HTTPException(400, "unknown_user")
 
-    code = secrets.token_urlsafe(24)
-    PENDING_AUTH[code] = {**pending, "user": user, "issued_at": time.time()}
+        PENDING_AUTH.pop(request_id, None)
+        code = secrets.token_urlsafe(24)
+        PENDING_AUTH[code] = {**pending, "user": user, "issued_at": time.time()}
 
-    params = urlencode({"code": code, "state": pending["state"]})
-    return RedirectResponse(f"{pending['redirect_uri']}?{params}", status_code=302)
+        params = urlencode({"code": code, "state": pending["state"]})
+        loc = f"{pending['redirect_uri']}?{params}"
+        _RECENT_AUTHORIZE_REDIRECT[request_id] = loc
+    asyncio.create_task(_expire_recent_authorize_redirect(request_id, 120.0))
+    return RedirectResponse(loc, status_code=302)
 
 
 @app.post("/oauth/token")
@@ -455,27 +550,28 @@ async def character(
     user = _require_user(request)
     refs = NINJA_REFS_BY_USER.get(user)
     # Poe.ninja is slow; never refetch on every GET (that starved the app + proxies).
-    if refs and (revalidate or name not in CHARACTERS):
+    if refs and (revalidate or _character_needs_poe_ninja_fill(user, name)):
         lock = _character_fetch_lock(user, name)
         async with lock:
-            if revalidate or name not in CHARACTERS:
+            if revalidate or _character_needs_poe_ninja_fill(user, name):
                 try:
                     await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
                 except httpx.HTTPError as exc:
                     log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
-                    if name not in CHARACTERS:
+                    if not _has_character_detail(user, name):
                         raise HTTPException(
                             status_code=503, detail="poe_ninja_unavailable"
                         ) from exc
                 except Exception as exc:
                     log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
-                    if name not in CHARACTERS:
+                    if not _has_character_detail(user, name):
                         raise HTTPException(
                             status_code=503, detail="poe_ninja_unavailable"
                         ) from exc
-    if name not in CHARACTERS:
+    detail = _character_detail_for_user(user, name)
+    if detail is None:
         raise HTTPException(404, "not_found")
-    return JSONResponse(CHARACTERS[name])
+    return JSONResponse(detail)
 
 
 @app.get("/account/stashes/{league}")

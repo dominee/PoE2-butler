@@ -56,6 +56,65 @@ export function AppShell() {
   }, [selectedCharacter, charactersQ.data, charactersQ.isError]);
   const characterQ = useCharacter(characterNameForDetail);
 
+  const gearLoadStatus = useMemo(() => {
+    if (!selectedCharacter) return null;
+    if (charactersQ.isError) {
+      return "Stage 0/3: Character list failed — open DevTools → Network for GET /api/characters?league=…";
+    }
+    if (!characterNameForDetail) {
+      if (charactersQ.isLoading || charactersQ.isFetching) {
+        return "Stage 1/3: Loading roster for this league…";
+      }
+      if (charactersQ.data?.characters.length === 0) {
+        return "Stage 1/3: No characters in this league — pick another league or Refresh.";
+      }
+      if (charactersQ.data) {
+        return "Stage 1/3: Selected name is not in this league roster (selection will clear)…";
+      }
+      return "Stage 1/3: Waiting for character list…";
+    }
+    if (characterQ.isError) return null;
+    if (characterQ.fetchStatus === "fetching" && characterQ.data === undefined) {
+      return `Stage 2/3: Fetching gear — GET /api/characters/${encodeURIComponent(characterNameForDetail)}`;
+    }
+    if (characterQ.data === undefined && characterQ.status === "pending") {
+      return `Stage 2/3: Queued — preparing request for ${characterNameForDetail}…`;
+    }
+    return null;
+  }, [
+    selectedCharacter,
+    characterNameForDetail,
+    charactersQ.isError,
+    charactersQ.isLoading,
+    charactersQ.isFetching,
+    charactersQ.data,
+    characterQ.isError,
+    characterQ.fetchStatus,
+    characterQ.status,
+    characterQ.data,
+  ]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !selectedCharacter) return;
+    console.log("[PoE2Butler][gear]", {
+      selectedCharacter,
+      characterNameForDetail,
+      rosterStatus: charactersQ.status,
+      rosterFetch: charactersQ.fetchStatus,
+      detailStatus: characterQ.status,
+      detailFetch: characterQ.fetchStatus,
+      gearLoadStatus,
+    });
+  }, [
+    selectedCharacter,
+    characterNameForDetail,
+    charactersQ.status,
+    charactersQ.fetchStatus,
+    characterQ.status,
+    characterQ.fetchStatus,
+    gearLoadStatus,
+  ]);
+
   // Persisted UI can keep a character name from a previous session; that fires a useless
   // detail request (404 or long mock timeout) and blocks the gear panel until it settles.
   useEffect(() => {
@@ -201,12 +260,15 @@ export function AppShell() {
               )}
             </div>
             {characterQ.data && <CharacterStatSummary detail={characterQ.data} />}
-            {selectedCharacter && characterQ.isFetching && characterQ.data === undefined && (
-              <p className="text-ink-500">Loading gear&hellip;</p>
+            {gearLoadStatus && (
+              <p className="text-ink-500" aria-live="polite">
+                {gearLoadStatus}
+              </p>
             )}
             {selectedCharacter && characterQ.isError && (
               <p className="text-ink-500" role="alert">
-                Could not load gear for this character. Try another character or use Refresh.
+                Stage 3/3: Gear request failed — check Network for GET /api/characters/
+                {encodeURIComponent(selectedCharacter)}. Try another character or Refresh.
               </p>
             )}
             {characterQ.data && charLayout === "doll" && (
