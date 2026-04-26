@@ -170,6 +170,17 @@ async def test_characters_endpoint_after_login(app_stack) -> None:
     assert "Necroqueen" in names
 
 
+async def test_character_detail_after_login(app_stack) -> None:
+    """Smoke: GET /api/characters/{name} completes (exercise snapshot + mock detail path)."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    resp = await client.get("/api/characters/Pewpewer")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body.get("summary", {}).get("name") == "Pewpewer"
+    assert isinstance(body.get("equipped"), list)
+
+
 async def test_refresh_requires_csrf(app_stack) -> None:
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)

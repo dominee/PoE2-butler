@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from typing import Any
@@ -46,13 +47,49 @@ def _extract_version(body: dict[str, Any]) -> int:
 
 
 def fetch_events_version(client: httpx.Client, ref: NinjaCharacterRef) -> int:
+    """Resolve the model ``version`` from Poe.ninja's events endpoint.
+
+    The live API returns ``text/event-stream`` (SSE): the connection stays open for
+    push updates. A naive ``get().json()`` waits until EOF and appears hung. We
+    read only the first ``data:`` JSON payload, extract ``version``, then close.
+    """
     url = (
         f"{NINJA_BASE}/poe2/api/events/character/"
         f"{ref.account}/{ref.league_slug}/{ref.character_name}"
     )
-    r = client.get(url, timeout=poe_ninja_read_timeout())
-    r.raise_for_status()
-    body = r.json()
+    timeout = poe_ninja_read_timeout()
+    with client.stream("GET", url, timeout=timeout) as r:
+        r.raise_for_status()
+        ct = (r.headers.get("content-type") or "").lower()
+        if "event-stream" in ct:
+            version: int | None = None
+            for line in r.iter_lines():
+                if line is None:
+                    continue
+                s = line.strip()
+                if not s or s.startswith(":"):
+                    continue
+                if not s.startswith("data:"):
+                    continue
+                raw = s[5:].strip()
+                if raw in ("", "[DONE]"):
+                    continue
+                try:
+                    data = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(data, dict):
+                    try:
+                        version = _extract_version(data)
+                        break
+                    except ValueError:
+                        continue
+            if version is None:
+                raise ValueError("poe_ninja_events_sse_missing_version")
+            _rate_limit_sleep()
+            return version
+        raw = r.read()
+    body = json.loads(raw)
     _rate_limit_sleep()
     if not isinstance(body, dict):
         raise ValueError("poe_ninja_events_invalid_json")

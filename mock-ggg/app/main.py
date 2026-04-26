@@ -99,6 +99,22 @@ _ninja_warm_task: asyncio.Task[None] | None = None
 _ninja_warm_by_uid: dict[str, asyncio.Task[None]] = {}
 
 
+def _character_startup_warm_wait_budget_sec() -> float:
+    """How long GET /account/characters/{name} may wait for this user's Poe.ninja warm task.
+
+    The warm task fetches *every* character on the account sequentially; waiting for it to
+    finish blocks the gear screen for minutes. A short budget lets the handler fall through
+    to a per-character Poe.ninja fetch for the requested name while warm continues in the
+    background (warm may duplicate work for that ref — acceptable).
+    """
+    raw = (os.environ.get("MOCK_GGG_CHARACTER_WARM_WAIT_SEC") or "5").strip()
+    try:
+        v = float(raw)
+    except ValueError:
+        v = 5.0
+    return max(0.0, min(v, 600.0))
+
+
 def _character_fetch_lock(uid: str, char_name: str) -> asyncio.Lock:
     key = (uid, char_name)
     lock = _character_fetch_locks.get(key)
@@ -665,20 +681,24 @@ async def character(
                     and not revalidate
                     and _character_needs_poe_ninja_fill(user, name)
                 ):
-                    try:
-                        await asyncio.wait_for(wt, timeout=600.0)
-                    except TimeoutError:
-                        log.warning(
-                            "mock_ggg: startup poe.ninja warm exceeded 600s; falling back to per-char fetch"
-                        )
-                    except asyncio.CancelledError:
-                        pass
-                    except Exception as exc:
-                        log.warning(
-                            "mock_ggg: startup warm task for %s finished with error (%s); per-char fetch may run",
-                            user,
-                            exc,
-                        )
+                    budget = _character_startup_warm_wait_budget_sec()
+                    if budget > 0:
+                        try:
+                            await asyncio.wait_for(wt, timeout=budget)
+                        except TimeoutError:
+                            log.warning(
+                                "mock_ggg: startup poe.ninja warm still running after %.1fs; per-char fetch for %r",
+                                budget,
+                                name,
+                            )
+                        except asyncio.CancelledError:
+                            pass
+                        except Exception as exc:
+                            log.warning(
+                                "mock_ggg: startup warm task for %s finished with error (%s); per-char fetch may run",
+                                user,
+                                exc,
+                            )
                 if revalidate or _character_needs_poe_ninja_fill(user, name):
                     try:
                         await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
