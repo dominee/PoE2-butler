@@ -79,6 +79,8 @@ services:
     environment:
       # Survive container restarts so backend DB session tokens still match the mock.
       MOCK_GGG_TOKEN_FILE: /data/tokens.json
+      # Optional: override Poe.ninja character URL list (defaults to image-bundled config/poe_ninja_characters.toml).
+      # MOCK_GGG_POE_NINJA_TOML: /config/poe_ninja_characters.toml
     volumes:
       - poe2b_dev_mock_ggg_tokens:/data
     networks:

@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.9",
     "itsdangerous>=2.2",
     "python-multipart>=0.0.20",
+    "httpx>=0.27",
 ]
 
 [dependency-groups]
@@ -24,6 +25,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+# ``sys.path`` bootstrap must run before sibling-module imports (importlib / flat layout).
+"app/main.py" = ["E402"]

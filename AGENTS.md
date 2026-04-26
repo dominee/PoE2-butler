@@ -301,16 +301,22 @@ Current migrations:
 
 ## 9. Mock GGG service
 
-Located in `mock-ggg/`. Fixture data in `mock-ggg/app/fixtures/`.
+Located in `mock-ggg/`. Stash simulation and static OAuth user `exile_one` live under `mock-ggg/app/fixtures/` (`static_users.json`, `characters.json`, `stashes.json`).
 
-To regenerate fixture data from poe.ninja exports:
+**Live Poe.ninja characters (dev):** URLs are listed in [`mock-ggg/config/poe_ninja_characters.toml`](mock-ggg/config/poe_ninja_characters.toml). On startup the mock calls Poe.ninja (`/poe2/api/events/character/...` then `.../model/{version}`), converts `charModel` to the same GGG-shaped JSON as the real account API, and registers one OAuth user per URL account segment (e.g. `dominee_9275`). `GET /account/characters` and `GET /account/characters/{name}` re-fetch from Poe.ninja so a backend **Refresh** (which clears cached character snapshots) pulls fresh gear.
+
+Environment:
+
+- `MOCK_GGG_POE_NINJA_TOML` — optional path to a replacement TOML (e.g. bind-mount in Compose).
+- `MOCK_GGG_SKIP_POE_NINJA=1` — skip live Poe.ninja (used by backend tests); only `exile_one` appears on the mock login form.
+
+To regenerate fixture data from **offline** poe.ninja JSON exports:
 
 ```bash
-cd mock-ggg/samples
-python convert.py  # reads *.json, writes ../app/fixtures/characters.json
+cd mock-ggg && uv run python samples/convert.py  # reads samples/*.json, writes app/fixtures/*.json
 ```
 
-The first entry in `users.json` is auto-selected on the mock login form.
+The mock login form lists OAuth users in dict insertion order (`exile_one` first, then synced ninja accounts).
 
 ---
 

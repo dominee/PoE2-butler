@@ -1,9 +1,7 @@
 """Mock GGG OAuth2 + API.
 
-Loose emulation of GGG's OAuth2 and account endpoints against local fixture data.
-The shape of each endpoint mirrors the real GGG API as used by
-``backend/app/clients/ggg_client.py``.  Real paths will be confirmed once GGG
-approves the client; adjustments here must be mirrored in the backend client.
+Loose emulation of GGG's OAuth2 and account endpoints against local fixture data
+and (optionally) live Poe.ninja character snapshots configured via TOML.
 
 This service MUST NOT be exposed outside development networks.
 """
@@ -11,15 +9,33 @@ This service MUST NOT be exposed outside development networks.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import secrets
+import sys
 import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+
+_APP_DIR = Path(__file__).resolve().parent
+if str(_APP_DIR) not in sys.path:
+    sys.path.insert(0, str(_APP_DIR))
+
+from ninja_config import load_character_refs
+from ninja_urls import NinjaCharacterRef
+from poe_ninja import (
+    account_slug_to_user_id,
+    build_user_blob_from_ggg,
+    character_summary,
+    fetch_character_ggg_and_account,
+)
+
+log = logging.getLogger(__name__)
 
 app = FastAPI(title="Mock GGG", version="0.1.0")
 
@@ -31,19 +47,79 @@ def _load(name: str) -> dict[str, Any]:
         return json.load(f)
 
 
-USERS = _load("users.json")
-CHARACTERS = _load("characters.json")
-STASHES = _load("stashes.json")
+def _group_ninja_refs(refs: list[NinjaCharacterRef]) -> dict[str, list[NinjaCharacterRef]]:
+    m: dict[str, list[NinjaCharacterRef]] = {}
+    for ref in refs:
+        uid = account_slug_to_user_id(ref.account)
+        m.setdefault(uid, []).append(ref)
+    return m
 
-# In-memory stores for auth flow artefacts. Fine for a dev mock.
+
+NINJA_REFS_BY_USER: dict[str, list[NinjaCharacterRef]] = _group_ninja_refs(load_character_refs())
+if os.environ.get("MOCK_GGG_SKIP_POE_NINJA") == "1":
+    NINJA_REFS_BY_USER = {}
+
+USERS: dict[str, Any] = dict(_load("static_users.json"))
+CHARACTERS: dict[str, Any] = _load("characters.json")
+STASHES: dict[str, Any] = _load("stashes.json")
+
 PENDING_AUTH: dict[str, dict[str, Any]] = {}
 ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
 REFRESH_TOKENS: dict[str, dict[str, Any]] = {}
 
-# If set, persist access/refresh maps so a mock container restart does not invalidate
-# app sessions that still hold tokens in the real DB.
 _token_path = (os.environ.get("MOCK_GGG_TOKEN_FILE") or "").strip()
 _TOKEN_FILE: str | None = _token_path or None
+
+
+def _sync_ninja_user_with_client(uid: str, refs: list[NinjaCharacterRef], client: httpx.Client) -> None:
+    summaries: list[dict[str, Any]] = []
+    league_ids: set[str] = set()
+    profile_name: str | None = None
+    for ref in refs:
+        ggg, acct = fetch_character_ggg_and_account(client, ref)
+        name = str(ggg["character"]["name"])
+        CHARACTERS[name] = ggg
+        summaries.append(character_summary(ggg))
+        league_ids.add(str(ggg["character"]["league"]))
+        if acct:
+            profile_name = acct
+    USERS[uid] = build_user_blob_from_ggg(
+        profile_display_name=profile_name or uid,
+        summaries=summaries,
+        league_ids=league_ids,
+    )
+
+
+def _sync_ninja_character_detail(
+    uid: str, char_name: str, refs: list[NinjaCharacterRef], client: httpx.Client
+) -> None:
+    ref = next((r for r in refs if r.character_name == char_name), None)
+    if ref is None:
+        return
+    ggg, _ = fetch_character_ggg_and_account(client, ref)
+    CHARACTERS[char_name] = ggg
+    blob = USERS.get(uid)
+    chars = blob.get("characters") if isinstance(blob, dict) else None
+    if isinstance(chars, list):
+        ns = character_summary(ggg)
+        blob["characters"] = [
+            ns if isinstance(c, dict) and c.get("name") == char_name else c for c in chars
+        ]
+
+
+def _init_ninja_from_network() -> None:
+    if not NINJA_REFS_BY_USER:
+        return
+    try:
+        with httpx.Client(timeout=60.0) as client:
+            for uid, refs in NINJA_REFS_BY_USER.items():
+                _sync_ninja_user_with_client(uid, refs, client)
+        log.info("mock_ggg: poe.ninja character sync OK (%d accounts)", len(NINJA_REFS_BY_USER))
+    except Exception as exc:
+        log.warning("mock_ggg: poe.ninja startup sync failed (%s); ninja accounts unavailable", exc)
+
+
+_init_ninja_from_network()
 
 
 def _persist_token_maps() -> None:
@@ -55,7 +131,6 @@ def _persist_token_maps() -> None:
         payload = {"access": ACCESS_TOKENS, "refresh": REFRESH_TOKENS}
         path.write_text(json.dumps(payload), encoding="utf-8")
     except OSError:
-        # Dev-only: ignore disk errors; in-memory state still works for the process lifetime.
         pass
 
 
@@ -85,9 +160,6 @@ def _load_token_maps() -> None:
 
 _load_token_maps()
 
-# Per-tab call counter: first call returns prev_contents (if present), later
-# calls return the full contents.  Simulates items arriving between snapshots,
-# which populates the activity log on the second Refresh.
 _TAB_CALL_COUNT: dict[str, int] = {}
 
 
@@ -98,7 +170,6 @@ async def healthz() -> dict[str, str]:
 
 @app.get("/dev/reset-activity", response_class=HTMLResponse)
 async def reset_activity() -> HTMLResponse:
-    """Reset the stash-tab call counters so the activity simulation restarts."""
     _TAB_CALL_COUNT.clear()
     return HTMLResponse(
         """<!doctype html><html><body style="font-family:system-ui;background:#1a1a1a;color:#eee;padding:2rem">
@@ -108,9 +179,6 @@ async def reset_activity() -> HTMLResponse:
         detect the new items.</p>
         </body></html>"""
     )
-
-
-# --- OAuth2 endpoints ---------------------------------------------------------
 
 
 @app.get("/oauth/authorize", response_class=HTMLResponse)
@@ -245,9 +313,6 @@ async def revoke(token: str = Form(...)) -> JSONResponse:
     return JSONResponse({"revoked": True})
 
 
-# --- Resource endpoints -------------------------------------------------------
-
-
 def _require_user(request: Request) -> str:
     auth = request.headers.get("authorization", "")
     if not auth.lower().startswith("bearer "):
@@ -274,12 +339,20 @@ async def leagues(request: Request) -> JSONResponse:
 @app.get("/account/characters")
 async def characters(request: Request) -> JSONResponse:
     user = _require_user(request)
+    refs = NINJA_REFS_BY_USER.get(user)
+    if refs:
+        with httpx.Client(timeout=60.0) as client:
+            _sync_ninja_user_with_client(user, refs, client)
     return JSONResponse({"characters": USERS[user]["characters"]})
 
 
 @app.get("/account/characters/{name}")
 async def character(name: str, request: Request) -> JSONResponse:
-    _require_user(request)
+    user = _require_user(request)
+    refs = NINJA_REFS_BY_USER.get(user)
+    if refs:
+        with httpx.Client(timeout=60.0) as client:
+            _sync_ninja_character_detail(user, name, refs, client)
     if name not in CHARACTERS:
         raise HTTPException(404, "not_found")
     return JSONResponse(CHARACTERS[name])
@@ -305,8 +378,6 @@ async def stash_tab(league: str, tab_id: str, request: Request) -> JSONResponse:
     call_n = _TAB_CALL_COUNT.get(key, 0)
     _TAB_CALL_COUNT[key] = call_n + 1
 
-    # First call: return prev_contents if available (simulates "before refresh" state).
-    # Subsequent calls: return the full current contents.
     if call_n == 0 and "prev_contents" in data and tab_id in data["prev_contents"]:
         return JSONResponse(data["prev_contents"][tab_id])
 

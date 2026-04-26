@@ -10,7 +10,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient, GGGError
@@ -68,6 +68,16 @@ async def get_latest_snapshot(
     )
     res = await session.execute(stmt)
     return res.scalar_one_or_none()
+
+
+async def delete_character_snapshots(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Remove cached per-character payloads so the next read refetches from GGG (or mock)."""
+    await session.execute(
+        delete(Snapshot).where(
+            Snapshot.user_id == user_id,
+            Snapshot.kind == SnapshotKind.CHARACTER,
+        )
+    )
 
 
 async def refresh_user_snapshot(

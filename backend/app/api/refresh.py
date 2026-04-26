@@ -18,7 +18,7 @@ from app.deps import (
 )
 from app.security.crypto import TokenCipher
 from app.security.sessions import RefreshCooldown
-from app.services.snapshot import refresh_user_snapshot
+from app.services.snapshot import delete_character_snapshots, refresh_user_snapshot
 
 router = APIRouter(prefix="/api/refresh", tags=["refresh"])
 
@@ -55,6 +55,7 @@ async def refresh(
         cipher=cipher,
         include_stashes_for_league=user.preferred_league,
     )
+    await delete_character_snapshots(db, user.id)
     await db.commit()
     return RefreshResponse(
         profile=outcome.profile,
