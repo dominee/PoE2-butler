@@ -20,9 +20,13 @@ Verified against `https://www.pathofexile.com/api/trade2/search` (2026):
 | **Response** | JSON object with string `id` (and `result`, `total`, etc.). |
 | **Browser URL** | `https://www.pathofexile.com/trade2/search/poe2/{league}/{id}` — same `id` as returned by POST. |
 | **Base item** | PoE2 expects the item base name as a **plain string** in `query.type` (e.g. `"Dualstring Bow"`). The older PoE1-style `filters.type_filters.filters.type.option` object is **invalid** here and yields `400 Invalid query`. |
-| **Rarity** | Non-unique: `query.filters.type_filters.filters.rarity.option` with values such as `normal`, `magic`, `rare`. Uniques omit the rarity filter in our builder. |
+| **Rarity** | `query.filters.type_filters.filters.rarity.option` uses only GGG-supported values: `normal`, `magic`, `rare`, `unique`, `uniquefoil`, `nonunique`. The `type_filters` group sets `disabled: false`. Currency, gems, divination cards, and quest items have **no** rarity filter (those strings are not valid trade rarity options). |
 | **Stats** | `query.stats` is a list of blocks `{ "type": "and", "filters": [ … ] }`. Each filter uses GGG stat ids like `explicit.stat_<numeric_hash>` and optional `value` `{ "min", "max" }`. Implicit / explicit / rune / enchant prefixes differ (`implicit.stat_…`, `rune.stat_…`, etc.). |
 | **Poll results** | `GET https://www.pathofexile.com/api/trade2/search/{league}/{id}` returns listing keys; not used by Hideout Butler today. |
+
+## Stat id resolution
+
+Before POSTing, `backend/app/services/trade_stat_index.py` loads `GET {trade_stats_data_url}` (default `https://www.pathofexile.com/api/trade2/data/stats`) once per process and matches each mod’s ``#``-placeholder **template** (plus mod **bucket**: implicit / explicit / rune / enchant / crafted) to the correct `explicit.stat_<hash>` / `implicit.stat_<hash>` / … id. A small bundled map remains as a fallback when the download fails or a line is missing from the catalogue.
 
 ## User-Agent
 
@@ -42,10 +46,10 @@ CI and local unit tests **must not** depend on live GGG responses:
 
 - **Body shaping**: `backend/tests/test_trade_ggg_body.py`, `backend/tests/test_trade_url.py`.
 - **HTTP submit**: `backend/tests/test_trade_search_submit.py` patches `httpx.AsyncClient`.
-- **Route**: `backend/tests/test_auth_flow.py` patches `app.api.trade.submit_trade_search` to return a fixed id and asserts the assembled `url`.
+- **Route**: `backend/tests/test_auth_flow.py` patches `ensure_trade_stats_index` and `submit_trade_search` so CI does not call GGG.
 
 ## Limitations
 
 - **Browser vs API**: Opening the trade **website** in a normal browser may hit Cloudflare challenges; that is separate from the JSON search API used here. Automated “open in browser” checks are not used in tests.
 - **403 / rate limits**: Some networks or User-Agents may be rejected. The fallback URL keeps the feature usable.
-- **Stat coverage**: Only mods whose templates appear in the bundled map (or a future full catalogue parse) receive `id` fields; other numeric lines are still in the clipboard payload but are omitted from the GGG POST body’s stat filters.
+- **Stat coverage**: Mod lines only appear in the POST body when a trade stat id can be resolved (catalogue + bundled fallback). Unusual or new mods may still be missing until GGG’s stats export includes them.

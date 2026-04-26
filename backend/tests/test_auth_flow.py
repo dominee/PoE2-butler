@@ -208,11 +208,15 @@ async def test_logout_clears_cookie_and_session(app_stack) -> None:
 
 
 async def test_trade_search_returns_payload_and_url(app_stack, monkeypatch) -> None:
+    async def _fake_ensure(_settings) -> None:
+        return None
+
     async def _fake_submit(_settings, league: str, payload: dict) -> str:
         assert league == "Dawn of the Hunt"
         assert "query" in payload
         return "DeterministicSearchId"
 
+    monkeypatch.setattr("app.api.trade.ensure_trade_stats_index", _fake_ensure)
     monkeypatch.setattr("app.api.trade.submit_trade_search", _fake_submit)
 
     _app, client, mock_app = app_stack

@@ -17,6 +17,7 @@ from app.db.models import User
 from app.deps import get_current_user
 from app.domain.item import Item
 from app.services.trade_search_submit import submit_trade_search
+from app.services.trade_stat_index import enrich_trade_payload_stat_ids, ensure_trade_stats_index
 from app.services.trade_url import (
     build_exact_search,
     build_trade_url_with_search_id,
@@ -50,8 +51,10 @@ async def trade_search(
     tolerance = (
         body.tolerance_pct if body.tolerance_pct is not None else float(user.trade_tolerance_pct)
     )
+    await ensure_trade_stats_index(settings)
     if body.mode == "exact":
         result = build_exact_search(body.item, tolerance_pct=tolerance, league=body.league)
+        enrich_trade_payload_stat_ids(result["payload"])
         search_id = await submit_trade_search(settings, result["league"], result["payload"])
         url = (
             build_trade_url_with_search_id(result["league"], search_id)
@@ -67,6 +70,7 @@ async def trade_search(
         )
     if body.mode == "upgrade":
         result = build_upgrade_search(body.item, league=body.league)
+        enrich_trade_payload_stat_ids(result["payload"])
         search_id = await submit_trade_search(settings, result["league"], result["payload"])
         url = (
             build_trade_url_with_search_id(result["league"], search_id)

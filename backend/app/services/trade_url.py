@@ -28,14 +28,17 @@ from app.services.trade_stat_catalog import bundled_trade_stat_id
 TRADE_BASE = "https://www.pathofexile.com/trade2/search/poe2"
 
 
-RARITY_TO_TRADE_OPTION = {
+# Only values accepted by ``type_filters.filters.rarity.option`` on PoE2 trade.
+# Currency / gems / div cards are not rarity filters (GGG returns ``Unknown rarity type``).
+RARITY_TO_TRADE_OPTION: dict[str, str | None] = {
     "Normal": "normal",
     "Magic": "magic",
     "Rare": "rare",
     "Unique": "unique",
-    "Currency": "currency",
-    "Gem": "gem",
-    "DivinationCard": "card",
+    "Currency": None,
+    "Gem": None,
+    "DivinationCard": None,
+    "QuestItem": None,
 }
 
 
@@ -166,10 +169,10 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
     if item.base_type:
         query["type"] = item.base_type
     rarity_option = RARITY_TO_TRADE_OPTION.get(item.rarity)
-    if rarity_option and item.rarity != "Unique":
-        query.setdefault("filters", {}).setdefault("type_filters", {}).setdefault(
-            "filters", {}
-        )["rarity"] = {"option": rarity_option}
+    if rarity_option:
+        tf = query.setdefault("filters", {}).setdefault("type_filters", {})
+        tf["disabled"] = False
+        tf.setdefault("filters", {})["rarity"] = {"option": rarity_option}
     if stats:
         query["stats"] = [{"type": "and", "filters": stats}]
     return {"query": query, "sort": {"price": "asc"}}

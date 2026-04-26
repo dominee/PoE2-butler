@@ -68,6 +68,8 @@ class Settings(BaseSettings):
 
     # PoE2 trade site public filter metadata (optional; used by trade_stat_catalog).
     trade_filter_data_url: str = "https://www.pathofexile.com/api/trade2/data/filters"
+    # Stat text → id catalogue for trade search filters (see trade_stat_index).
+    trade_stats_data_url: str = "https://www.pathofexile.com/api/trade2/data/stats"
     # Base URL for POSTing a search; path is ``/{league}`` (league URL-encoded).
     trade_search_api_base: str = "https://www.pathofexile.com/api/trade2/search"
 

@@ -143,14 +143,26 @@ def test_exact_search_includes_type_and_rarity_filters() -> None:
     result = build_exact_search(item, tolerance_pct=10)
     q = result["payload"]["query"]
     assert q["type"] == "Spine Bow"
-    assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "rare"
+    tf = q["filters"]["type_filters"]
+    assert tf["disabled"] is False
+    assert tf["filters"]["rarity"]["option"] == "rare"
 
 
-def test_exact_search_unique_item_omits_rarity_filter() -> None:
+def test_exact_search_unique_item_sets_unique_rarity_filter() -> None:
     item = make_item(rarity="Unique", base_type="Spine Bow")
     result = build_exact_search(item, tolerance_pct=10)
     q = result["payload"]["query"]
     assert q["type"] == "Spine Bow"
+    tf = q["filters"]["type_filters"]
+    assert tf["disabled"] is False
+    assert tf["filters"]["rarity"]["option"] == "unique"
+
+
+def test_exact_search_currency_item_omits_rarity_filter() -> None:
+    item = make_item(rarity="Currency", base_type="Chaos Orb")
+    result = build_exact_search(item, tolerance_pct=10)
+    q = result["payload"]["query"]
+    assert q["type"] == "Chaos Orb"
     assert "filters" not in q
 
 
@@ -203,7 +215,9 @@ def test_upgrade_keeps_base_type_filter() -> None:
     result = build_upgrade_search(item)
     q = result["payload"]["query"]
     assert q["type"] == "Spine Bow"
-    assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "rare"
+    tf = q["filters"]["type_filters"]
+    assert tf["disabled"] is False
+    assert tf["filters"]["rarity"]["option"] == "rare"
 
 
 # --- build_trade_url ----------------------------------------------------------
