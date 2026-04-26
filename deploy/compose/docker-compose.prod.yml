@@ -193,16 +193,15 @@ services:
     image: ghcr.io/${GITHUB_OWNER:-local}/poe2b-admin:${IMAGE_TAG:-latest}
     container_name: poe2b-admin
     restart: unless-stopped
+    # Same pattern as backend: ADMIN_PASSWORD_HASH and friends live in .env.prod
+    # so Compose never expands ``${ADMIN_PASSWORD_HASH}`` (bcrypt ``$`` would break).
+    env_file:
+      - ../../deploy/env/.env.prod
     environment:
       ADMIN_ENVIRONMENT: prod
       ADMIN_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       ADMIN_REDIS_URL: redis://redis:6379/0
       ADMIN_BACKEND_BASE_URL: http://backend:8000
-      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
-      ADMIN_TOTP_SECRET: ${ADMIN_TOTP_SECRET}
-      ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-[]}
     depends_on:
       postgres:
         condition: service_healthy

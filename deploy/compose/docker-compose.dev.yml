@@ -148,13 +148,16 @@ services:
       context: ../../admin
     container_name: poe2b-admin
     restart: unless-stopped
+    # Same env file as backend: bcrypt hashes contain ``$`` which Compose would
+    # treat as variable refs if passed only via ``environment: ${ADMIN_PASSWORD_HASH}``.
+    # Service ``env_file`` injects literals into the container without that mangling.
+    env_file:
+      - ../../deploy/env/.env.dev
     environment:
       ADMIN_ENVIRONMENT: dev
       ADMIN_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
       ADMIN_REDIS_URL: redis://redis:6379/0
       ADMIN_BACKEND_BASE_URL: http://backend:8000
-      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-dev-session-secret-change-me}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-$$2b$$12$$kf1Sh4imysin12trFxWc6uhSuXCR4JUySGOwKgYR9Kn8y4obxEiYu}
     depends_on:
       postgres:
         condition: service_healthy

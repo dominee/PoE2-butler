@@ -6,27 +6,25 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Cookie, Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import text
 
 from admin.app.auth import AdminSession, AuthError, SessionManager
 from admin.app.config import AdminSettings, get_admin_settings
-from admin.app.db import (
-    count_snapshots_by_kind,
-    get_engine,
-    list_users,
-    recent_snapshots,
-)
+from admin.app.dashboard_data import bundle_for_json, load_dashboard_bundle
+from admin.app.db import list_users, recent_snapshots
 from admin.app.middleware import AdminSecurityHeaders, IPAllowlistMiddleware
 from admin.app.redis_stats import (
     backend_health,
     price_cache_summary,
+    probe_ok,
     queue_summary,
     redis_summary,
 )
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_STATIC_DIR = Path(__file__).parent / "static"
 
 
 def _session_manager() -> SessionManager:
@@ -53,6 +51,9 @@ def create_app() -> FastAPI:
     app = FastAPI(title="PoE2 Butler Admin", docs_url=None, redoc_url=None)
     app.add_middleware(AdminSecurityHeaders)
     app.add_middleware(IPAllowlistMiddleware, allowlist=settings.ip_allowlist)
+
+    if _STATIC_DIR.is_dir():
+        app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
     _register_routes(app)
     return app
@@ -120,28 +121,23 @@ def _register_routes(app: FastAPI) -> None:
     async def healthz() -> dict:
         return {"status": "ok"}
 
+    @app.get("/admin/api/summary")
+    async def api_summary(_session: AdminSession = Depends(_require_session)) -> JSONResponse:
+        bundle = await load_dashboard_bundle()
+        return JSONResponse(bundle_for_json(bundle))
+
     @app.get("/admin/", response_class=HTMLResponse)
     async def home(
         request: Request,
         session: AdminSession = Depends(_require_session),
     ) -> HTMLResponse:
-        engine = get_engine()
-        async with engine.connect() as conn:
-            totals_rows = await conn.execute(
-                text(
-                    "SELECT (SELECT COUNT(*) FROM users) AS users, "
-                    "(SELECT COUNT(*) FROM snapshots) AS snapshots"
-                )
-            )
-            totals = dict(totals_rows.first()._mapping)
+        settings = get_admin_settings()
+        bundle = await load_dashboard_bundle()
         context = {
             "session": session,
             "active": "home",
-            "totals": totals,
-            "snapshots_by_kind": await count_snapshots_by_kind(),
-            "redis": await redis_summary(),
-            "price_cache": await price_cache_summary(),
-            "queue": await queue_summary(),
+            "dashboard_refresh_sec": settings.dashboard_refresh_sec,
+            **bundle,
         }
         return TEMPLATES.TemplateResponse(request, "home.html", context)
 
@@ -193,13 +189,16 @@ def _register_routes(app: FastAPI) -> None:
         request: Request,
         session: AdminSession = Depends(_require_session),
     ) -> HTMLResponse:
+        health = await backend_health()
+        upstream_ok = all(probe_ok(v) for v in health.values()) if health else False
         return TEMPLATES.TemplateResponse(
             request,
             "upstream.html",
             {
                 "session": session,
                 "active": "upstream",
-                "health": await backend_health(),
+                "health": health,
+                "upstream_ok": upstream_ok,
             },
         )
 

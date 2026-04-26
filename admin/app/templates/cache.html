@@ -1,13 +1,16 @@
 {% extends "base.html" %}
+{% block title %}Cache · Admin{% endblock %}
 {% block content %}
 <section>
   <h2>Redis</h2>
-  <table>
+  <table class="data">
     <tbody>
       <tr><th>Keys</th><td>{{ redis.key_count }}</td></tr>
-      <tr><th>Memory</th><td>{{ redis.used_memory_human }} / {{ redis.maxmemory_human }}</td></tr>
+      <tr><th>Memory</th><td>{{ redis.used_memory_human }} / {{ redis.maxmemory_human or "—" }}</td></tr>
       <tr><th>Peak</th><td>{{ redis.used_memory_peak_human }}</td></tr>
       <tr><th>Clients</th><td>{{ redis.connected_clients }}</td></tr>
+      <tr><th>Evicted keys</th><td>{{ redis.evicted_keys if redis.evicted_keys is not none else "—" }}</td></tr>
+      <tr><th>Expired keys (total)</th><td>{{ redis.expired_keys if redis.expired_keys is not none else "—" }}</td></tr>
     </tbody>
   </table>
 </section>
@@ -27,7 +30,7 @@
 </section>
 <section>
   <h2>Queue (arq)</h2>
-  <table>
+  <table class="data">
     <tbody>
       <tr><th>Queued</th><td>{{ queue.queued }}</td></tr>
       <tr><th>In progress</th><td>{{ queue.in_progress }}</td></tr>

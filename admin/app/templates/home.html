@@ -1,27 +1,152 @@
 {% extends "base.html" %}
+{% block title %}Overview · Admin{% endblock %}
 {% block content %}
+
+<div class="upstream-strip">
+  <h2>Backend</h2>
+  {% for path, probe in health.items() %}
+  <div class="probe">
+    <span class="path">{{ path }}</span>
+    <span class="meta">
+      {% if probe.error %}
+      <span class="badge badge-bad">error</span>
+      <span class="muted">{{ probe.error }}</span>
+      {% elif probe.status_code == 200 %}
+      <span class="badge badge-ok">{{ probe.status_code }}</span>
+      {% else %}
+      <span class="badge badge-warn">{{ probe.status_code or "—" }}</span>
+      {% endif %}
+      <span class="muted">{{ probe.latency_ms }} ms</span>
+      {% if probe.version %}
+      <span class="muted">v{{ probe.version }}</span>
+      {% endif %}
+      {% if probe.body_status %}
+      <span class="muted">{{ probe.body_status }}</span>
+      {% endif %}
+    </span>
+  </div>
+  {% endfor %}
+  <div class="probe" style="margin-left:auto">
+    <span class="path">Overall</span>
+    <span class="meta">
+      {% if upstream_ok %}
+      <span class="badge badge-ok">healthy</span>
+      {% else %}
+      <span class="badge badge-bad">degraded</span>
+      {% endif %}
+    </span>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <div class="metric-card">
+    <span class="label">Users</span>
+    <span class="value" id="m-users">{{ totals.users }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Snapshots</span>
+    <span class="value" id="m-snapshots">{{ totals.snapshots }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Active users (7d)</span>
+    <span class="value" id="m-active7">{{ metrics.active_users_7d }}</span>
+    <span class="sub">last_login in window</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">OAuth token rows</span>
+    <span class="value" id="m-tokens">{{ metrics.token_rows }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Public shares</span>
+    <span class="value" id="m-shares">{{ metrics.active_shares }}</span>
+    <span class="sub">not revoked</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Snapshots (24h)</span>
+    <span class="value" id="m-sn24">{{ metrics.snapshots_24h }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Redis keys</span>
+    <span class="value" id="m-rkeys">{{ redis.key_count }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Queue / in progress</span>
+    <span class="value" id="m-queue">{{ queue.queued }} / {{ queue.in_progress }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="label">Price cache keys</span>
+    <span class="value" id="m-prices">{{ price_cache.key_count }}</span>
+  </div>
+</div>
+
 <section>
-  <h2>Overview</h2>
-  <table>
+  <h2>Snapshot mix</h2>
+  <p class="muted" style="margin:0 0 0.75rem">Share of rows by <code>snapshot.kind</code></p>
+  {% for row in snapshot_mix %}
+  <div class="mix-row">
+    <div class="mix-label">
+      <span class="kind">{{ row.kind }}</span>
+      <span class="pct">{{ row.n }} · {{ row.pct }}%</span>
+    </div>
+    <div class="mix-bar" title="{{ row.kind }}: {{ row.n }}">
+      <i style="width: {{ row.pct }}%"></i>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">No snapshot rows yet.</p>
+  {% endfor %}
+</section>
+
+<section>
+  <h2>Redis memory</h2>
+  <table class="data">
     <tbody>
-      <tr><th>Users</th><td>{{ totals.users }}</td></tr>
-      <tr><th>Snapshots</th><td>{{ totals.snapshots }}</td></tr>
-      <tr><th>Redis keys</th><td>{{ redis.key_count }}</td></tr>
-      <tr><th>Redis memory</th><td>{{ redis.used_memory_human }} / {{ redis.maxmemory_human }}</td></tr>
-      <tr><th>Price cache entries</th><td>{{ price_cache.key_count }}</td></tr>
-      <tr><th>Queue length</th><td>{{ queue.queued }} (in-progress: {{ queue.in_progress }})</td></tr>
+      <tr><th>Used</th><td id="t-redis-mem">{{ redis.used_memory_human }} / {{ redis.maxmemory_human or "—" }}</td></tr>
+      <tr><th>Peak</th><td id="t-redis-peak">{{ redis.used_memory_peak_human }}</td></tr>
+      <tr><th>Clients</th><td id="t-redis-clients">{{ redis.connected_clients }}</td></tr>
+      <tr><th>Evicted keys</th><td id="t-redis-evict">{{ redis.evicted_keys if redis.evicted_keys is not none else "—" }}</td></tr>
+      <tr><th>Expired keys (total)</th><td id="t-redis-exp">{{ redis.expired_keys if redis.expired_keys is not none else "—" }}</td></tr>
     </tbody>
   </table>
 </section>
+
 <section>
-  <h2>Snapshots by kind</h2>
-  <table>
-    <thead><tr><th>Kind</th><th>Count</th></tr></thead>
-    <tbody>
-      {% for row in snapshots_by_kind %}
-      <tr><td>{{ row.kind }}</td><td>{{ row.n }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h2>Last snapshot write</h2>
+  <p class="muted" style="margin:0"><code id="m-last-sn">{{ metrics_iso.last_snapshot_at or "—" }}</code></p>
 </section>
+
+{% if dashboard_refresh_sec > 0 %}
+<p class="refresh-hint">Live refresh every {{ dashboard_refresh_sec }}s via <code>/admin/api/summary</code>.</p>
+<script>
+(function () {
+  var sec = {{ dashboard_refresh_sec | int }};
+  if (!sec) return;
+  async function tick() {
+    try {
+      var r = await fetch("/admin/api/summary", { credentials: "same-origin" });
+      if (!r.ok) return;
+      var j = await r.json();
+      function set(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+      set("m-users", j.totals.users);
+      set("m-snapshots", j.totals.snapshots);
+      set("m-active7", j.metrics.active_users_7d);
+      set("m-tokens", j.metrics.token_rows);
+      set("m-shares", j.metrics.active_shares);
+      set("m-sn24", j.metrics.snapshots_24h);
+      set("m-rkeys", j.redis.key_count);
+      set("m-queue", j.queue.queued + " / " + j.queue.in_progress);
+      set("m-prices", j.price_cache.key_count);
+      set("m-last-sn", j.metrics.last_snapshot_at || "—");
+      set("t-redis-mem", (j.redis.used_memory_human || "—") + " / " + (j.redis.maxmemory_human || "—"));
+      set("t-redis-peak", j.redis.used_memory_peak_human || "—");
+      set("t-redis-clients", j.redis.connected_clients != null ? j.redis.connected_clients : "—");
+      set("t-redis-evict", j.redis.evicted_keys != null ? j.redis.evicted_keys : "—");
+      set("t-redis-exp", j.redis.expired_keys != null ? j.redis.expired_keys : "—");
+    } catch (e) {}
+  }
+  setInterval(tick, sec * 1000);
+})();
+</script>
+{% endif %}
+
 {% endblock %}
