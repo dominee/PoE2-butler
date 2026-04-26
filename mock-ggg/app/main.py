@@ -14,6 +14,8 @@ import os
 import secrets
 import sys
 import time
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -21,23 +23,25 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
 
 _APP_DIR = Path(__file__).resolve().parent
 if str(_APP_DIR) not in sys.path:
     sys.path.insert(0, str(_APP_DIR))
 
 from ninja_config import load_character_refs
+from ninja_convert import stable_id
 from ninja_urls import NinjaCharacterRef
 from poe_ninja import (
     account_slug_to_user_id,
     build_user_blob_from_ggg,
     character_summary,
     fetch_character_ggg_and_account,
+    poe_ninja_read_timeout,
+    synthetic_character_summaries,
 )
 
 log = logging.getLogger(__name__)
-
-app = FastAPI(title="Mock GGG", version="0.1.0")
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -55,13 +59,26 @@ def _group_ninja_refs(refs: list[NinjaCharacterRef]) -> dict[str, list[NinjaChar
     return m
 
 
-NINJA_REFS_BY_USER: dict[str, list[NinjaCharacterRef]] = _group_ninja_refs(load_character_refs())
+try:
+    _ninja_url_refs = load_character_refs()
+except Exception as exc:
+    log.warning("mock_ggg: failed to load poe_ninja character TOML (%s)", exc)
+    _ninja_url_refs = []
+NINJA_REFS_BY_USER: dict[str, list[NinjaCharacterRef]] = _group_ninja_refs(_ninja_url_refs)
 if os.environ.get("MOCK_GGG_SKIP_POE_NINJA") == "1":
     NINJA_REFS_BY_USER = {}
 
 USERS: dict[str, Any] = dict(_load("static_users.json"))
 CHARACTERS: dict[str, Any] = _load("characters.json")
 STASHES: dict[str, Any] = _load("stashes.json")
+
+for _nuid in NINJA_REFS_BY_USER:
+    if _nuid not in USERS:
+        USERS[_nuid] = {
+            "profile": {"name": _nuid, "uuid": stable_id(_nuid), "realm": "pc", "guild": None},
+            "leagues": [],
+            "characters": [],
+        }
 
 PENDING_AUTH: dict[str, dict[str, Any]] = {}
 ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
@@ -119,7 +136,34 @@ def _init_ninja_from_network() -> None:
         log.warning("mock_ggg: poe.ninja startup sync failed (%s); ninja accounts unavailable", exc)
 
 
-_init_ninja_from_network()
+async def _background_ninja_warm() -> None:
+    """Full account scrape; runs in a worker thread (sleeps between Poe.ninja calls in ``poe_ninja``)."""
+    try:
+        await run_in_threadpool(_init_ninja_from_network)
+    except Exception as exc:
+        log.warning("mock_ggg: background poe.ninja sync failed (%s)", exc)
+    else:
+        log.info("mock_ggg: background poe.ninja sync finished")
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Start Poe.ninja warm-up without blocking readiness (rate limits apply inside the thread)."""
+    task: asyncio.Task[None] | None = None
+    if NINJA_REFS_BY_USER and os.environ.get("MOCK_GGG_SKIP_POE_NINJA") != "1":
+        task = asyncio.create_task(_background_ninja_warm(), name="mock_ggg_poe_ninja_warm")
+    yield
+    if task is not None and not task.done():
+        try:
+            await asyncio.wait_for(task, timeout=120.0)
+        except TimeoutError:
+            log.warning("mock_ggg: background poe.ninja sync still running at shutdown; cancelling")
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+
+
+app = FastAPI(title="Mock GGG", version="0.1.0", lifespan=_lifespan)
 
 
 def _persist_token_maps() -> None:
@@ -337,13 +381,26 @@ async def leagues(request: Request) -> JSONResponse:
 
 
 @app.get("/account/characters")
-async def characters(request: Request) -> JSONResponse:
+async def characters(
+    request: Request,
+    revalidate: bool = Query(False, description="When true, refetch all Poe.ninja models (slow)."),
+) -> JSONResponse:
+    """OAuth callback must stay fast: default path serves cache or URL-derived placeholders."""
     user = _require_user(request)
     refs = NINJA_REFS_BY_USER.get(user)
+    if refs and revalidate:
+        try:
+            with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
+                _sync_ninja_user_with_client(user, refs, client)
+        except Exception as exc:
+            log.warning("mock_ggg: character list revalidate failed (%s)", exc)
+    blob = USERS.get(user) or {}
+    ch = blob.get("characters")
+    if isinstance(ch, list) and len(ch) > 0:
+        return JSONResponse({"characters": ch})
     if refs:
-        with httpx.Client(timeout=60.0) as client:
-            _sync_ninja_user_with_client(user, refs, client)
-    return JSONResponse({"characters": USERS[user]["characters"]})
+        return JSONResponse({"characters": synthetic_character_summaries(refs)})
+    return JSONResponse({"characters": ch if isinstance(ch, list) else []})
 
 
 @app.get("/account/characters/{name}")
@@ -351,8 +408,17 @@ async def character(name: str, request: Request) -> JSONResponse:
     user = _require_user(request)
     refs = NINJA_REFS_BY_USER.get(user)
     if refs:
-        with httpx.Client(timeout=60.0) as client:
-            _sync_ninja_character_detail(user, name, refs, client)
+        try:
+            with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
+                _sync_ninja_character_detail(user, name, refs, client)
+        except httpx.HTTPError as exc:
+            log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
+            if name not in CHARACTERS:
+                raise HTTPException(status_code=503, detail="poe_ninja_unavailable") from exc
+        except Exception as exc:
+            log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
+            if name not in CHARACTERS:
+                raise HTTPException(status_code=503, detail="poe_ninja_unavailable") from exc
     if name not in CHARACTERS:
         raise HTTPException(404, "not_found")
     return JSONResponse(CHARACTERS[name])

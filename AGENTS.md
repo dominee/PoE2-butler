@@ -309,6 +309,8 @@ Environment:
 
 - `MOCK_GGG_POE_NINJA_TOML` — optional path to a replacement TOML (e.g. bind-mount in Compose).
 - `MOCK_GGG_SKIP_POE_NINJA=1` — skip live Poe.ninja (used by backend tests); only `exile_one` appears on the mock login form.
+- `MOCK_GGG_POE_NINJA_MIN_INTERVAL_SEC` — minimum pause **after each successful** Poe.ninja HTTP response (default `0.75`). Applies to background warm-up and on-demand `/account/characters*` fetches.
+- `GET /account/characters` stays **fast** for OAuth (cached list or URL-derived placeholders). Full Poe.ninja rescrape uses `GET /account/characters?revalidate=1` (the backend passes this on **manual Refresh** only).
 
 To regenerate fixture data from **offline** poe.ninja JSON exports:
 

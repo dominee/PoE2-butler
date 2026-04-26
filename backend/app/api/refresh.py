@@ -54,6 +54,7 @@ async def refresh(
         ggg=ggg,
         cipher=cipher,
         include_stashes_for_league=user.preferred_league,
+        revalidate_character_list=True,
     )
     await delete_character_snapshots(db, user.id)
     await db.commit()

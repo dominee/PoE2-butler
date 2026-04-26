@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     ggg_user_agent_contact: str = "dev@hell.sk"
     ggg_user_agent_suffix: str = "PoE2-Hideout-Butler"
+    # httpx read timeout for GGG (and dev mock) HTTP calls; raise for slow mock Poe.ninja scrapes.
+    ggg_http_timeout_seconds: float = 15.0
 
     refresh_cooldown_seconds: int = 60
     default_trade_tolerance_pct: int = 10

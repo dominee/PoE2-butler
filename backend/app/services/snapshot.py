@@ -87,6 +87,7 @@ async def refresh_user_snapshot(
     ggg: GGGClient,
     cipher: TokenCipher,
     include_stashes_for_league: str | None = None,
+    revalidate_character_list: bool = False,
 ) -> SnapshotOutcome:
     """Fetch profile, leagues and characters for ``user`` and persist them.
 
@@ -129,7 +130,7 @@ async def refresh_user_snapshot(
         outcome.errors.append(f"leagues:{exc}")
 
     try:
-        chars = await ggg.get_characters(access)
+        chars = await ggg.get_characters(access, revalidate=revalidate_character_list)
         await upsert_snapshot(
             session, user_id=user.id, kind=SnapshotKind.CHARACTERS, key="", payload=chars
         )
