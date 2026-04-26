@@ -1,8 +1,15 @@
 # PoE2 Butler · Admin console
 
-Read-only FastAPI service for operators: user list, snapshot stats, Redis and
-queue telemetry, and upstream health probes. Deployed alongside the main
-backend on its own Traefik subdomain.
+Read-only FastAPI service for operators: **dashboard** (headline metrics, backend
+health strip, snapshot mix bars), user list, snapshot audit, Redis / queue
+telemetry, and upstream probes. Deployed alongside the main backend on its own
+Traefik subdomain.
+
+## Database
+
+Dashboard SQL uses **PostgreSQL** intervals (`NOW() - INTERVAL '7 days'`, etc.).
+Point `ADMIN_DATABASE_URL` at the same Postgres instance the backend uses (read
+credentials are fine). SQLite is not supported for these admin queries.
 
 ## Local dev
 
@@ -15,22 +22,41 @@ ADMIN_BACKEND_BASE_URL=http://localhost:8000 \
 uv run uvicorn admin.app.main:app --reload --port 8001
 ```
 
-Default credentials: user `admin`, password `admin`.  **Always** override via
+Static assets (including `admin.css`) are served from `/static/`; the Dockerfile
+copies the whole `app/` tree (templates + `static/`).
+
+Default credentials: user `admin`, password `admin`. **Always** override via
 `ADMIN_PASSWORD_HASH` (bcrypt) in any non-dev deployment and set
 `ADMIN_TOTP_SECRET` for a second factor.
 
 Restrict network exposure via `ADMIN_IP_ALLOWLIST` (JSON list of CIDRs).
+
+### Docker Compose and bcrypt hashes
+
+bcrypt hashes contain `$` characters. Compose treats `$` as interpolation when it
+expands values (for example `environment: ADMIN_PASSWORD_HASH: ${…}`, or the same
+`.env` file used as `docker compose --env-file`). In `deploy/env/.env.dev` and
+`.env.prod`, write each literal `$` in the hash as `$$`, and **do not wrap the hash
+in quotes**—quoted values often leave `$$` unexpanded so bcrypt sees garbage.
+`AdminSettings` also strips outer quotes and collapses `$$` → `$` as a fallback.
+
+### Live dashboard refresh
+
+Set `ADMIN_DASHBOARD_REFRESH_SEC` to a positive integer (e.g. `30`) to poll
+`GET /admin/api/summary` from the Overview page and update headline numbers
+without a full reload. `0` (default) disables polling.
 
 ## Routes
 
 | Path | Purpose |
 |------|---------|
 | `GET /admin/login` · `POST /admin/login` | Form-based sign in (bcrypt + optional TOTP) |
-| `GET /admin/` | Totals, snapshots by kind, redis + queue summary |
+| `GET /admin/` | **Dashboard:** totals, activity metrics, snapshot mix, Redis summary, backend probes |
+| `GET /admin/api/summary` | JSON bundle for the same dashboard (session cookie required); used for optional auto-refresh |
 | `GET /admin/users` | Recent users and their prefs |
 | `GET /admin/snapshots` | Most recent snapshots across all users |
-| `GET /admin/cache` | Redis, price cache, arq queue |
-| `GET /admin/upstream` | Probes backend `/healthz` and `/readyz` |
+| `GET /admin/cache` | Redis (memory, clients, evicted/expired keys), price cache, arq queue |
+| `GET /admin/upstream` | Backend `/healthz` and `/readyz` with latency, HTTP status, parsed `version` |
 | `GET /admin/healthz` | Cheap liveness probe for Traefik |
 | `GET /admin/logout` | Clear session cookie |
 

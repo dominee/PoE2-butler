@@ -132,7 +132,7 @@ python -c "import base64, os; print(base64.b32encode(os.urandom(20)).decode())"
 python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
 ```
 
-> **Important**: bcrypt hashes contain `$` characters. In docker-compose `--env-file` files each `$` must be escaped as `$$`.
+> **Important**: bcrypt hashes contain `$`. Docker Compose treats `$` as interpolation when you reference a value in the **compose YAML** itself (for example `environment: ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}`). The **prod** and **dev** stacks load admin secrets from `env_file` (`.env.prod` / `.env.dev`), so you can keep a normal single-`$` bcrypt string in that file. If you ever pass the hash only through compose substitution, escape each `$` as `$$` in the source env file.
 
 ---
 
@@ -189,7 +189,7 @@ Required variables for prod (in addition to defaults):
 | `APP_DOMAIN` | `app.hideoutbutler.com` |
 | `ADMIN_DOMAIN` | `admin.hideoutbutler.com` |
 | `SECURITY_CONTACT_EMAIL` | Optional; ops / security contact (not consumed by Traefik) |
-| `ADMIN_PASSWORD_HASH` | bcrypt hash (escape `$` → `$$`) |
+| `ADMIN_PASSWORD_HASH` | bcrypt hash in `.env.prod` (single `$` is fine; admin service uses `env_file`) |
 | `ADMIN_TOTP_SECRET` | base32 secret |
 | `ADMIN_SESSION_SECRET` | Random 32-byte base64 |
 | `GITHUB_OWNER` | Your GitHub username (for image tags) |

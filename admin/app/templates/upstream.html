@@ -1,12 +1,43 @@
 {% extends "base.html" %}
+{% block title %}Upstream · Admin{% endblock %}
 {% block content %}
 <section>
   <h2>Backend probes</h2>
-  <table>
-    <thead><tr><th>Endpoint</th><th>Result</th></tr></thead>
+  <p class="muted" style="margin-top:0">Target: main API (<code>ADMIN_BACKEND_BASE_URL</code>)</p>
+  <p style="margin-bottom:0.75rem">
+    {% if upstream_ok %}
+    <span class="badge badge-ok">All probes OK</span>
+    {% else %}
+    <span class="badge badge-bad">Degraded</span>
+    {% endif %}
+  </p>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Endpoint</th>
+        <th>HTTP</th>
+        <th>Latency</th>
+        <th>Version</th>
+        <th>Body status</th>
+        <th>Error</th>
+      </tr>
+    </thead>
     <tbody>
-      {% for path, result in health.items() %}
-      <tr><td><code>{{ path }}</code></td><td>{{ result }}</td></tr>
+      {% for path, probe in health.items() %}
+      <tr>
+        <td><code>{{ path }}</code></td>
+        <td>
+          {% if probe.status_code == 200 %}
+          <span class="badge badge-ok">{{ probe.status_code }}</span>
+          {% elif probe.status_code %}
+          <span class="badge badge-warn">{{ probe.status_code }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ probe.latency_ms }} ms</td>
+        <td>{{ probe.version or "—" }}</td>
+        <td>{{ probe.body_status or "—" }}</td>
+        <td class="muted">{{ probe.error or "—" }}</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>

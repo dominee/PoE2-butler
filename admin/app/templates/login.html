@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Sign in · Admin{% endblock %}
 {% block content %}
-<section>
-  <h2>Sign in</h2>
-  {% if error %}<p style="color:#f38b8b">{{ error }}</p>{% endif %}
+<div class="panel form-card">
+  <div class="login-hero">
+    <h2>Operator sign-in</h2>
+    <p class="muted">Restricted access. Use strong credentials and TOTP in production.</p>
+  </div>
+  {% if error %}<div class="error-banner" role="alert">{{ error }}</div>{% endif %}
   <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
-  <form method="post" action="/admin/login">
+  <form method="post" action="/admin/login" class="stack">
     {% if csrf_token %}
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     {% endif %}
@@ -23,8 +26,7 @@
       <input name="totp" inputmode="numeric" pattern="[0-9]{6}" required />
     </label>
     {% endif %}
-    <button type="submit">Sign in</button>
-    <p class="muted">Access is restricted to operators.</p>
+    <button type="submit" class="primary">Sign in</button>
   </form>
-</section>
+</div>
 {% endblock %}
