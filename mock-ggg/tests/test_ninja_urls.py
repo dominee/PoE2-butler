@@ -9,6 +9,14 @@ def test_parse_profile_url() -> None:
     assert ref == NinjaCharacterRef("dominee-9275", "vaal", "IamGothmog")
 
 
+def test_parse_profile_url_vaalssf_league_slug() -> None:
+    """SSF leagues use slugs like ``vaalssf`` in the path; regex league group must accept them."""
+    ref = parse_character_url(
+        "https://poe.ninja/poe2/profile/dominee-9275/vaalssf/character/release_it_already"
+    )
+    assert ref == NinjaCharacterRef("dominee-9275", "vaalssf", "release_it_already")
+
+
 def test_parse_builds_url() -> None:
     ref = parse_character_url("https://poe.ninja/poe2/builds/vaal/character/Ithax-6772/Wthax")
     assert ref == NinjaCharacterRef("Ithax-6772", "vaal", "Wthax")
