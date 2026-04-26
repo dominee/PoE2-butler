@@ -148,14 +148,29 @@ def test_exact_search_includes_type_and_rarity_filters() -> None:
     assert tf["filters"]["rarity"]["option"] == "rare"
 
 
-def test_exact_search_unique_item_sets_unique_rarity_filter() -> None:
-    item = make_item(rarity="Unique", base_type="Spine Bow")
+def test_exact_search_unique_sets_name_type_and_rarity() -> None:
+    item = make_item(
+        rarity="Unique",
+        name="Headhunter",
+        base_type="Heavy Belt",
+    )
     result = build_exact_search(item, tolerance_pct=10)
     q = result["payload"]["query"]
-    assert q["type"] == "Spine Bow"
+    assert q["type"] == "Heavy Belt"
+    assert q["name"] == "Headhunter"
     tf = q["filters"]["type_filters"]
     assert tf["disabled"] is False
     assert tf["filters"]["rarity"]["option"] == "unique"
+
+
+def test_exact_search_unique_without_display_name_omits_query_name() -> None:
+    """GGG still needs ``name`` for a specific unique; omit key when unknown."""
+    item = make_item(rarity="Unique", base_type="Spine Bow", name="")
+    result = build_exact_search(item, tolerance_pct=10)
+    q = result["payload"]["query"]
+    assert q["type"] == "Spine Bow"
+    assert "name" not in q
+    assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "unique"
 
 
 def test_exact_search_currency_item_omits_rarity_filter() -> None:

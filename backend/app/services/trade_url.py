@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
 
-from app.domain.item import Item
+from app.domain.item import Item, strip_item_mod_text
 from app.services.trade_stat_catalog import bundled_trade_stat_id
 
 TRADE_BASE = "https://www.pathofexile.com/trade2/search/poe2"
@@ -62,6 +62,7 @@ _NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
 def parse_mod_line(text: str) -> ParsedMod:
     """Extract numeric values from a mod line."""
+    text = strip_item_mod_text(text)
     matches = _NUMBER_RE.findall(text)
     values = [float(m) for m in matches]
     template = _NUMBER_RE.sub("#", text)
@@ -168,6 +169,9 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
     }
     if item.base_type:
         query["type"] = item.base_type
+    # Uniques are identified by ``name`` + ``type`` (base); ``type`` alone matches every base.
+    if item.rarity == "Unique" and item.name.strip():
+        query["name"] = item.name.strip()
     rarity_option = RARITY_TO_TRADE_OPTION.get(item.rarity)
     if rarity_option:
         tf = query.setdefault("filters", {}).setdefault("type_filters", {})

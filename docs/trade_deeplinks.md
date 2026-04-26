@@ -20,6 +20,7 @@ Verified against `https://www.pathofexile.com/api/trade2/search` (2026):
 | **Response** | JSON object with string `id` (and `result`, `total`, etc.). |
 | **Browser URL** | `https://www.pathofexile.com/trade2/search/poe2/{league}/{id}` — same `id` as returned by POST. |
 | **Base item** | PoE2 expects the item base name as a **plain string** in `query.type` (e.g. `"Dualstring Bow"`). The older PoE1-style `filters.type_filters.filters.type.option` object is **invalid** here and yields `400 Invalid query`. |
+| **Unique name** | For `rarity: unique`, set `query.name` to the unique’s display name (e.g. `"Headhunter"`) together with `query.type` as the base (e.g. `"Heavy Belt"`). Without `name`, the trade site matches every item of that base. |
 | **Rarity** | `query.filters.type_filters.filters.rarity.option` uses only GGG-supported values: `normal`, `magic`, `rare`, `unique`, `uniquefoil`, `nonunique`. The `type_filters` group sets `disabled: false`. Currency, gems, divination cards, and quest items have **no** rarity filter (those strings are not valid trade rarity options). |
 | **Stats** | `query.stats` is a list of blocks `{ "type": "and", "filters": [ … ] }`. Each filter uses GGG stat ids like `explicit.stat_<numeric_hash>` and optional `value` `{ "min", "max" }`. Implicit / explicit / rune / enchant prefixes differ (`implicit.stat_…`, `rune.stat_…`, etc.). |
 | **Poll results** | `GET https://www.pathofexile.com/api/trade2/search/{league}/{id}` returns listing keys; not used by Hideout Butler today. |
