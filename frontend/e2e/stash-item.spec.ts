@@ -9,9 +9,9 @@ import { loginViaMock } from "./helpers";
 test("mock GGG login: browse stash and open item detail", async ({ page }) => {
   test.setTimeout(120_000);
 
-  await loginViaMock(page, "exile_one");
+  await loginViaMock(page, "dominee_9275");
   await expect(page.getByRole("heading", { name: /characters/i })).toBeVisible();
-  await page.getByRole("combobox", { name: /league/i }).selectOption("Dawn of the Hunt");
+  await page.getByRole("combobox", { name: /league/i }).selectOption("Fate of the Vaal");
 
   await page.getByRole("button", { name: "Stash" }).click();
   await expect(page.getByRole("button", { name: /refresh stash/i })).toBeVisible({

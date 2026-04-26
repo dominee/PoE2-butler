@@ -19,7 +19,7 @@ async function waitForAuthenticatedSession(page: Page, timeoutMs: number): Promi
   return false;
 }
 
-export async function loginViaMock(page: Page, user = "exile_one"): Promise<void> {
+export async function loginViaMock(page: Page, user = "dominee_9275"): Promise<void> {
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     await page.goto("/api/auth/login");
     await expect(page.locator("h1")).toHaveText(/mock ggg/i, { timeout: 20_000 });

@@ -301,14 +301,14 @@ Current migrations:
 
 ## 9. Mock GGG service
 
-Located in `mock-ggg/`. Stash simulation and static OAuth user `exile_one` live under `mock-ggg/app/fixtures/` (`static_users.json`, `characters.json`, `stashes.json`).
+Located in `mock-ggg/`. Stash simulation and optional extra OAuth rows live under `mock-ggg/app/fixtures/` (`static_users.json`, `characters.json`, `stashes.json`). The mock login list is driven primarily by [`mock-ggg/config/poe_ninja_characters.toml`](mock-ggg/config/poe_ninja_characters.toml) (see “Live Poe.ninja characters” below).
 
 **Live Poe.ninja characters (dev):** URLs are listed in [`mock-ggg/config/poe_ninja_characters.toml`](mock-ggg/config/poe_ninja_characters.toml). On startup the mock calls Poe.ninja (`/poe2/api/events/character/...` then `.../model/{version}`), converts `charModel` to the same GGG-shaped JSON as the real account API, and registers one OAuth user per URL account segment (e.g. `dominee_9275`). `GET /account/characters` and `GET /account/characters/{name}` re-fetch from Poe.ninja so a backend **Refresh** (which clears cached character snapshots) pulls fresh gear.
 
 Environment:
 
 - `MOCK_GGG_POE_NINJA_TOML` — optional path to a replacement TOML (e.g. bind-mount in Compose).
-- `MOCK_GGG_SKIP_POE_NINJA=1` — skip live Poe.ninja (used by backend tests); only `exile_one` appears on the mock login form.
+- `MOCK_GGG_SKIP_POE_NINJA=1` — skip live Poe.ninja HTTP (used by backend tests); TOML-defined OAuth users still appear on the mock login form, with gear seeded from `characters.json` where names match.
 - `MOCK_GGG_POE_NINJA_MIN_INTERVAL_SEC` — minimum pause **after each successful** Poe.ninja HTTP response (default `0.75`). Applies to background warm-up and on-demand `/account/characters*` fetches.
 - `GET /account/characters` stays **fast** for OAuth (cached list or URL-derived placeholders). Full Poe.ninja rescrape uses `GET /account/characters?revalidate=1` (the backend passes this on **manual Refresh** only).
 
@@ -318,7 +318,7 @@ To regenerate fixture data from **offline** poe.ninja JSON exports:
 cd mock-ggg && uv run python samples/convert.py  # reads samples/*.json, writes app/fixtures/*.json
 ```
 
-The mock login form lists OAuth users in dict insertion order (`exile_one` first, then synced ninja accounts).
+The mock login form lists OAuth users in dict insertion order: optional `static_users.json` entries first, then TOML-derived accounts (e.g. `dominee_9275`).
 
 ---
 

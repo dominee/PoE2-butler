@@ -46,6 +46,12 @@ from poe_ninja import (
 
 log = logging.getLogger(__name__)
 
+
+def _poe_ninja_network_disabled() -> bool:
+    """When true: no live Poe.ninja HTTP (backend tests); TOML still drives OAuth user ids."""
+    return os.environ.get("MOCK_GGG_SKIP_POE_NINJA") == "1"
+
+
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
@@ -68,11 +74,9 @@ except Exception as exc:
     log.warning("mock_ggg: failed to load poe_ninja character TOML (%s)", exc)
     _ninja_url_refs = []
 NINJA_REFS_BY_USER: dict[str, list[NinjaCharacterRef]] = _group_ninja_refs(_ninja_url_refs)
-if os.environ.get("MOCK_GGG_SKIP_POE_NINJA") == "1":
-    NINJA_REFS_BY_USER = {}
 
 USERS: dict[str, Any] = dict(_load("static_users.json"))
-# Fixture-only detail blobs (exile_one); ninja-backed accounts use _character_detail_by_user.
+# Optional static OAuth rows; TOML accounts are merged below. Fixture blobs in characters.json seed ninja detail when not hitting Poe.ninja.
 FIXTURE_CHARACTERS: dict[str, Any] = _load("characters.json")
 STASHES: dict[str, Any] = _load("stashes.json")
 # OAuth user id -> character name -> GGG-style detail (never share across mock users).
@@ -128,8 +132,6 @@ def _character_detail_for_user(uid: str, name: str) -> Any | None:
     per = _character_detail_by_user.get(uid)
     if per is not None and name in per:
         return per[name]
-    if uid == "exile_one":
-        return FIXTURE_CHARACTERS.get(name)
     return None
 
 
@@ -314,7 +316,7 @@ async def _lifespan(_app: FastAPI):
     """Start Poe.ninja warm-up without blocking readiness (rate limits apply inside the thread)."""
     global _ninja_warm_task
     _ninja_warm_task = None
-    if NINJA_REFS_BY_USER and os.environ.get("MOCK_GGG_SKIP_POE_NINJA") != "1":
+    if NINJA_REFS_BY_USER and not _poe_ninja_network_disabled():
         _ninja_warm_task = asyncio.create_task(_background_ninja_warm(), name="mock_ggg_poe_ninja_warm")
     yield
     if _ninja_warm_task is not None and not _ninja_warm_task.done():
@@ -438,8 +440,10 @@ def _ninja_stash_from_equipped(user: str, league: str) -> dict[str, Any] | None:
     contents: dict[str, Any] = {}
     prev_contents: dict[str, Any] = {}
     for tid in tab_ids:
-        contents[tid] = {"items": packed if tid == first_id else []}
-        prev_contents[tid] = {"items": []}
+        block = packed if tid == first_id else []
+        contents[tid] = {"items": block}
+        # First GET serves ``prev_contents`` (see stash_tab); keep populated like static STASHES fixtures.
+        prev_contents[tid] = {"items": copy.deepcopy(block)}
     return {"tabs": tabs, "contents": contents, "prev_contents": prev_contents}
 
 
@@ -644,7 +648,7 @@ async def characters(
     """OAuth callback must stay fast: default path serves cache or URL-derived placeholders."""
     user = _require_user(request)
     refs = NINJA_REFS_BY_USER.get(user)
-    if refs and revalidate:
+    if refs and revalidate and not _poe_ninja_network_disabled():
         try:
             await run_in_threadpool(_revalidate_ninja_characters_sync, user, refs)
         except Exception as exc:
@@ -670,7 +674,7 @@ async def character(
     user = _require_user(request)
     refs = NINJA_REFS_BY_USER.get(user)
     # Poe.ninja is slow; never refetch on every GET (that starved the app + proxies).
-    if refs and (revalidate or _character_needs_poe_ninja_fill(user, name)):
+    if refs and (revalidate or _character_needs_poe_ninja_fill(user, name)) and not _poe_ninja_network_disabled():
         lock = _character_fetch_lock(user, name)
         async with lock:
             if revalidate or _character_needs_poe_ninja_fill(user, name):
