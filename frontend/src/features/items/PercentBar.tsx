@@ -2,52 +2,17 @@
  * Roll-quality / T1-percentage bar.
  *
  * Fills from 0 to `pct` (capped visually at 110 %). A tick at 100 % marks the T1 cap.
- * Variants tint the fill for “within this affix tier” vs “vs global T1 max”.
+ * Fill uses a two-stop theme gradient (ink → ember); value text uses the same pair.
  */
 
 const VISUAL_MAX = 110;
 
-function barColor(pct: number, variant: PercentBarProps["variant"]): string {
-  if (variant === "withinTier") {
-    if (pct >= 90) {
-      return "bg-cyan-400";
-    }
-    if (pct >= 70) {
-      return "bg-sky-500";
-    }
-    if (pct >= 50) {
-      return "bg-slate-500";
-    }
-    return "bg-ink-500";
-  }
-  if (variant === "t1") {
-    if (pct >= 100) {
-      return "bg-amber-400";
-    }
-    if (pct >= 90) {
-      return "bg-yellow-500";
-    }
-    if (pct >= 70) {
-      return "bg-lime-500";
-    }
-    if (pct >= 50) {
-      return "bg-sky-500/80";
-    }
-    return "bg-ink-500";
-  }
-  if (pct >= 100) {
-    return "bg-amber-400";
-  }
-  if (pct >= 90) {
-    return "bg-yellow-400";
-  }
-  if (pct >= 70) {
-    return "bg-lime-500";
-  }
-  if (pct >= 50) {
-    return "bg-sky-500";
-  }
-  return "bg-ink-500";
+/** Bar fill: muted ink at low roll, ember accent at high roll (gradient spans the filled width). */
+const FILL_GRADIENT = "bg-gradient-to-r from-ink-600 to-ember-400";
+
+function valueTextClass(pct: number, variant: PercentBarProps["variant"]): string {
+  const strong = variant === "t1" && pct >= 100 ? true : pct >= 92;
+  return strong ? "text-ember-400" : "text-ink-400";
 }
 
 export interface PercentBarProps {
@@ -56,7 +21,7 @@ export interface PercentBarProps {
   /** Shown in the title tooltip. */
   tierLabel?: string;
   showValue?: boolean;
-  /** `withinTier` = cyan-forward; `t1` = gold T1 ladder; `default` = mixed (legacy). */
+  /** Kept for semantics / future tuning; fill is always the same theme gradient. */
   variant?: "default" | "withinTier" | "t1";
   /** Slightly taller for the item detail pane. */
   size?: "sm" | "md";
@@ -86,25 +51,18 @@ export function PercentBar({
 
   const clampedPct = Math.min(pct, VISUAL_MAX);
   const widthPct = (clampedPct / VISUAL_MAX) * 100;
-  const color = barColor(pct, variant);
   const label = tierLabel ? `${tierLabel}: ${pct}%` : `${pct}%`;
-
-  const valueClass =
-    variant === "t1" && pct >= 100
-      ? "text-amber-400"
-      : variant === "withinTier" && pct >= 90
-        ? "text-cyan-300/90"
-        : "text-ink-300";
+  const valueClass = valueTextClass(pct, variant);
 
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={label}>
       <div className={`relative ${h} min-w-0 flex-1 overflow-visible rounded-full bg-ink-800/90`}>
         <div
-          className={`absolute inset-y-0 left-0 rounded-full transition-all ${color}`}
+          className={`absolute inset-y-0 left-0 rounded-full transition-[width] ${FILL_GRADIENT}`}
           style={{ width: `${widthPct}%` }}
         />
         <div
-          className="absolute inset-y-[-2px] w-px bg-amber-200/25"
+          className="absolute inset-y-[-2px] w-px bg-ember-400/35"
           style={{ left: `${(100 / VISUAL_MAX) * 100}%` }}
           title="100% on this scale = T1 max"
         />
