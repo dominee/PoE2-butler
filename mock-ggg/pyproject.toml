@@ -26,7 +26,8 @@ build-backend = "hatchling.build"
 packages = ["app"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+# ``app/`` modules use flat ``ninja_*`` imports (same as ``main.py``); include it on path for tests.
+pythonpath = [".", "app"]
 testpaths = ["tests"]
 
 [tool.ruff]

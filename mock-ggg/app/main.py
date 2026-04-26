@@ -107,6 +107,18 @@ def _sync_ninja_user_with_client(uid: str, refs: list[NinjaCharacterRef], client
     )
 
 
+def _revalidate_ninja_characters_sync(uid: str, refs: list[NinjaCharacterRef]) -> None:
+    with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
+        _sync_ninja_user_with_client(uid, refs, client)
+
+
+def _sync_ninja_character_detail_sync(
+    uid: str, char_name: str, refs: list[NinjaCharacterRef]
+) -> None:
+    with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
+        _sync_ninja_character_detail(uid, char_name, refs, client)
+
+
 def _sync_ninja_character_detail(
     uid: str, char_name: str, refs: list[NinjaCharacterRef], client: httpx.Client
 ) -> None:
@@ -390,8 +402,7 @@ async def characters(
     refs = NINJA_REFS_BY_USER.get(user)
     if refs and revalidate:
         try:
-            with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
-                _sync_ninja_user_with_client(user, refs, client)
+            await run_in_threadpool(_revalidate_ninja_characters_sync, user, refs)
         except Exception as exc:
             log.warning("mock_ggg: character list revalidate failed (%s)", exc)
     blob = USERS.get(user) or {}
@@ -409,8 +420,7 @@ async def character(name: str, request: Request) -> JSONResponse:
     refs = NINJA_REFS_BY_USER.get(user)
     if refs:
         try:
-            with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
-                _sync_ninja_character_detail(user, name, refs, client)
+            await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
         except httpx.HTTPError as exc:
             log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
             if name not in CHARACTERS:

@@ -142,7 +142,7 @@ class GGGClient:
 
     async def get_character(self, access_token: str, name: str) -> dict[str, Any]:
         detail_timeout = httpx.Timeout(
-            max(120.0, float(self._settings.ggg_http_timeout_seconds)),
+            max(300.0, float(self._settings.ggg_http_timeout_seconds)),
             connect=30.0,
         )
         return await self._get(f"/account/characters/{name}", access_token, timeout=detail_timeout)
