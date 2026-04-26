@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./client";
+import { useUIStore } from "@/store/uiStore";
 import type {
   ActivityResponse,
   CharacterDetail,
@@ -94,6 +95,8 @@ export function useCharacter(name: string | null) {
     queryKey: queryKeys.character(name ?? ""),
     queryFn: () => api.get<CharacterDetail>(`/api/characters/${encodeURIComponent(name ?? "")}`),
     enabled: Boolean(name),
+    // Detail can take minutes against the Poe.ninja mock; retries multiply painful waits.
+    retry: false,
   });
 }
 
@@ -103,6 +106,7 @@ export function useRefresh() {
     mutationFn: () => api.post<RefreshResponse>("/api/refresh"),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["characters"] });
+      qc.invalidateQueries({ queryKey: ["character"] });
       qc.invalidateQueries({ queryKey: queryKeys.leagues });
       qc.invalidateQueries({ queryKey: queryKeys.me });
       qc.invalidateQueries({ queryKey: ["activity"] });
@@ -225,6 +229,8 @@ export function useLogout() {
     mutationFn: () => api.post<{ status: string }>("/api/auth/logout"),
     onSuccess: () => {
       qc.clear();
+      // Avoid carrying a persisted character across sessions (detail keys / roster can drift).
+      useUIStore.setState({ selectedCharacter: null, selectedTab: null });
       window.location.href = "/";
     },
   });

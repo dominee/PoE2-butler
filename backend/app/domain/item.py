@@ -24,6 +24,11 @@ def _strip_tags(text: str) -> str:
     return _TAG_PLAIN.sub(lambda m: m.group(1), _TAG_LABELED.sub(lambda m: m.group(2), text))
 
 
+def strip_item_mod_text(text: str) -> str:
+    """Strip GGG ``[Id|Label]`` markup from a mod line (inventory / trade / export)."""
+    return _strip_tags(text)
+
+
 def _unwrap_ggg_item_dict(raw: dict[str, Any]) -> dict[str, Any]:
     """Path of Exile 2 character payloads often put the item under ``itemData``; flavour and
     ``extended`` live there while ``inventoryId`` / slot metadata stay on the outer object."""
@@ -249,8 +254,8 @@ def parse_item(raw: dict[str, Any]) -> Item:
                 mod_range_hints = [h for h in raw_hints if isinstance(h, dict)]
 
     implicit_mod_details, explicit_mod_details = _parse_mod_details_from_extended(ext)
-    implicit_mods_list = list(raw.get("implicitMods") or [])
-    explicit_mods_list = list(raw.get("explicitMods") or [])
+    implicit_mods_list = [strip_item_mod_text(str(m)) for m in raw.get("implicitMods") or []]
+    explicit_mods_list = [strip_item_mod_text(str(m)) for m in raw.get("explicitMods") or []]
     implicit_mod_range_hints = (
         _reference_range_columns([str(m) for m in implicit_mods_list], mod_range_hints)
         if mod_range_hints
@@ -290,9 +295,9 @@ def parse_item(raw: dict[str, Any]) -> Item:
         explicit_mod_details=explicit_mod_details,
         explicit_mod_range_hints=explicit_mod_range_hints,
         socketed_items=socketed_items,
-        rune_mods=list(raw.get("runeMods") or []),
-        enchant_mods=list(raw.get("enchantMods") or []),
-        crafted_mods=list(raw.get("craftedMods") or []),
+        rune_mods=[strip_item_mod_text(str(m)) for m in raw.get("runeMods") or []],
+        enchant_mods=[strip_item_mod_text(str(m)) for m in raw.get("enchantMods") or []],
+        crafted_mods=[strip_item_mod_text(str(m)) for m in raw.get("craftedMods") or []],
         sockets=sockets,
         stack_size=raw.get("stackSize"),
         max_stack_size=raw.get("maxStackSize"),

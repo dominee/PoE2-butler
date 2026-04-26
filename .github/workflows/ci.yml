@@ -41,7 +41,7 @@ jobs:
       - run: uv run pytest -ra
 
   mock-ggg:
-    name: mock-ggg lint
+    name: mock-ggg lint + tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,6 +53,7 @@ jobs:
           version: "latest"
       - run: uv sync --frozen || uv sync
       - run: uv run ruff check .
+      - run: uv run pytest -ra
 
   frontend:
     name: frontend lint + tests

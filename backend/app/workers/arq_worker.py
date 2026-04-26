@@ -34,7 +34,11 @@ from app.services.pricing import PriceCache
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.static import StaticPriceSource
-from app.services.snapshot import get_latest_snapshot, refresh_user_snapshot
+from app.services.snapshot import (
+    delete_character_snapshots,
+    get_latest_snapshot,
+    refresh_user_snapshot,
+)
 from app.services.third_party_ratelimit import KEY_POE_NINJA, throttle
 
 
@@ -53,6 +57,7 @@ async def refresh_user(ctx: dict, user_id: str) -> dict:
             outcome = await refresh_user_snapshot(
                 session=session, user=user, ggg=ggg, cipher=cipher
             )
+            await delete_character_snapshots(session, user.id)
             await session.commit()
             return {
                 "ok": True,

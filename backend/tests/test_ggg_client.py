@@ -40,7 +40,7 @@ async def test_ggg_client_sends_mandatory_user_agent_header() -> None:
             )
         if request.url.path == "/profile":
             assert request.headers.get("Authorization") == "Bearer token"
-            return httpx.Response(200, json={"name": "ExileOne#1234"})
+            return httpx.Response(200, json={"name": "OAuthMockProfile#1"})
         return httpx.Response(404, json={"detail": "not_found"})
 
     transport = httpx.MockTransport(handler)
@@ -48,7 +48,7 @@ async def test_ggg_client_sends_mandatory_user_agent_header() -> None:
         ggg = GGGClient(_settings(), client=client)
         await ggg.exchange_code(code="abc", code_verifier="verifier")
         profile = await ggg.get_profile("token")
-        assert profile["name"] == "ExileOne#1234"
+        assert profile["name"] == "OAuthMockProfile#1"
 
 
 def test_ggg_error_implies_reauth_on_invalid_grant() -> None:

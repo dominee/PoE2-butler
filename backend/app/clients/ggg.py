@@ -53,7 +53,8 @@ class TokenResponse:
 class GGGClient:
     def __init__(self, settings: Settings, *, client: httpx.AsyncClient | None = None) -> None:
         self._settings = settings
-        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(15.0))
+        self._default_timeout = httpx.Timeout(settings.ggg_http_timeout_seconds)
+        self._client = client or httpx.AsyncClient(timeout=self._default_timeout)
         self._user_agent = (
             f"OAuth {settings.ggg_client_id}/{settings.app_version} "
             f"(contact: {settings.ggg_user_agent_contact}) "
@@ -129,11 +130,20 @@ class GGGClient:
     async def get_leagues(self, access_token: str) -> dict[str, Any]:
         return await self._get("/account/leagues", access_token)
 
-    async def get_characters(self, access_token: str) -> dict[str, Any]:
-        return await self._get("/account/characters", access_token)
+    async def get_characters(
+        self, access_token: str, *, revalidate: bool = False
+    ) -> dict[str, Any]:
+        path = "/account/characters"
+        if revalidate:
+            path = f"{path}?revalidate=1"
+        # Mock scrapes Poe.ninja sequentially (rate-limited); allow a long read.
+        long = httpx.Timeout(900.0, connect=30.0) if revalidate else None
+        return await self._get(path, access_token, timeout=long)
 
     async def get_character(self, access_token: str, name: str) -> dict[str, Any]:
-        return await self._get(f"/account/characters/{name}", access_token)
+        # Dev mock may scrape Poe.ninja for several minutes; align with revalidate list budget.
+        detail_timeout = httpx.Timeout(connect=30.0, read=900.0, write=120.0, pool=120.0)
+        return await self._get(f"/account/characters/{name}", access_token, timeout=detail_timeout)
 
     async def get_stash_list(self, access_token: str, league: str) -> dict[str, Any]:
         return await self._get(f"/account/stashes/{league}", access_token)
@@ -141,13 +151,20 @@ class GGGClient:
     async def get_stash_tab(self, access_token: str, league: str, tab_id: str) -> dict[str, Any]:
         return await self._get(f"/account/stashes/{league}/{tab_id}", access_token)
 
-    async def _get(self, path: str, access_token: str) -> dict[str, Any]:
+    async def _get(
+        self,
+        path: str,
+        access_token: str,
+        *,
+        timeout: httpx.Timeout | None = None,
+    ) -> dict[str, Any]:
         url = f"{self._settings.ggg_api_base_url}{path}"
         headers = {
             "Authorization": f"Bearer {access_token}",
             "User-Agent": self._user_agent,
         }
-        resp = await self._client.get(url, headers=headers)
+        req_timeout = timeout if timeout is not None else self._default_timeout
+        resp = await self._client.get(url, headers=headers, timeout=req_timeout)
         self._record_rate_limit(resp)
         if resp.status_code >= 400:
             raise GGGError(resp.status_code, self._safe_body(resp))

@@ -9,11 +9,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient, GGGError
+from app.config import get_settings
 from app.db.models import Snapshot, SnapshotKind, User
 from app.domain.league import parse_leagues, pick_current_league
 from app.logging import get_logger
@@ -70,6 +72,16 @@ async def get_latest_snapshot(
     return res.scalar_one_or_none()
 
 
+async def delete_character_snapshots(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Remove cached per-character payloads so the next read refetches from GGG (or mock)."""
+    await session.execute(
+        delete(Snapshot).where(
+            Snapshot.user_id == user_id,
+            Snapshot.kind == SnapshotKind.CHARACTER,
+        )
+    )
+
+
 async def refresh_user_snapshot(
     *,
     session: AsyncSession,
@@ -77,6 +89,7 @@ async def refresh_user_snapshot(
     ggg: GGGClient,
     cipher: TokenCipher,
     include_stashes_for_league: str | None = None,
+    revalidate_character_list: bool = False,
 ) -> SnapshotOutcome:
     """Fetch profile, leagues and characters for ``user`` and persist them.
 
@@ -118,16 +131,9 @@ async def refresh_user_snapshot(
         log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"leagues:{exc}")
 
-    try:
-        chars = await ggg.get_characters(access)
-        await upsert_snapshot(
-            session, user_id=user.id, kind=SnapshotKind.CHARACTERS, key="", payload=chars
-        )
-        outcome.characters = True
-    except Exception as exc:  # noqa: BLE001
-        log.error("snapshot.characters_failed", error=str(exc), exc_info=True)
-        outcome.errors.append(f"characters:{exc}")
-
+    # Stash list + tab payloads are fast against the mock; Poe.ninja ``revalidate=1`` on the
+    # character list can take many minutes. Run stashes first so manual refresh still fills
+    # STASH_TAB rows even when get_characters times out.
     if include_stashes_for_league:
         try:
             await _refresh_stashes(
@@ -135,6 +141,16 @@ async def refresh_user_snapshot(
             )
         except Exception as exc:  # noqa: BLE001
             outcome.errors.append(f"stashes:{exc}")
+
+    try:
+        chars = await ggg.get_characters(access, revalidate=revalidate_character_list)
+        await upsert_snapshot(
+            session, user_id=user.id, kind=SnapshotKind.CHARACTERS, key="", payload=chars
+        )
+        outcome.characters = True
+    except Exception as exc:  # noqa: BLE001
+        log.error("snapshot.characters_failed", error=str(exc), exc_info=True)
+        outcome.errors.append(f"characters:{exc}")
 
     user.last_refreshed_at = datetime.now(UTC)
     return outcome
@@ -186,6 +202,24 @@ async def refresh_stashes(
     await _refresh_stashes(session, user=user, ggg=ggg, access=access, league=league)
 
 
+def _character_detail_snapshot_ttl_seconds(payload: dict[str, Any]) -> float:
+    """Use a short TTL for empty gear when the backend talks to the local mock.
+
+    The mock seeds a minimal character (no items) then warms full Poe.ninja data in
+    the background; without this, the 60s snapshot cache keeps the empty doll.
+    """
+    settings = get_settings()
+    api = settings.ggg_api_base_url.lower()
+    if "mock-ggg" not in api and "127.0.0.1" not in api:
+        return 60.0
+    items = payload.get("items")
+    if items is None:
+        return 5.0
+    if isinstance(items, (list, tuple)) and len(items) == 0:
+        return 5.0
+    return 60.0
+
+
 async def ensure_character_detail(
     *,
     session: AsyncSession,
@@ -198,7 +232,8 @@ async def ensure_character_detail(
     existing = await get_latest_snapshot(session, user.id, SnapshotKind.CHARACTER, key=name)
     if existing is not None:
         age = datetime.now(UTC) - existing.fetched_at
-        if age.total_seconds() < 60:
+        ttl = _character_detail_snapshot_ttl_seconds(existing.payload)
+        if age.total_seconds() < ttl:
             return existing.payload
 
     access = await get_valid_ggg_access(session, user, ggg, cipher)

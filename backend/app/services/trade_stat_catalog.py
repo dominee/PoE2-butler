@@ -16,12 +16,21 @@ from app.config import Settings
 from app.logging import get_logger
 
 CATALOG_REDIS_KEY = "trade:filter_catalog:poe2:raw"
-# Bundled hand-picked examples; extend as real ids are discovered from a successful fetch.
-BUNDLED_TEMPLATE_TO_STAT_ID: dict[str, str] = {
-    # Template keys use ``#`` from :func:`app.services.trade_url.parse_mod_line`.
-    "# to maximum Life": "explicit.stat_2376",
-    "#% to Fire Resistance": "explicit.stat_1180",
-    "#% increased Physical Damage": "explicit.stat_1234",
+# Template keys use ``#`` from :func:`app.services.trade_url.parse_mod_line`.
+# Values are GGG stat *hashes* (``…stat_<hash>``) from ``/api/trade2/data/stats``.
+BUNDLED_TEMPLATE_TO_STAT_HASH: dict[str, str] = {
+    "# to maximum Life": "3299347043",
+    "#% to Fire Resistance": "3372524247",
+    "#% increased Physical Damage": "1509134228",
+}
+
+_BUCKET_STAT_PREFIX: dict[str, str] = {
+    "implicit": "implicit",
+    "explicit": "explicit",
+    "rune": "rune",
+    "enchant": "enchant",
+    # Bench crafts use explicit-style ids on the trade site today.
+    "crafted": "explicit",
 }
 
 log = get_logger("app.services.trade_stat_catalog")
@@ -36,6 +45,20 @@ def _user_agent(settings: Settings) -> str:
     )
 
 
+def trade_search_user_agent(settings: Settings) -> str:
+    """User-Agent for PoE2 trade metadata GET and search POST requests."""
+    return _user_agent(settings)
+
+
+def bundled_trade_stat_id(bucket: str, template: str) -> str | None:
+    """Resolve a bundled numeric stat id for ``template`` in the given mod ``bucket``."""
+    h = BUNDLED_TEMPLATE_TO_STAT_HASH.get(template)
+    if not h:
+        return None
+    prefix = _BUCKET_STAT_PREFIX.get(bucket, "explicit")
+    return f"{prefix}.stat_{h}"
+
+
 async def refresh_if_stale(redis: Redis, settings: Settings) -> int:
     """If Redis has no fresh catalog, attempt HTTP download. Returns byte length stored."""
     if await redis.get(CATALOG_REDIS_KEY):
@@ -48,7 +71,10 @@ async def refresh_if_stale(redis: Redis, settings: Settings) -> int:
         async with httpx.AsyncClient(timeout=30) as c:
             r = await c.get(
                 url,
-                headers={"User-Agent": _user_agent(settings), "Accept": "application/json"},
+                headers={
+                    "User-Agent": trade_search_user_agent(settings),
+                    "Accept": "application/json",
+                },
             )
         if r.status_code == 200 and r.text:
             await redis.setex(CATALOG_REDIS_KEY, _CACHE_TTL_SEC, r.text)
@@ -69,7 +95,7 @@ async def template_to_stat_id(redis: Redis, template: str) -> str | None:
     """Map a mod ``template`` (``#`` placeholders) to a trade stat id if known."""
     if not template:
         return None
-    t = BUNDLED_TEMPLATE_TO_STAT_ID.get(template)
+    t = bundled_trade_stat_id("explicit", template)
     if t:
         return t
     raw = await redis.get(CATALOG_REDIS_KEY)

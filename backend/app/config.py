@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     ggg_user_agent_contact: str = "dev@hell.sk"
     ggg_user_agent_suffix: str = "PoE2-Hideout-Butler"
+    # httpx read timeout for GGG (and dev mock) HTTP calls; raise for slow mock Poe.ninja scrapes.
+    ggg_http_timeout_seconds: float = 15.0
 
     refresh_cooldown_seconds: int = 60
     default_trade_tolerance_pct: int = 10
@@ -68,6 +70,10 @@ class Settings(BaseSettings):
 
     # PoE2 trade site public filter metadata (optional; used by trade_stat_catalog).
     trade_filter_data_url: str = "https://www.pathofexile.com/api/trade2/data/filters"
+    # Stat text → id catalogue for trade search filters (see trade_stat_index).
+    trade_stats_data_url: str = "https://www.pathofexile.com/api/trade2/data/stats"
+    # Base URL for POSTing a search; path is ``/{league}`` (league URL-encoded).
+    trade_search_api_base: str = "https://www.pathofexile.com/api/trade2/search"
 
     cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://app.localhost"])
 

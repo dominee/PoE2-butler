@@ -10,6 +10,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 RUN uv sync --no-dev --no-install-project
 
+COPY config ./config
 COPY app ./app
 RUN uv sync --no-dev
 

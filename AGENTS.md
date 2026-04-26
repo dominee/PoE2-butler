@@ -45,7 +45,7 @@ Authoritative detail: [INSTRUCTIONS.md](INSTRUCTIONS.md) section **“Product ex
 - **Stat summary:** [`backend/app/domain/stat_summary.py`](backend/app/domain/stat_summary.py) (heuristic MVP); expand data files later.
 - **Queue:** **Redis + arq** for background work; per–API throttling in [`backend/app/services/third_party_ratelimit.py`](backend/app/services/third_party_ratelimit.py); job `refresh_trade_filter_catalog` in worker. No RabbitMQ unless requirements outgrow this.
 - **Pricing phase 1:** Aggregators (e.g. poe.ninja) + trade **links**; label as aggregate, not live market; **no** GGG trade scraping.
-- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) + stat ids in [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py) (bundled map for now); weighted/sum filters later.
+- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) (bundled template→stat hash map) + [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py); deep link POST in [`backend/app/services/trade_search_submit.py`](backend/app/services/trade_search_submit.py); see [docs/trade_deeplinks.md](docs/trade_deeplinks.md); weighted/sum filters later.
 
 ---
 
@@ -301,16 +301,24 @@ Current migrations:
 
 ## 9. Mock GGG service
 
-Located in `mock-ggg/`. Fixture data in `mock-ggg/app/fixtures/`.
+Located in `mock-ggg/`. Stash simulation and optional extra OAuth rows live under `mock-ggg/app/fixtures/` (`static_users.json`, `characters.json`, `stashes.json`). The mock login list is driven primarily by [`mock-ggg/config/poe_ninja_characters.toml`](mock-ggg/config/poe_ninja_characters.toml) (see “Live Poe.ninja characters” below).
 
-To regenerate fixture data from poe.ninja exports:
+**Live Poe.ninja characters (dev):** URLs are listed in [`mock-ggg/config/poe_ninja_characters.toml`](mock-ggg/config/poe_ninja_characters.toml). On startup the mock calls Poe.ninja (`/poe2/api/events/character/...` then `.../model/{version}`), converts `charModel` to the same GGG-shaped JSON as the real account API, and registers one OAuth user per URL account segment (e.g. `dominee_9275`). `GET /account/characters` and `GET /account/characters/{name}` re-fetch from Poe.ninja so a backend **Refresh** (which clears cached character snapshots) pulls fresh gear.
+
+Environment:
+
+- `MOCK_GGG_POE_NINJA_TOML` — optional path to a replacement TOML (e.g. bind-mount in Compose).
+- `MOCK_GGG_SKIP_POE_NINJA=1` — skip live Poe.ninja HTTP (used by backend tests); TOML-defined OAuth users still appear on the mock login form, with gear seeded from `characters.json` where names match.
+- `MOCK_GGG_POE_NINJA_MIN_INTERVAL_SEC` — minimum pause **after each successful** Poe.ninja HTTP response (default `0.75`). Applies to background warm-up and on-demand `/account/characters*` fetches.
+- `GET /account/characters` stays **fast** for OAuth (cached list or URL-derived placeholders). Full Poe.ninja rescrape uses `GET /account/characters?revalidate=1` (the backend passes this on **manual Refresh** only).
+
+To regenerate fixture data from **offline** poe.ninja JSON exports:
 
 ```bash
-cd mock-ggg/samples
-python convert.py  # reads *.json, writes ../app/fixtures/characters.json
+cd mock-ggg && uv run python samples/convert.py  # reads samples/*.json, writes app/fixtures/*.json
 ```
 
-The first entry in `users.json` is auto-selected on the mock login form.
+The mock login form lists OAuth users in dict insertion order: optional `static_users.json` entries first, then TOML-derived accounts (e.g. `dominee_9275`).
 
 ---
 

@@ -8,12 +8,10 @@ Two flows are supported, each a pure function over a normalized :class:`Item`:
 * :func:`build_upgrade_search` — "find an upgrade" per the spec: each numeric
   mod becomes a filter with ``min = floor(value * 0.95)`` and no upper bound.
 
-Stat text mapping to GGG trade stat ids requires a static id catalogue that
-GGG exposes through their trade API.  That catalogue is out of scope for M2;
-until it is loaded, filters carry the mod text verbatim under ``text`` and the
-builder marks numeric mods so the frontend can render a useful filter summary
-and the future Discord bot can substitute real stat ids when they become
-available.
+Stat text mapping uses a small bundled template→hash map plus optional Redis
+catalogue (see :mod:`app.services.trade_stat_catalog`). Filters keep human
+``text`` / ``template`` for the clipboard payload; GGG POST bodies use only
+``id`` + ``value`` (see :func:`app.services.trade_ggg_body.ggg_search_body_from_result_payload`).
 """
 
 from __future__ import annotations
@@ -24,20 +22,23 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
 
-from app.domain.item import Item
-from app.services.trade_stat_catalog import BUNDLED_TEMPLATE_TO_STAT_ID
+from app.domain.item import Item, strip_item_mod_text
+from app.services.trade_stat_catalog import bundled_trade_stat_id
 
 TRADE_BASE = "https://www.pathofexile.com/trade2/search/poe2"
 
 
-RARITY_TO_TRADE_OPTION = {
+# Only values accepted by ``type_filters.filters.rarity.option`` on PoE2 trade.
+# Currency / gems / div cards are not rarity filters (GGG returns ``Unknown rarity type``).
+RARITY_TO_TRADE_OPTION: dict[str, str | None] = {
     "Normal": "normal",
     "Magic": "magic",
     "Rare": "rare",
     "Unique": "unique",
-    "Currency": "currency",
-    "Gem": "gem",
-    "DivinationCard": "card",
+    "Currency": None,
+    "Gem": None,
+    "DivinationCard": None,
+    "QuestItem": None,
 }
 
 
@@ -61,6 +62,7 @@ _NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
 def parse_mod_line(text: str) -> ParsedMod:
     """Extract numeric values from a mod line."""
+    text = strip_item_mod_text(text)
     matches = _NUMBER_RE.findall(text)
     values = [float(m) for m in matches]
     template = _NUMBER_RE.sub("#", text)
@@ -127,7 +129,7 @@ def _stat_filters_for_exact(
             "template": parsed.template,
             "value": {"min": _floor_int(lo), "max": _ceil_int(hi)},
         }
-        sid = BUNDLED_TEMPLATE_TO_STAT_ID.get(parsed.template)
+        sid = bundled_trade_stat_id(bucket, parsed.template)
         if sid:
             row["id"] = sid
         filters.append(row)
@@ -148,31 +150,33 @@ def _stat_filters_for_upgrade(pairs: list[tuple[str, str]]) -> list[dict[str, An
             "template": parsed.template,
             "value": {"min": floor_min},
         }
-        sid = BUNDLED_TEMPLATE_TO_STAT_ID.get(parsed.template)
+        sid = bundled_trade_stat_id(bucket, parsed.template)
         if sid:
             row["id"] = sid
         filters.append(row)
     return filters
 
 
-def _type_filters(item: Item) -> dict[str, Any]:
-    out: dict[str, Any] = {}
-    if item.base_type:
-        out["type"] = {"option": item.base_type}
-    rarity_option = RARITY_TO_TRADE_OPTION.get(item.rarity)
-    if rarity_option and item.rarity != "Unique":
-        out["rarity"] = {"option": rarity_option}
-    return out
-
-
 def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
-    """Build the GGG trade-API query shell (before stat id substitution)."""
+    """Build the GGG PoE2 trade query (``query`` + ``sort``).
+
+    PoE2 expects base item name as a plain string in ``query["type"]``, not
+    ``type_filters.filters.type`` (that shape is invalid). Rarity uses
+    ``filters.type_filters.filters.rarity`` alongside ``type`` when set.
+    """
     query: dict[str, Any] = {
         "status": {"option": "online"},
     }
-    type_filters = _type_filters(item)
-    if type_filters:
-        query["filters"] = {"type_filters": {"filters": type_filters}}
+    if item.base_type:
+        query["type"] = item.base_type
+    # Uniques are identified by ``name`` + ``type`` (base); ``type`` alone matches every base.
+    if item.rarity == "Unique" and item.name.strip():
+        query["name"] = item.name.strip()
+    rarity_option = RARITY_TO_TRADE_OPTION.get(item.rarity)
+    if rarity_option:
+        tf = query.setdefault("filters", {}).setdefault("type_filters", {})
+        tf["disabled"] = False
+        tf.setdefault("filters", {})["rarity"] = {"option": rarity_option}
     if stats:
         query["stats"] = [{"type": "and", "filters": stats}]
     return {"query": query, "sort": {"price": "asc"}}
@@ -222,14 +226,16 @@ def build_upgrade_search(item: Item, *, league: str | None = None) -> dict[str, 
 
 
 def build_trade_url(league: str) -> str:
-    """Base trade URL for a league.
-
-    Full pre-fill requires POSTing the payload to GGG's trade API and
-    redirecting to ``/trade2/search/poe2/<league>/<id>``. Until that is wired
-    (it needs an approved OAuth client), the URL returned here opens the
-    trade site at the chosen league so the user can paste the payload or
-    manually replicate the filters.
-    """
+    """Trade site URL for a league (no search id)."""
     if not league:
         return TRADE_BASE
     return f"{TRADE_BASE}/{quote(league, safe='')}"
+
+
+def build_trade_url_with_search_id(league: str, search_id: str) -> str:
+    """Public trade URL including GGG search id: ``…/poe2/<league>/<id>``."""
+    base = build_trade_url(league)
+    sid = (search_id or "").strip()
+    if not sid:
+        return base
+    return f"{base}/{sid}"

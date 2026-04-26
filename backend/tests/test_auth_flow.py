@@ -27,7 +27,6 @@ from app.main import create_app
 
 
 def _load_mock_ggg_app():
-    # Add mock-ggg to sys.path so we can import its `app` package as `mock_ggg_app`.
     mock_dir = Path(__file__).resolve().parent.parent.parent / "mock-ggg"
     pkg_root = mock_dir
     spec = importlib.util.spec_from_file_location("mock_ggg_app_main", pkg_root / "app" / "main.py")
@@ -42,6 +41,7 @@ def _load_mock_ggg_app():
 
 @pytest.fixture
 async def app_stack(monkeypatch, tmp_path):
+    monkeypatch.setenv("MOCK_GGG_SKIP_POE_NINJA", "1")
     # In-memory SQLite for hermetic tests. The model types use
     # ``with_variant`` so JSON/UUID map cleanly on either dialect.
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -133,7 +133,7 @@ async def _full_login(client: AsyncClient, mock_app) -> str:
     # 3. Submit the form: mock redirects back to our callback with ?code&state
     resp = await mock_client.post(
         "/oauth/authorize",
-        data={"request_id": request_id, "user": "exile_one"},
+        data={"request_id": request_id, "user": "dominee_9275"},
         follow_redirects=False,
     )
     assert resp.status_code == 302
@@ -156,7 +156,7 @@ async def test_full_login_flow_sets_session_and_exposes_me(app_stack) -> None:
     resp = await client.get("/api/me")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["account_name"] == "ExileOne#1234"
+    assert body["account_name"] == "dominee_9275"
 
 
 async def test_characters_endpoint_after_login(app_stack) -> None:
@@ -166,8 +166,21 @@ async def test_characters_endpoint_after_login(app_stack) -> None:
     assert resp.status_code == 200
     data = resp.json()
     names = [c["name"] for c in data["characters"]]
-    assert "Pewpewer" in names
-    assert "Necroqueen" in names
+    assert "Catticiaan" in names
+    assert "NextWizardKing" in names
+    assert "IamGothmog" in names
+    assert "release_it_already" in names
+
+
+async def test_character_detail_after_login(app_stack) -> None:
+    """Smoke: GET /api/characters/{name} completes (exercise snapshot + mock detail path)."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    resp = await client.get("/api/characters/Catticiaan")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body.get("summary", {}).get("name") == "Catticiaan"
+    assert isinstance(body.get("equipped"), list)
 
 
 async def test_refresh_requires_csrf(app_stack) -> None:
@@ -207,7 +220,18 @@ async def test_logout_clears_cookie_and_session(app_stack) -> None:
     assert resp.status_code == 401
 
 
-async def test_trade_search_returns_payload_and_url(app_stack) -> None:
+async def test_trade_search_returns_payload_and_url(app_stack, monkeypatch) -> None:
+    async def _fake_ensure(_settings) -> None:
+        return None
+
+    async def _fake_submit(_settings, league: str, payload: dict) -> str:
+        assert league == "Dawn of the Hunt"
+        assert "query" in payload
+        return "DeterministicSearchId"
+
+    monkeypatch.setattr("app.api.trade.ensure_trade_stats_index", _fake_ensure)
+    monkeypatch.setattr("app.api.trade.submit_trade_search", _fake_submit)
+
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)
     item = {
@@ -243,7 +267,7 @@ async def test_trade_search_returns_payload_and_url(app_stack) -> None:
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["mode"] == "exact"
-    assert body["url"].endswith("Dawn%20of%20the%20Hunt")
+    assert body["url"].endswith("Dawn%20of%20the%20Hunt/DeterministicSearchId")
     assert body["payload"]["query"]["stats"][0]["filters"][0]["value"] == {
         "min": 90,
         "max": 110,
@@ -346,12 +370,12 @@ async def test_stash_refresh_and_list(app_stack) -> None:
 
     resp = await client.post(
         "/api/stashes/refresh",
-        json={"league": "Dawn of the Hunt"},
+        json={"league": "Fate of the Vaal"},
         headers={"X-CSRF-Token": csrf},
     )
     assert resp.status_code == 200, resp.text
 
-    resp = await client.get("/api/stashes", params={"league": "Dawn of the Hunt"})
+    resp = await client.get("/api/stashes", params={"league": "Fate of the Vaal"})
     assert resp.status_code == 200
     body = resp.json()
     names = [t["name"] for t in body["tabs"]]
@@ -359,7 +383,7 @@ async def test_stash_refresh_and_list(app_stack) -> None:
     assert "Currency" in names
 
     tab_id = body["tabs"][0]["id"]
-    resp = await client.get(f"/api/stashes/{tab_id}", params={"league": "Dawn of the Hunt"})
+    resp = await client.get(f"/api/stashes/{tab_id}", params={"league": "Fate of the Vaal"})
     assert resp.status_code == 200
     tab = resp.json()
     assert tab["tab"]["name"] == "Gear Dump"

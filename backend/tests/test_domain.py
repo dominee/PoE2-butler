@@ -131,6 +131,20 @@ def test_parse_item_headhunter_unique_reference_flavour_and_bounds() -> None:
     assert any(h and "(1—3)" in h for h in item.implicit_mod_range_hints if h)
 
 
+def test_parse_item_strips_tags_from_mod_lists() -> None:
+    raw = {
+        "id": "ring-1",
+        "typeLine": "Topaz Ring",
+        "baseType": "Topaz Ring",
+        "rarity": "Rare",
+        "implicitMods": ["+23% to [Resistances|Lightning Resistance]"],
+        "explicitMods": ["+171 to [Accuracy|Accuracy] Rating"],
+    }
+    item = parse_item(raw)
+    assert item.implicit_mods == ["+23% to Lightning Resistance"]
+    assert item.explicit_mods == ["+171 to Accuracy Rating"]
+
+
 def test_parse_item_copies_basic_fields() -> None:
     raw = {
         "id": "item-1",
