@@ -83,9 +83,30 @@ for _nuid in NINJA_REFS_BY_USER:
 PENDING_AUTH: dict[str, dict[str, Any]] = {}
 ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
 REFRESH_TOKENS: dict[str, dict[str, Any]] = {}
+# Coalesce concurrent GETs for the same (user, character) while Poe.ninja runs once.
+_character_fetch_locks: dict[tuple[str, str], asyncio.Lock] = {}
+
+
+def _character_fetch_lock(uid: str, char_name: str) -> asyncio.Lock:
+    key = (uid, char_name)
+    lock = _character_fetch_locks.get(key)
+    if lock is None:
+        lock = asyncio.Lock()
+        _character_fetch_locks[key] = lock
+    return lock
+
 
 _token_path = (os.environ.get("MOCK_GGG_TOKEN_FILE") or "").strip()
 _TOKEN_FILE: str | None = _token_path or None
+
+
+def _apply_ninja_slug_identity(ref: NinjaCharacterRef, ggg: dict[str, Any]) -> None:
+    """Align ``character.name`` / ``id`` with the TOML URL slug (Poe charModel ``name`` can differ, e.g. ``Big BMaru`` vs ``Big_BMaru``)."""
+    ch = ggg.get("character")
+    if not isinstance(ch, dict):
+        return
+    ch["name"] = ref.character_name
+    ch["id"] = stable_id(f"{ref.account}:{ref.character_name}")
 
 
 def _sync_ninja_user_with_client(uid: str, refs: list[NinjaCharacterRef], client: httpx.Client) -> None:
@@ -94,8 +115,11 @@ def _sync_ninja_user_with_client(uid: str, refs: list[NinjaCharacterRef], client
     profile_name: str | None = None
     for ref in refs:
         ggg, acct = fetch_character_ggg_and_account(client, ref)
-        name = str(ggg["character"]["name"])
-        CHARACTERS[name] = ggg
+        poe_name = str(ggg.get("character", {}).get("name") or ref.character_name)
+        _apply_ninja_slug_identity(ref, ggg)
+        CHARACTERS[ref.character_name] = ggg
+        if poe_name != ref.character_name:
+            CHARACTERS[poe_name] = ggg
         summaries.append(character_summary(ggg))
         league_ids.add(str(ggg["character"]["league"]))
         if acct:
@@ -126,13 +150,18 @@ def _sync_ninja_character_detail(
     if ref is None:
         return
     ggg, _ = fetch_character_ggg_and_account(client, ref)
-    CHARACTERS[char_name] = ggg
+    poe_name = str(ggg.get("character", {}).get("name") or ref.character_name)
+    _apply_ninja_slug_identity(ref, ggg)
+    CHARACTERS[ref.character_name] = ggg
+    if poe_name != ref.character_name:
+        CHARACTERS[poe_name] = ggg
     blob = USERS.get(uid)
     chars = blob.get("characters") if isinstance(blob, dict) else None
     if isinstance(chars, list):
         ns = character_summary(ggg)
         blob["characters"] = [
-            ns if isinstance(c, dict) and c.get("name") == char_name else c for c in chars
+            ns if isinstance(c, dict) and c.get("name") in (char_name, ref.character_name) else c
+            for c in chars
         ]
 
 
@@ -415,20 +444,35 @@ async def characters(
 
 
 @app.get("/account/characters/{name}")
-async def character(name: str, request: Request) -> JSONResponse:
+async def character(
+    name: str,
+    request: Request,
+    revalidate: bool = Query(
+        False,
+        description="When true, refetch this character from Poe.ninja (slow). Default serves cache.",
+    ),
+) -> JSONResponse:
     user = _require_user(request)
     refs = NINJA_REFS_BY_USER.get(user)
-    if refs:
-        try:
-            await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
-        except httpx.HTTPError as exc:
-            log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
-            if name not in CHARACTERS:
-                raise HTTPException(status_code=503, detail="poe_ninja_unavailable") from exc
-        except Exception as exc:
-            log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
-            if name not in CHARACTERS:
-                raise HTTPException(status_code=503, detail="poe_ninja_unavailable") from exc
+    # Poe.ninja is slow; never refetch on every GET (that starved the app + proxies).
+    if refs and (revalidate or name not in CHARACTERS):
+        lock = _character_fetch_lock(user, name)
+        async with lock:
+            if revalidate or name not in CHARACTERS:
+                try:
+                    await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
+                except httpx.HTTPError as exc:
+                    log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
+                    if name not in CHARACTERS:
+                        raise HTTPException(
+                            status_code=503, detail="poe_ninja_unavailable"
+                        ) from exc
+                except Exception as exc:
+                    log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
+                    if name not in CHARACTERS:
+                        raise HTTPException(
+                            status_code=503, detail="poe_ninja_unavailable"
+                        ) from exc
     if name not in CHARACTERS:
         raise HTTPException(404, "not_found")
     return JSONResponse(CHARACTERS[name])

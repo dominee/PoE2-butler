@@ -37,6 +37,9 @@ export default defineConfig({
       "/api": {
         target: devApiProxy,
         changeOrigin: false,
+        // Dev mock may scrape Poe.ninja for minutes; avoid Traefik/Vite cutting the stream with 499.
+        timeout: 600_000,
+        proxyTimeout: 600_000,
       },
     },
   },

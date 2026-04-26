@@ -137,14 +137,12 @@ class GGGClient:
         if revalidate:
             path = f"{path}?revalidate=1"
         # Mock scrapes Poe.ninja sequentially (rate-limited); allow a long read.
-        long = httpx.Timeout(300.0, connect=30.0) if revalidate else None
+        long = httpx.Timeout(900.0, connect=30.0) if revalidate else None
         return await self._get(path, access_token, timeout=long)
 
     async def get_character(self, access_token: str, name: str) -> dict[str, Any]:
-        detail_timeout = httpx.Timeout(
-            max(300.0, float(self._settings.ggg_http_timeout_seconds)),
-            connect=30.0,
-        )
+        # Dev mock may scrape Poe.ninja for several minutes; align with revalidate list budget.
+        detail_timeout = httpx.Timeout(connect=30.0, read=900.0, write=120.0, pool=120.0)
         return await self._get(f"/account/characters/{name}", access_token, timeout=detail_timeout)
 
     async def get_stash_list(self, access_token: str, league: str) -> dict[str, Any]:

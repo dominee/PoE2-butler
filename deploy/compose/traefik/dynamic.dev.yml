@@ -1,4 +1,12 @@
 http:
+  # Default Traefik→origin timeouts are too short when the dev mock scrapes Poe.ninja (browser 499, hung UI).
+  serversTransports:
+    poe2b-dev-long-read:
+      forwardingTimeouts:
+        dialTimeout: 30s
+        responseHeaderTimeout: 900s
+        idleConnTimeout: 900s
+
   routers:
     app:
       rule: Host(`app.dev.hideoutbutler.com`)
@@ -24,10 +32,12 @@ http:
   services:
     app:
       loadBalancer:
+        serversTransport: poe2b-dev-long-read
         servers:
           - url: http://frontend:5173
     api:
       loadBalancer:
+        serversTransport: poe2b-dev-long-read
         servers:
           - url: http://backend:8000
     admin:

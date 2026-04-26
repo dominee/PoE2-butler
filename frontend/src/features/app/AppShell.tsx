@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   useCharacter,
@@ -45,7 +45,32 @@ export function AppShell() {
   }, [leaguesQ.data, selectedLeague, setLeague]);
 
   const charactersQ = useCharacters(selectedLeague);
-  const characterQ = useCharacter(selectedCharacter);
+  // Persisted `selectedCharacter` can belong to another account until the roster loads; avoid
+  // hammering `/api/characters/:name` (long mock scrape + backend ReadTimeout) for a stale name.
+  const characterNameForDetail = useMemo(() => {
+    if (!selectedCharacter) return null;
+    if (!charactersQ.data || charactersQ.isError) return null;
+    return charactersQ.data.characters.some((c) => c.name === selectedCharacter)
+      ? selectedCharacter
+      : null;
+  }, [selectedCharacter, charactersQ.data, charactersQ.isError]);
+  const characterQ = useCharacter(characterNameForDetail);
+
+  // Persisted UI can keep a character name from a previous session; that fires a useless
+  // detail request (404 or long mock timeout) and blocks the gear panel until it settles.
+  useEffect(() => {
+    if (charactersQ.isLoading || charactersQ.isError || !charactersQ.data) return;
+    if (!selectedCharacter) return;
+    const roster = charactersQ.data.characters;
+    const inRoster = roster.some((c) => c.name === selectedCharacter);
+    if (!inRoster) setCharacter(null);
+  }, [
+    charactersQ.isLoading,
+    charactersQ.isError,
+    charactersQ.data,
+    selectedCharacter,
+    setCharacter,
+  ]);
 
   useEffect(() => {
     setSelectedItem(null);
@@ -176,8 +201,13 @@ export function AppShell() {
               )}
             </div>
             {characterQ.data && <CharacterStatSummary detail={characterQ.data} />}
-            {selectedCharacter && characterQ.isLoading && (
+            {selectedCharacter && characterQ.isFetching && characterQ.data === undefined && (
               <p className="text-ink-500">Loading gear&hellip;</p>
+            )}
+            {selectedCharacter && characterQ.isError && (
+              <p className="text-ink-500" role="alert">
+                Could not load gear for this character. Try another character or use Refresh.
+              </p>
             )}
             {characterQ.data && charLayout === "doll" && (
               <>

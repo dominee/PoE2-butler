@@ -129,6 +129,17 @@ async def refresh_user_snapshot(
         log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"leagues:{exc}")
 
+    # Stash list + tab payloads are fast against the mock; Poe.ninja ``revalidate=1`` on the
+    # character list can take many minutes. Run stashes first so manual refresh still fills
+    # STASH_TAB rows even when get_characters times out.
+    if include_stashes_for_league:
+        try:
+            await _refresh_stashes(
+                session, user=user, ggg=ggg, access=access, league=include_stashes_for_league
+            )
+        except Exception as exc:  # noqa: BLE001
+            outcome.errors.append(f"stashes:{exc}")
+
     try:
         chars = await ggg.get_characters(access, revalidate=revalidate_character_list)
         await upsert_snapshot(
@@ -138,14 +149,6 @@ async def refresh_user_snapshot(
     except Exception as exc:  # noqa: BLE001
         log.error("snapshot.characters_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"characters:{exc}")
-
-    if include_stashes_for_league:
-        try:
-            await _refresh_stashes(
-                session, user=user, ggg=ggg, access=access, league=include_stashes_for_league
-            )
-        except Exception as exc:  # noqa: BLE001
-            outcome.errors.append(f"stashes:{exc}")
 
     user.last_refreshed_at = datetime.now(UTC)
     return outcome
