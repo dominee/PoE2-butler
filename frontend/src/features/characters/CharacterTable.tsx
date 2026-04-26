@@ -6,6 +6,7 @@
  */
 
 import type { Item } from "@/api/types";
+import { itemIconDisplayUrl } from "@/features/items/itemRarityFavicon";
 import { stripTags } from "@/utils/modText";
 
 const SLOT_LABELS: Record<string, string> = {
@@ -83,14 +84,12 @@ export function CharacterTable({
           >
             <span className="truncate text-xs text-ink-400">{slot}</span>
             <span className="flex items-center gap-1.5 truncate">
-              {item.icon && (
-                <img
-                  src={item.icon}
-                  alt=""
-                  className="h-5 w-5 shrink-0 object-contain"
-                  loading="lazy"
-                />
-              )}
+              <img
+                src={itemIconDisplayUrl(item)}
+                alt=""
+                className="h-5 w-5 shrink-0 object-contain"
+                loading="lazy"
+              />
               <span className="truncate">{item.name || item.type_line || "—"}</span>
             </span>
             <span className="truncate text-parchment-100/70">{item.base_type}</span>

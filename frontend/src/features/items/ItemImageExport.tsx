@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { Item, ItemRarity } from "@/api/types";
-import { itemIconForCanvasProxy } from "@/utils/poecdnIcon";
 
 import { splitExplicitMods, usefulProperties } from "./itemPaneModel";
+import { itemIconForExportPng } from "./itemRarityFavicon";
 import { RARITY_NAME_CLASS } from "./itemVisualStyles";
 import { computeItemScore } from "./itemMetrics";
 import { itemRollScoreState } from "./modRollMetrics";
@@ -56,9 +56,7 @@ const RARITY_CARD_BORDER: Record<ItemRarity, string> = {
  */
 function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" | "detail" }) {
   const b = RARITY_CARD_BORDER[item.rarity] ?? "border-ink-600";
-  const resolvedIcon = item.icon
-    ? (itemIconForCanvasProxy(item.icon) ?? item.icon)
-    : null;
+  const resolvedIcon = itemIconForExportPng(item);
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
   const visibleProps = usefulProperties(item.properties);
@@ -85,35 +83,27 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
       className={`${b} w-[400px] rounded-md border-2 bg-ink-900 p-3 text-left text-sm text-parchment-100 shadow-lg`}
     >
       <div className="font-display text-sm font-semibold text-ember-200/90">PoE2 Hideout Butler</div>
-      {resolvedIcon && (
-        <div className="mt-2 flex items-start gap-2">
-          <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
-            <img
-              src={resolvedIcon}
-              alt=""
-              className="object-contain"
-              style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
-            />
-          </div>
-          <div className="min-w-0">
-            {item.name && (
-              <div className={`break-words text-base font-display ${nameClass}`}>{item.name}</div>
-            )}
-            <div className="text-parchment-100/80">{item.type_line}</div>
-            <div className="mt-1 text-[10px] uppercase text-ink-500">
-              <span>{item.rarity}</span>
-              {item.ilvl != null && <span className="ml-1">ilvl {item.ilvl}</span>}
-              {item.corrupted && <span className="ml-1 text-red-400">corrupted</span>}
-            </div>
-          </div>
+      <div className="mt-2 flex items-start gap-2">
+        <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
+          <img
+            src={resolvedIcon}
+            alt=""
+            className="object-contain"
+            style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
+          />
         </div>
-      )}
-      {!item.icon && (
-        <div className="mt-2">
-          {item.name && <div className={`font-display text-base font-semibold ${nameClass}`}>{item.name}</div>}
+        <div className="min-w-0">
+          {item.name && (
+            <div className={`break-words text-base font-display ${nameClass}`}>{item.name}</div>
+          )}
           <div className="text-parchment-100/80">{item.type_line}</div>
+          <div className="mt-1 text-[10px] uppercase text-ink-500">
+            <span>{item.rarity}</span>
+            {item.ilvl != null && <span className="ml-1">ilvl {item.ilvl}</span>}
+            {item.corrupted && <span className="ml-1 text-red-400">corrupted</span>}
+          </div>
         </div>
-      )}
+      </div>
 
       {hasRollData && itemScore != null && (
         <div className="mt-2 flex items-center gap-2 text-xs">

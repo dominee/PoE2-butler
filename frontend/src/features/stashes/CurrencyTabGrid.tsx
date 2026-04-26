@@ -7,6 +7,7 @@
  */
 
 import type { Item, PriceEstimate } from "@/api/types";
+import { itemIconDisplayUrl } from "@/features/items/itemRarityFavicon";
 import { formatChaos } from "@/features/items/itemMetrics";
 
 export interface CurrencyTabGridProps {
@@ -84,18 +85,12 @@ export function CurrencyTabGrid({
             )}
 
             {/* Icon */}
-            {item.icon ? (
-              <img
-                src={item.icon}
-                alt={item.type_line}
-                className="h-3/5 w-full object-contain pt-1"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-3/5 w-full items-center justify-center px-0.5 text-center text-[10px] leading-tight text-rarity-currency">
-                {item.type_line}
-              </div>
-            )}
+            <img
+              src={itemIconDisplayUrl(item)}
+              alt={item.type_line}
+              className="h-3/5 w-full object-contain pt-1"
+              loading="lazy"
+            />
 
             {/* Stack size */}
             {item.stack_size != null && (

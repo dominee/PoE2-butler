@@ -21,6 +21,7 @@ import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
+import { itemIconDisplayUrl } from "./itemRarityFavicon";
 
 export interface ItemDetailPaneProps {
   item: Item | null;
@@ -163,20 +164,18 @@ export function ItemDetailPane({
       {/* ── Header ── */}
       <header className="flex items-start gap-3">
         {/* Item icon */}
-        {item.icon && (
-          <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
-            <img
-              src={item.icon}
-              alt={item.name || item.type_line}
-              className="object-contain"
-              style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).parentElement!.style.display = "none";
-              }}
-            />
-          </div>
-        )}
+        <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
+          <img
+            src={itemIconDisplayUrl(item)}
+            alt={item.name || item.type_line}
+            className="object-contain"
+            style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
+            loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).parentElement!.style.display = "none";
+            }}
+          />
+        </div>
         <div className="min-w-0 flex-1">
           {item.name && (
             <div className={`break-words font-display text-base leading-snug ${nameClass}`}>

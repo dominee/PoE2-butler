@@ -2,11 +2,12 @@
  * Large-icon grid layout for stash browsing.
  *
  * Displays items as their base item icons in a responsive grid with a stat
- * summary overlay on hover.  Items without icons fall back to a coloured text
- * tile.  Rarity, activity status, and valuable-item signals are all preserved.
+ * summary overlay on hover. Items without a GGG `icon` URL use a per-rarity
+ * placeholder. Rarity, activity status, and valuable-item signals are preserved.
  */
 
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
+import { itemIconDisplayUrl } from "@/features/items/itemRarityFavicon";
 import { formatChaos } from "@/features/items/itemMetrics";
 import { stripTags } from "@/utils/modText";
 
@@ -103,18 +104,12 @@ export function StashIconGrid({
             )}
 
             {/* Icon */}
-            {item.icon ? (
-              <img
-                src={item.icon}
-                alt={item.name || item.type_line}
-                className="h-full w-full object-contain p-1"
-                loading="lazy"
-              />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center p-0.5 text-center text-[10px] leading-tight text-parchment-100/80">
-                {item.name || item.type_line}
-              </span>
-            )}
+            <img
+              src={itemIconDisplayUrl(item)}
+              alt={item.name || item.type_line}
+              className="h-full w-full object-contain p-1"
+              loading="lazy"
+            />
 
             {/* Stack size */}
             {item.stack_size != null && item.stack_size > 1 && (
