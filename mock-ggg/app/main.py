@@ -31,7 +31,7 @@ if str(_APP_DIR) not in sys.path:
     sys.path.insert(0, str(_APP_DIR))
 
 from ninja_config import load_character_refs
-from ninja_convert import stable_id
+from ninja_convert import pack_items, stable_id
 from ninja_urls import NinjaCharacterRef
 from poe_ninja import (
     account_slug_to_user_id,
@@ -94,6 +94,9 @@ ACCESS_TOKENS: dict[str, dict[str, Any]] = {}
 REFRESH_TOKENS: dict[str, dict[str, Any]] = {}
 # Coalesce concurrent GETs for the same (user, character) while Poe.ninja runs once.
 _character_fetch_locks: dict[tuple[str, str], asyncio.Lock] = {}
+# Startup warm (lifespan): one asyncio task per ninja OAuth uid (parallel Poe.ninja account syncs).
+_ninja_warm_task: asyncio.Task[None] | None = None
+_ninja_warm_by_uid: dict[str, asyncio.Task[None]] = {}
 
 
 def _character_fetch_lock(uid: str, char_name: str) -> asyncio.Lock:
@@ -191,6 +194,12 @@ def _apply_ninja_slug_identity(ref: NinjaCharacterRef, ggg: dict[str, Any]) -> N
     ch["id"] = stable_id(f"{ref.account}:{ref.character_name}")
 
 
+def _run_warm_uid_in_thread(uid: str, refs: list[NinjaCharacterRef]) -> None:
+    """Thread entry for startup warm (must open its own ``httpx.Client``)."""
+    with httpx.Client(timeout=poe_ninja_read_timeout()) as client:
+        _sync_ninja_user_with_client(uid, refs, client)
+
+
 def _sync_ninja_user_with_client(uid: str, refs: list[NinjaCharacterRef], client: httpx.Client) -> None:
     summaries: list[dict[str, Any]] = []
     league_ids: set[str] = set()
@@ -225,10 +234,26 @@ def _sync_ninja_character_detail_sync(
         _sync_ninja_character_detail(uid, char_name, refs, client)
 
 
+def _ref_for_character_name(refs: list[NinjaCharacterRef], char_name: str) -> NinjaCharacterRef | None:
+    """Match TOML slug to roster name (spacing / underscores differ from Poe display names)."""
+    for r in refs:
+        if r.character_name == char_name:
+            return r
+    norm = char_name.replace(" ", "_")
+    for r in refs:
+        if r.character_name.replace(" ", "_") == norm:
+            return r
+    lowered = char_name.lower()
+    for r in refs:
+        if r.character_name.lower() == lowered:
+            return r
+    return None
+
+
 def _sync_ninja_character_detail(
     uid: str, char_name: str, refs: list[NinjaCharacterRef], client: httpx.Client
 ) -> None:
-    ref = next((r for r in refs if r.character_name == char_name), None)
+    ref = _ref_for_character_name(refs, char_name)
     if ref is None:
         return
     ggg, _ = fetch_character_ggg_and_account(client, ref)
@@ -247,43 +272,46 @@ def _sync_ninja_character_detail(
         ]
 
 
-def _init_ninja_from_network() -> None:
+async def _background_ninja_warm() -> None:
+    """One Poe.ninja sync per ninja account, in parallel (each uid still serializes its own chars)."""
+    global _ninja_warm_by_uid
+    _ninja_warm_by_uid.clear()
     if not NINJA_REFS_BY_USER:
         return
     try:
-        with httpx.Client(timeout=60.0) as client:
-            for uid, refs in NINJA_REFS_BY_USER.items():
-                _sync_ninja_user_with_client(uid, refs, client)
-        log.info("mock_ggg: poe.ninja character sync OK (%d accounts)", len(NINJA_REFS_BY_USER))
-    except Exception as exc:
-        log.warning("mock_ggg: poe.ninja startup sync failed (%s); ninja accounts unavailable", exc)
-
-
-async def _background_ninja_warm() -> None:
-    """Full account scrape; runs in a worker thread (sleeps between Poe.ninja calls in ``poe_ninja``)."""
-    try:
-        await run_in_threadpool(_init_ninja_from_network)
+        for uid, refs in NINJA_REFS_BY_USER.items():
+            _ninja_warm_by_uid[uid] = asyncio.create_task(
+                run_in_threadpool(_run_warm_uid_in_thread, uid, refs),
+                name=f"mock_ggg_poe_ninja_warm:{uid}",
+            )
+        results = await asyncio.gather(*_ninja_warm_by_uid.values(), return_exceptions=True)
+        for uid, res in zip(_ninja_warm_by_uid.keys(), results, strict=True):
+            if isinstance(res, BaseException):
+                log.warning("mock_ggg: poe.ninja warm failed for %s (%s)", uid, res)
+        log.info("mock_ggg: background poe.ninja sync finished (%d accounts)", len(_ninja_warm_by_uid))
     except Exception as exc:
         log.warning("mock_ggg: background poe.ninja sync failed (%s)", exc)
-    else:
-        log.info("mock_ggg: background poe.ninja sync finished")
 
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     """Start Poe.ninja warm-up without blocking readiness (rate limits apply inside the thread)."""
-    task: asyncio.Task[None] | None = None
+    global _ninja_warm_task
+    _ninja_warm_task = None
     if NINJA_REFS_BY_USER and os.environ.get("MOCK_GGG_SKIP_POE_NINJA") != "1":
-        task = asyncio.create_task(_background_ninja_warm(), name="mock_ggg_poe_ninja_warm")
+        _ninja_warm_task = asyncio.create_task(_background_ninja_warm(), name="mock_ggg_poe_ninja_warm")
     yield
-    if task is not None and not task.done():
+    if _ninja_warm_task is not None and not _ninja_warm_task.done():
+        for _child in list(_ninja_warm_by_uid.values()):
+            if not _child.done():
+                _child.cancel()
         try:
-            await asyncio.wait_for(task, timeout=120.0)
+            await asyncio.wait_for(_ninja_warm_task, timeout=120.0)
         except TimeoutError:
             log.warning("mock_ggg: background poe.ninja sync still running at shutdown; cancelling")
-            task.cancel()
+            _ninja_warm_task.cancel()
             with suppress(asyncio.CancelledError):
-                await task
+                await _ninja_warm_task
 
 
 app = FastAPI(title="Mock GGG", version="0.1.0", lifespan=_lifespan)
@@ -328,6 +356,82 @@ def _load_token_maps() -> None:
 _load_token_maps()
 
 _TAB_CALL_COUNT: dict[str, int] = {}
+
+# GGG inventory slots we mirror into the mock stash "gear summary" tab (gear + flasks + jewels).
+_GGG_STASH_EQUIP_SLOTS = frozenset(
+    {
+        "Weapon",
+        "Weapon2",
+        "Offhand",
+        "Offhand2",
+        "Helm",
+        "BodyArmour",
+        "Gloves",
+        "Boots",
+        "Amulet",
+        "Ring",
+        "Ring2",
+        "Belt",
+        "Flask",
+        "PassiveJewels",
+    }
+)
+
+
+def _equipped_items_for_ninja_stash(user: str, league: str) -> list[dict[str, Any]]:
+    """Collect equipped rows from character detail for every TOML character in this league."""
+    refs = NINJA_REFS_BY_USER.get(user) or []
+    out: list[dict[str, Any]] = []
+    for ref in refs:
+        if league_name_from_url_slug(ref.league_slug) != league:
+            continue
+        detail = _character_detail_for_user(user, ref.character_name)
+        if not isinstance(detail, dict):
+            continue
+        char_key = stable_id(f"{ref.account}:{ref.character_name}")[:10]
+        for raw in detail.get("items") or []:
+            if not isinstance(raw, dict):
+                continue
+            if raw.get("inventoryId") not in _GGG_STASH_EQUIP_SLOTS:
+                continue
+            item = copy.deepcopy(raw)
+            orig_id = item.get("id")
+            if orig_id is not None:
+                item["id"] = f"{char_key}-{orig_id}"
+            item.pop("x", None)
+            item.pop("y", None)
+            out.append(item)
+    return out
+
+
+def _ninja_stash_from_equipped(user: str, league: str) -> dict[str, Any] | None:
+    """Same tab ids as the fixture league; first tab holds packed equipped gear for this account."""
+    base = STASHES.get(league)
+    if not isinstance(base, dict):
+        return None
+    tabs = copy.deepcopy(base.get("tabs") or [])
+    raw_items = _equipped_items_for_ninja_stash(user, league)
+    try:
+        packed = pack_items(raw_items) if raw_items else []
+    except Exception as exc:
+        log.warning("mock_ggg: pack_items failed for equipped summary (%s)", exc)
+        packed = []
+
+    tab_ids = [t["id"] for t in tabs if isinstance(t, dict) and isinstance(t.get("id"), str)]
+    first_id = tab_ids[0] if tab_ids else "fate-of-the-vaal-gear"
+    contents: dict[str, Any] = {}
+    prev_contents: dict[str, Any] = {}
+    for tid in tab_ids:
+        contents[tid] = {"items": packed if tid == first_id else []}
+        prev_contents[tid] = {"items": []}
+    return {"tabs": tabs, "contents": contents, "prev_contents": prev_contents}
+
+
+def _stash_dataset_for_user(user: str, league: str) -> dict[str, Any] | None:
+    """Ninja accounts: stash derived from equipped items (no shared druid fixture)."""
+    if user in NINJA_REFS_BY_USER:
+        return _ninja_stash_from_equipped(user, league)
+    return STASHES.get(league)
 
 
 @app.get("/healthz")
@@ -554,20 +658,42 @@ async def character(
         lock = _character_fetch_lock(user, name)
         async with lock:
             if revalidate or _character_needs_poe_ninja_fill(user, name):
-                try:
-                    await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
-                except httpx.HTTPError as exc:
-                    log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
-                    if not _has_character_detail(user, name):
-                        raise HTTPException(
-                            status_code=503, detail="poe_ninja_unavailable"
-                        ) from exc
-                except Exception as exc:
-                    log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
-                    if not _has_character_detail(user, name):
-                        raise HTTPException(
-                            status_code=503, detail="poe_ninja_unavailable"
-                        ) from exc
+                wt = _ninja_warm_by_uid.get(user)
+                if (
+                    wt is not None
+                    and not wt.done()
+                    and not revalidate
+                    and _character_needs_poe_ninja_fill(user, name)
+                ):
+                    try:
+                        await asyncio.wait_for(wt, timeout=600.0)
+                    except TimeoutError:
+                        log.warning(
+                            "mock_ggg: startup poe.ninja warm exceeded 600s; falling back to per-char fetch"
+                        )
+                    except asyncio.CancelledError:
+                        pass
+                    except Exception as exc:
+                        log.warning(
+                            "mock_ggg: startup warm task for %s finished with error (%s); per-char fetch may run",
+                            user,
+                            exc,
+                        )
+                if revalidate or _character_needs_poe_ninja_fill(user, name):
+                    try:
+                        await run_in_threadpool(_sync_ninja_character_detail_sync, user, name, refs)
+                    except httpx.HTTPError as exc:
+                        log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
+                        if not _has_character_detail(user, name):
+                            raise HTTPException(
+                                status_code=503, detail="poe_ninja_unavailable"
+                            ) from exc
+                    except Exception as exc:
+                        log.warning("mock_ggg: poe.ninja character %r failed (%s)", name, exc)
+                        if not _has_character_detail(user, name):
+                            raise HTTPException(
+                                status_code=503, detail="poe_ninja_unavailable"
+                            ) from exc
     detail = _character_detail_for_user(user, name)
     if detail is None:
         raise HTTPException(404, "not_found")
@@ -576,8 +702,8 @@ async def character(
 
 @app.get("/account/stashes/{league}")
 async def stash_tabs(league: str, request: Request) -> JSONResponse:
-    _require_user(request)
-    data = STASHES.get(league)
+    user = _require_user(request)
+    data = _stash_dataset_for_user(user, league)
     if data is None:
         return JSONResponse({"tabs": []})
     return JSONResponse({"tabs": data["tabs"]})
@@ -585,12 +711,12 @@ async def stash_tabs(league: str, request: Request) -> JSONResponse:
 
 @app.get("/account/stashes/{league}/{tab_id}")
 async def stash_tab(league: str, tab_id: str, request: Request) -> JSONResponse:
-    _require_user(request)
-    data = STASHES.get(league)
-    if data is None or tab_id not in data["contents"]:
+    user = _require_user(request)
+    data = _stash_dataset_for_user(user, league)
+    if data is None or tab_id not in data.get("contents", {}):
         raise HTTPException(404, "not_found")
 
-    key = f"{league}/{tab_id}"
+    key = f"{user}:{league}:{tab_id}"
     call_n = _TAB_CALL_COUNT.get(key, 0)
     _TAB_CALL_COUNT[key] = call_n + 1
 
