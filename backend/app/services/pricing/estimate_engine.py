@@ -11,7 +11,6 @@ from app.services.pricing.poe2_scout import Poe2ScoutSource
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.source import PriceEstimate, PriceUnit
-from app.services.third_party_ratelimit import KEY_GGG_TRADE_FETCH, throttle
 from app.services.trade_listings import sample_median_listing_chaos, trade_search_list_result
 from app.services.trade_relaxation import apply_relaxation_step, stat_filter_drop_indices
 from app.services.trade_search_submit import submit_trade_search
@@ -19,6 +18,11 @@ from app.services.trade_stat_index import enrich_trade_payload_stat_ids, ensure_
 from app.services.trade_url import build_exact_search_with_stat_filters, stat_filters_for_exact_item
 
 log = get_logger("app.services.pricing.estimate_engine")
+
+
+def _item_display_name(item: Item) -> str:
+    n = (item.name or item.type_line or "").strip()
+    return n[:200] if n else ""
 
 
 def _poe_ninja_from_settings(settings: Settings) -> PoeNinjaSource | None:
@@ -79,7 +83,12 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
         return None
 
     st = PriceJobState(
-        user_id=user_id, item_id=str(item.id), league=league, status="running", message="starting"
+        user_id=user_id,
+        item_id=str(item.id),
+        item_name=_item_display_name(item),
+        league=league,
+        status="running",
+        message="starting",
     )
     await save_job_state(redis, job_id, st)
     key = match_item(item)
@@ -135,28 +144,44 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
         if not isinstance(pl, dict):
             continue
         enrich_trade_payload_stat_ids(pl)
-        g_int = float(settings.ggg_trade_fetch_min_interval_sec)
-        await throttle(redis, KEY_GGG_TRADE_FETCH, min_interval_sec=g_int)
-        sid = await submit_trade_search(settings, league, pl)
-        if not sid:
-            log.info("price_estimate.search_submit_failed", step=step)
-            continue
-        await throttle(redis, KEY_GGG_TRADE_FETCH, min_interval_sec=g_int)
-        total, ids = await trade_search_list_result(settings, league, sid)
-        if not ids or total == 0:
-            continue
-        med, n = await sample_median_listing_chaos(
-            settings,
-            league,
-            sid,
-            chaos_map,
-            min_samples=1,
-            cap_ids=32,
-        )
-        if n > 0 and med > 0:
-            chosen_median, chosen_n, used_steps = med, n, step
-            if total >= settings.pricing_min_trade_listings:
+        last_total = 0
+        for _attempt in range(200):
+            sid, submit_rl = await submit_trade_search(settings, league, pl, redis=redis)
+            if submit_rl:
+                st.message = "GGG rate limit (trade search) — waiting before retry"
+                await save_job_state(redis, job_id, st)
+                continue
+            if not sid:
+                log.info("price_estimate.search_submit_failed", step=step)
                 break
+            total, ids, list_rl = await trade_search_list_result(
+                settings, league, sid, redis=redis
+            )
+            if list_rl:
+                st.message = "GGG rate limit (trade list) — waiting before retry"
+                await save_job_state(redis, job_id, st)
+                continue
+            if not ids or total == 0:
+                break
+            med, n, sample_rl = await sample_median_listing_chaos(
+                settings,
+                league,
+                sid,
+                chaos_map,
+                min_samples=1,
+                cap_ids=32,
+                redis=redis,
+            )
+            if sample_rl:
+                st.message = "GGG rate limit (trade fetch) — waiting before retry"
+                await save_job_state(redis, job_id, st)
+                continue
+            if n > 0 and med > 0:
+                chosen_median, chosen_n, used_steps = med, n, step
+                last_total = total
+            break
+        if last_total >= settings.pricing_min_trade_listings and chosen_median > 0:
+            break
 
     if chosen_median > 0:
         v, u = _value_display_units(chosen_median, chaos_map)

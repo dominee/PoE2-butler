@@ -204,6 +204,7 @@ export interface PriceJobState {
   error: string | null;
   user_id: string;
   item_id: string;
+  item_name?: string;
   league: string;
 }
 

@@ -118,11 +118,20 @@
 {% include "partials/price_estimates.html" %}
 
 {% if dashboard_refresh_sec > 0 %}
-<p class="refresh-hint">Live refresh every {{ dashboard_refresh_sec }}s via <code>/admin/api/summary</code>.</p>
+<p class="refresh-hint muted" style="margin:0 0 0.5rem">
+  Live polling does <strong>not</strong> start automatically after login.
+  Use <strong>Refresh now</strong> or <strong>Start auto-refresh</strong> (every {{ dashboard_refresh_sec }}s via <code>/admin/api/summary</code>).
+</p>
+<p style="margin:0 0 1rem;display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center">
+  <button type="button" class="primary" id="admin-dashboard-refresh-now">Refresh now</button>
+  <button type="button" id="admin-dashboard-start-live">Start auto-refresh</button>
+  <button type="button" id="admin-dashboard-stop-live" style="display:none">Stop auto-refresh</button>
+</p>
 <script>
 (function () {
   var sec = {{ dashboard_refresh_sec | int }};
   if (!sec) return;
+  var liveId = null;
   async function tick() {
     try {
       var r = await fetch("/admin/api/summary", { credentials: "same-origin" });
@@ -174,7 +183,22 @@
       }
     } catch (e) {}
   }
-  setInterval(tick, sec * 1000);
+  var bNow = document.getElementById("admin-dashboard-refresh-now");
+  var bStart = document.getElementById("admin-dashboard-start-live");
+  var bStop = document.getElementById("admin-dashboard-stop-live");
+  if (bNow) bNow.addEventListener("click", function () { tick(); });
+  if (bStart) bStart.addEventListener("click", function () {
+    if (liveId) return;
+    tick();
+    liveId = setInterval(tick, sec * 1000);
+    bStart.style.display = "none";
+    if (bStop) bStop.style.display = "";
+  });
+  if (bStop) bStop.addEventListener("click", function () {
+    if (liveId) { clearInterval(liveId); liveId = null; }
+    if (bStart) bStart.style.display = "";
+    bStop.style.display = "none";
+  });
 })();
 </script>
 {% endif %}

@@ -4,7 +4,7 @@
   <p class="muted pe-sub">
     <code>poe2b:price_job:*</code> JSON state, <code>poe2b:price_dedup:*</code> dedupe keys, arq
     <code>arq:queue</code> / <code>arq:in-progress</code> (by function when unpickle works), and
-    <code>tp3:*:next</code> throttle slots.
+    <code>tp3:ggg_trade:lock</code> (GGG 429 / spacing) and <code>tp3:*:next</code> throttle slots.
   </p>
 
   <div class="pe-digest pe-arq-split">
@@ -62,6 +62,7 @@
   </div>
 
   <h3>Throttles (next available)</h3>
+  <p class="muted pe-tiny" style="margin:0 0 0.5rem">When <code>ggg_trade2_lock</code> is active, the worker cannot call GGG trade2 until the lock expires (429 backoff or min interval).</p>
   <table class="data pe-throttle" data-pe-throttle-table>
     <thead>
       <tr>
@@ -69,6 +70,7 @@
         <th>Active</th>
         <th>Key</th>
         <th>PTTL ms</th>
+        <th>≈ wait</th>
       </tr>
     </thead>
     <tbody>
@@ -78,9 +80,10 @@
         <td>{% if row.active %}<span class="badge badge-warn">wait</span>{% else %}<span class="badge badge-ok">ready</span>{% endif %}</td>
         <td><code class="muted pe-key">{{ row.key }}</code></td>
         <td data-pttl>{{ row.pttl_ms or 0 }}</td>
+        <td data-sec>{% if row.active and row.pttl_ms %}{{ (row.pttl_ms / 1000) | round(1) }}s{% else %}—{% endif %}</td>
       </tr>
       {% else %}
-      <tr><td colspan="4" class="muted">No throttle rows (empty config).</td></tr>
+      <tr><td colspan="5" class="muted">No throttle rows (empty config).</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -109,7 +112,7 @@
           </td>
           <td><code>{{ j.league or "—" }}</code></td>
           <td><code title="{{ j.job_id_full or '' }}">{{ j.job_id }}</code></td>
-          <td><code title="{{ j.item_id or '' }}">{{ j.item_id }}</code></td>
+          <td class="pe-item-name" style="max-width:14rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.item_id or '' }}"><span>{{ j.item_label or j.item_id }}</span></td>
           <td class="muted" style="max-width:12rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.message or j.step or '' }}">{{ (j.message or j.step or "—") | truncate(48) }}</td>
           <td>{% if j.chaos_equiv is not none %}{{ (j.chaos_equiv | float) | round(2) }}{% else %}—{% endif %}</td>
           <td class="muted" style="max-width:10rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.error or '' }}">{{ (j.error or "—") | truncate(32) }}</td>

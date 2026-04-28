@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -71,7 +71,18 @@ class Settings(BaseSettings):
     pricing_trade_estimate_enabled: bool = True
     pricing_scout_base_url: str = ""
     pricing_min_trade_listings: int = 5
-    ggg_trade_fetch_min_interval_sec: float = 0.55
+    # Minimum spacing between *successful* GGG trade2 API calls (search POST, list GET, fetch).
+    # Honour GGG rate limits: keep this conservative (10s+ in prod).
+    ggg_trade_min_interval_sec: float = Field(
+        default=12.0,
+        validation_alias=AliasChoices(
+            "ggg_trade_min_interval_sec",
+            "ggg_trade_fetch_min_interval_sec",
+        ),
+    )
+    ggg_trade_429_buffer_sec: int = 15
+    ggg_trade_429_fallback_sec: int = 300
+    ggg_trade_429_max_wait_sec: int = 600
     # Fallback when poe.ninja is not the active source (rough conversion to chaos)
     trade_listing_divine_to_chaos: float = 250.0
     trade_listing_exalt_to_chaos: float = 8.0

@@ -159,9 +159,17 @@ async def price_estimate_item(
         log.warning("price_estimate_item.failed", error=str(exc), job_id=job_id)
         from app.services.pricing.estimate_state import PriceJobState, save_job_state
 
+        display = ""
+        n = item_dict.get("name")
+        t = item_dict.get("type_line")
+        if isinstance(n, str) and n.strip():
+            display = n.strip()[:200]
+        elif isinstance(t, str) and t.strip():
+            display = t.strip()[:200]
         st = PriceJobState(
             user_id=user_id,
             item_id=str(item_dict.get("id", "")),
+            item_name=display,
             league=league,
             status="failed",
             error=str(exc)[:200],

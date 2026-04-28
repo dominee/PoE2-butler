@@ -120,9 +120,11 @@ async def start_price_estimate(
         else user.trade_tolerance_pct
     )
     item_dump = body.item.model_dump(mode="json")
+    display_name = (body.item.name or body.item.type_line or "").strip()[:200]
     q = PriceJobState(
         user_id=str(user.id),
         item_id=str(body.item.id),
+        item_name=display_name,
         league=body.league,
         status="queued",
         message="queued",

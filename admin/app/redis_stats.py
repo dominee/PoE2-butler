@@ -154,8 +154,9 @@ async def price_cache_summary() -> dict:
     return {"key_count": total, "sample": sample}
 
 
-# Throttle "next" keys for third_party_ratelimit (vendor + ":next").
+# Throttle "next" keys for third_party_ratelimit (vendor + ":next") and GGG global trade lock.
 _THROTTLE_TOKENS: tuple[tuple[str, str], ...] = (
+    ("ggg_trade2_lock", "tp3:ggg_trade:lock"),
     ("poe_ninja", "tp3:poe_ninja:next"),
     ("ggg_trade_data", "tp3:ggg_trade_data:next"),
     ("ggg_trade_fetch", "tp3:ggg_trade_fetch:next"),
@@ -195,6 +196,11 @@ def _price_job_sample_row(redis_key: str, d: dict[str, Any]) -> dict[str, Any]:
     res = d.get("result")
     err = d.get("error")
     item_id = str(d.get("item_id") or "")
+    name_raw = d.get("item_name")
+    if isinstance(name_raw, str) and name_raw.strip():
+        item_label = name_raw.strip()[:120]
+    else:
+        item_label = (item_id[:20] + "…") if len(item_id) > 22 else item_id
     jid = redis_key.split(":", 2)[-1] if isinstance(redis_key, str) else str(redis_key)
     chaos = _chaos_equiv(res)
     e_short = None
@@ -206,7 +212,8 @@ def _price_job_sample_row(redis_key: str, d: dict[str, Any]) -> dict[str, Any]:
         "job_id_full": jid,
         "status": st_display,
         "league": str(d.get("league") or ""),
-        "item_id": (item_id[:20] + "…") if len(item_id) > 22 else item_id,
+        "item_label": item_label,
+        "item_id": item_id,
         "user_id": str(d.get("user_id") or "")[:8] or "—",
         "step": str(d.get("step") or "")[:100],
         "message": str(d.get("message") or "")[:160],

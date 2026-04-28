@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   useCreateShare,
@@ -58,6 +58,7 @@ export function ItemDetailPane({
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
+  const [pricingRerun, setPricingRerun] = useState(0);
 
   const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
   const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
@@ -69,7 +70,16 @@ export function ItemDetailPane({
     item,
     tradeTol,
     Boolean(isApp && league && item),
+    pricingRerun,
+    false,
   );
+
+  useEffect(() => {
+    setPricingRerun(0);
+  }, [item?.id]);
+
+  const pricingBusy =
+    priceQ.isFetching || currencyRatesQ.isFetching || refinedQ.isLoading;
 
   if (!item) {
     return (
@@ -162,6 +172,12 @@ export function ItemDetailPane({
     setTimeout(() => setShareFeedback(null), 4000);
   };
 
+  const onRefreshPricing = () => {
+    void priceQ.refetch();
+    void currencyRatesQ.refetch();
+    setPricingRerun((n) => n + 1);
+  };
+
   const borderCol = PANE_RARITY_BORDER[item.rarity as ItemRarity] ?? "rgba(80,80,90,0.45)";
   const flavour =
     item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
@@ -204,13 +220,29 @@ export function ItemDetailPane({
             {item.ilvl != null && <span>ilvl {item.ilvl}</span>}
             {item.corrupted && <span className="text-red-400">corrupted</span>}
           </div>
-          {price && (
-            <div className="mt-1">
-              <PriceBadge
-                price={price}
-                threshold={prefs?.valuable_threshold_chaos}
-                currencyChaos={currencyChaos}
-              />
+          {isApp && league && (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {price ? (
+                <PriceBadge
+                  price={price}
+                  threshold={prefs?.valuable_threshold_chaos}
+                  currencyChaos={currencyChaos}
+                />
+              ) : (
+                <span className="text-[11px] text-ink-600">No quick price</span>
+              )}
+              <button
+                type="button"
+                onClick={onRefreshPricing}
+                disabled={pricingBusy}
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-ink-600 bg-ink-900/80 text-parchment-200/90 transition hover:border-ember-500/50 hover:text-ember-200 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Refresh pricing (quick lookup, rates, and refined estimate)"
+                aria-label="Refresh pricing for this item"
+              >
+                <RefreshPricingIcon
+                  className={pricingBusy ? "animate-spin" : undefined}
+                />
+              </button>
             </div>
           )}
           {isApp && league && (
@@ -571,5 +603,26 @@ export function ItemDetailPane({
         </>
       )}
     </aside>
+  );
+}
+
+function RefreshPricingIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M23 4v6h-6" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
   );
 }

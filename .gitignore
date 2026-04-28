@@ -31,6 +31,7 @@ admin/*/dist/
 .DS_Store
 .idea/
 .vscode/
+.cursor/
 *.swp
 
 # Docker / data volumes (if mounted local)

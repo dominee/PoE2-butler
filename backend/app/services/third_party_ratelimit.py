@@ -1,25 +1,46 @@
 """Throttling helpers for 3rd-party API calls (Redis).
 
-Used from the arq worker and (optionally) the API layer before fan-out to
-poe.ninja, trade filter metadata, etc. This is the product's answer to
-INSTRUCTIONS § "message queue" for rate-limited partners: the job queue is arq;
-per-vendor throttling is implemented here without a second broker.
+Used from the arq worker and the API layer before GGG trade2 / poe.ninja, etc.
+The GGG trade public API is strictly rate-limited: use :func:`await_ggg_trade_slot`
+before every search POST / list GET / fetch GET, then :func:`ggg_trade_mark_success`
+on HTTP 200. On HTTP 429, :func:`ggg_trade_register_429` sets a Redis lock for the
+server-requested wait time (plus buffer) parsed from the JSON body.
 """
 
 from __future__ import annotations
 
 import asyncio
+import math
+import re
 
 from redis.asyncio import Redis
+
+from app.config import Settings
 
 # Key prefix: ``tp3:{vendor}`` — one logical slot per job tick (fixed window).
 KEY_POE_NINJA = "tp3:poe_ninja"
 KEY_GGG_TRADE_META = "tp3:ggg_trade_data"
 KEY_GGG_TRADE_FETCH = "tp3:ggg_trade_fetch"
+KEY_GGG_TRADE_LOCK = "tp3:ggg_trade:lock"
 KEY_GENERIC = "tp3:generic"
 
 # Default minimum spacing between calls for hot loops (seconds).
 _DEFAULT_INTERVAL = 0.35
+
+_GGG_WAIT_RE = re.compile(r"Please wait (\d+)\s*seconds", re.IGNORECASE)
+
+
+def parse_ggg_rate_limit_wait_sec(body: str) -> int | None:
+    """Parse ``Please wait N seconds`` from GGG JSON error body."""
+    if not body:
+        return None
+    m = _GGG_WAIT_RE.search(body)
+    if not m:
+        return None
+    try:
+        return max(1, int(m.group(1)))
+    except (TypeError, ValueError):
+        return None
 
 
 async def throttle(
@@ -36,3 +57,35 @@ async def throttle(
             return
         await asyncio.sleep(min_interval_sec)
     # best-effort: do not block worker forever
+
+
+async def await_ggg_trade_slot(redis: Redis, settings: Settings) -> None:
+    """Block until the global GGG trade2 lock expires (spacing or 429 backoff)."""
+    key = KEY_GGG_TRADE_LOCK
+    while True:
+        pttl = await redis.pttl(key)
+        if pttl is None or pttl == -2:
+            return
+        if pttl == -1:
+            await asyncio.sleep(0.5)
+            continue
+        if pttl <= 0:
+            return
+        await asyncio.sleep(min(pttl / 1000.0 + 0.02, 5.0))
+
+
+async def ggg_trade_mark_success(redis: Redis, settings: Settings) -> None:
+    """After a successful GGG trade2 response, enforce min spacing before the next call."""
+    ex = max(1, int(math.ceil(float(settings.ggg_trade_min_interval_sec))))
+    await redis.set(KEY_GGG_TRADE_LOCK, "1", ex=ex)
+
+
+async def ggg_trade_register_429(redis: Redis, settings: Settings, body: str) -> int:
+    """Set lock TTL from GGG's ``Please wait N seconds`` (plus buffer), capped."""
+    buf = int(settings.ggg_trade_429_buffer_sec)
+    fb = int(settings.ggg_trade_429_fallback_sec)
+    cap = int(settings.ggg_trade_429_max_wait_sec)
+    w = parse_ggg_rate_limit_wait_sec(body) or fb
+    total = min(cap, w + buf)
+    await redis.set(KEY_GGG_TRADE_LOCK, "429", ex=max(1, total))
+    return total

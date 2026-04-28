@@ -245,27 +245,33 @@ export function useActivity(league: string | null) {
 /**
  * Enqueues a hybrid (aggregator + trade median) job and polls Redis-backed status.
  * See ``docs/pricing_estimates.md``.
+ * @param rerunKey - Increment to enqueue a new estimate (e.g. user clicks refresh) for the same item.
+ * @param autoStart - If false (default), the first job is only enqueued after rerunKey is at least 1 (user action).
  */
 export function useRefinedPriceEstimate(
   league: string | null,
   item: Item | null,
   tolerancePct: number,
   enabled: boolean,
+  rerunKey: number = 0,
+  autoStart: boolean = false,
 ) {
   const sessionKey = league && item ? `${league}::${item.id}` : "";
+  const runKey = `${sessionKey}::${rerunKey}`;
   const [jobId, setJobId] = useState<string | null>(null);
-  const prevKey = useRef<string>("");
+  const prevRunKey = useRef<string>("");
   const started = useRef(false);
 
   useEffect(() => {
-    if (sessionKey === prevKey.current) return;
-    prevKey.current = sessionKey;
+    if (runKey === prevRunKey.current) return;
+    prevRunKey.current = runKey;
     setJobId(null);
     started.current = false;
-  }, [sessionKey]);
+  }, [runKey]);
 
   useEffect(() => {
     if (!sessionKey || !enabled || !item) return;
+    if (!autoStart && rerunKey < 1) return;
     if (started.current) return;
     started.current = true;
     (async () => {
@@ -280,7 +286,7 @@ export function useRefinedPriceEstimate(
         started.current = false;
       }
     })();
-  }, [sessionKey, enabled, item, league, tolerancePct]);
+  }, [sessionKey, runKey, enabled, item, league, tolerancePct, autoStart, rerunKey]);
 
   const jobQ = useQuery<PriceJobState>({
     queryKey: ["price-estimate", jobId],

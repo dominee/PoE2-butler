@@ -20,6 +20,25 @@ import { StashIconGrid } from "./StashIconGrid";
 import { StashTable } from "./StashTable";
 import { TabStrip } from "./TabStrip";
 
+/** Match backend ``_items_sorted_for_price_queue``: currency first, then uniques, etc. */
+const RARITY_PRICE_ORDER: Record<string, number> = {
+  Currency: 0,
+  Unique: 1,
+  Rare: 2,
+  Magic: 3,
+  Normal: 4,
+  Gem: 5,
+};
+
+function itemsSortedForPriceQueue(items: Item[]): Item[] {
+  return [...items].sort((a, b) => {
+    const ra = RARITY_PRICE_ORDER[a.rarity] ?? 99;
+    const rb = RARITY_PRICE_ORDER[b.rarity] ?? 99;
+    if (ra !== rb) return ra - rb;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 export interface StashBrowserProps {
   league: string | null;
   selectedItemId: string | null;
@@ -68,7 +87,8 @@ export function StashBrowser({
 
   const items = useMemo(() => tabQ.data?.items ?? [], [tabQ.data?.items]);
   const filtered = useMemo(() => applyFilters(items, filters), [items, filters]);
-  const pricesQ = usePriceLookup(league, items);
+  const itemsForPricing = useMemo(() => itemsSortedForPriceQueue(items), [items]);
+  const pricesQ = usePriceLookup(league, itemsForPricing);
   const prices = useMemo(() => pricesQ.data?.prices ?? {}, [pricesQ.data?.prices]);
   const valuableIds = useMemo(() => {
     if (valuableThreshold == null) return undefined;

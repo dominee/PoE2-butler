@@ -20,6 +20,7 @@ class PriceJobState(BaseModel):
     error: str | None = None
     user_id: str = ""
     item_id: str = ""
+    item_name: str = ""
     league: str = ""
 
 

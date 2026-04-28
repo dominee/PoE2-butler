@@ -10,9 +10,15 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
+from redis.asyncio import Redis
 
 from app.config import Settings
 from app.logging import get_logger
+from app.services.third_party_ratelimit import (
+    await_ggg_trade_slot,
+    ggg_trade_mark_success,
+    ggg_trade_register_429,
+)
 from app.services.trade_stat_catalog import trade_search_user_agent
 
 log = get_logger("app.services.trade_listings")
@@ -76,8 +82,9 @@ async def trade_search_list_result(
     search_id: str,
     *,
     start: int = 0,
-) -> tuple[int, list[str]]:
-    """GET ``/api/trade2/search/{league}/{id}`` — returns ``(total, result_ids)``."""
+    redis: Redis | None = None,
+) -> tuple[int, list[str], bool]:
+    """GET ``/api/trade2/search/{league}/{id}`` — returns ``(total, result_ids, rate_limited)``."""
     base = settings.trade_search_api_base.rstrip("/")
     # trade_search_api_base is .../search — list endpoint is same host + path .../search/league/id
     # Path is: {api_base}/../ but actually search base is `.../api/trade2/search`
@@ -88,6 +95,8 @@ async def trade_search_list_result(
         params["start"] = start
     ua = trade_search_user_agent(settings)
     h_get = {"User-Agent": ua, "Accept": "application/json"}
+    if redis is not None:
+        await await_ggg_trade_slot(redis, settings)
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             r = await client.get(
@@ -97,21 +106,29 @@ async def trade_search_list_result(
             )
     except (httpx.HTTPError, OSError) as exc:
         log.warning("trade_listings.search_get_failed", error=str(exc))
-        return 0, []
+        return 0, [], False
+
+    if r.status_code == 429:
+        if redis is not None:
+            await ggg_trade_register_429(redis, settings, r.text)
+        log.warning("trade_listings.search_get_429", text=r.text[:400] if r.text else "")
+        return 0, [], True
 
     if r.status_code != 200:
         log.warning("trade_listings.search_get_http", status_code=r.status_code, text=r.text[:400])
-        return 0, []
+        return 0, [], False
+    if redis is not None:
+        await ggg_trade_mark_success(redis, settings)
     try:
         data: dict[str, Any] = r.json()
     except json.JSONDecodeError:
-        return 0, []
+        return 0, [], False
     total = int(data.get("total") or 0)
     raw = data.get("result")
     if not isinstance(raw, list):
-        return total, []
+        return total, [], False
     out = [x for x in raw if isinstance(x, str) and x.strip()]
-    return total, out
+    return total, out, False
 
 
 def _trade_fetch_base_url(settings: Settings) -> str:
@@ -127,16 +144,20 @@ async def trade_fetch_listings(
     league: str,
     search_id: str,
     item_ids: list[str],
-) -> list[dict[str, Any]]:
-    """GET ``/api/trade2/fetch/{ids}?query=search_id`` — returns list of result dicts."""
+    *,
+    redis: Redis | None = None,
+) -> tuple[list[dict[str, Any]], bool]:
+    """GET fetch for listing JSON — returns (result dicts, rate_limited)."""
     if not item_ids:
-        return []
+        return [], False
     base = _trade_fetch_base_url(settings)
     # ids joined by comma; URL-encode each? PoE uses hex without extra encoding.
     part = ",".join(item_ids[:_FETCH_BATCH])
     url = f"{base}/fetch/{part}"
     ua = trade_search_user_agent(settings)
     h_get = {"User-Agent": ua, "Accept": "application/json"}
+    if redis is not None:
+        await await_ggg_trade_slot(redis, settings)
     try:
         async with httpx.AsyncClient(timeout=25.0) as client:
             r = await client.get(
@@ -146,19 +167,27 @@ async def trade_fetch_listings(
             )
     except (httpx.HTTPError, OSError) as exc:
         log.warning("trade_listings.fetch_failed", error=str(exc))
-        return []
+        return [], False
+
+    if r.status_code == 429:
+        if redis is not None:
+            await ggg_trade_register_429(redis, settings, r.text)
+        log.warning("trade_listings.fetch_429", text=r.text[:400] if r.text else "")
+        return [], True
 
     if r.status_code != 200:
         log.warning("trade_listings.fetch_http", status_code=r.status_code, text=r.text[:400])
-        return []
+        return [], False
+    if redis is not None:
+        await ggg_trade_mark_success(redis, settings)
     try:
         data: dict[str, Any] = r.json()
     except json.JSONDecodeError:
-        return []
+        return [], False
     res = data.get("result")
     if not isinstance(res, list):
-        return []
-    return [x for x in res if isinstance(x, dict)]
+        return [], False
+    return [x for x in res if isinstance(x, dict)], False
 
 
 async def sample_median_listing_chaos(
@@ -169,18 +198,27 @@ async def sample_median_listing_chaos(
     *,
     min_samples: int = 5,
     cap_ids: int = 32,
-) -> tuple[float, int]:
-    """First search page + batched fetches; return (median, sample_count)."""
-    total, ids = await trade_search_list_result(settings, league, search_id)
+    redis: Redis | None = None,
+) -> tuple[float, int, bool]:
+    """First search page + batched fetches; return ``(median, sample_count, rate_limited)``."""
+    total, ids, list_rl = await trade_search_list_result(
+        settings, league, search_id, redis=redis
+    )
+    if list_rl:
+        return 0.0, 0, True
     if not ids:
-        return 0.0, 0
+        return 0.0, 0, False
     take = min(len(ids), cap_ids, _MAX_FETCH_IDS)
     if take < 1:
-        return 0.0, 0
+        return 0.0, 0, False
     all_prices: list[float] = []
     for off in range(0, take, _FETCH_BATCH):
         chunk = ids[off : off + _FETCH_BATCH]
-        rows = await trade_fetch_listings(settings, league, search_id, chunk)
+        rows, fetch_rl = await trade_fetch_listings(
+            settings, league, search_id, chunk, redis=redis
+        )
+        if fetch_rl:
+            return 0.0, 0, True
         for row in rows:
             v = listing_chaos_value(row, chaos_per_name)
             if v is not None and v > 0:
@@ -188,5 +226,5 @@ async def sample_median_listing_chaos(
         if len(all_prices) >= min_samples:
             break
     if not all_prices:
-        return 0.0, 0
-    return median_chaos(all_prices), len(all_prices)
+        return 0.0, 0, False
+    return median_chaos(all_prices), len(all_prices), False

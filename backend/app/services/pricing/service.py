@@ -13,6 +13,25 @@ from app.services.pricing.source import PriceEstimate, PriceSource
 
 log = get_logger("app.services.pricing")
 
+# Stash / bulk lookup: currency first, then uniques, then the rest.
+_RARITY_PRICE_ORDER: dict[str, int] = {
+    "Currency": 0,
+    "Unique": 1,
+    "Rare": 2,
+    "Magic": 3,
+    "Normal": 4,
+    "Gem": 5,
+}
+
+
+def _items_sorted_for_price_queue(items: Iterable[Item]) -> list[Item]:
+    def key(it: Item) -> tuple[int, str]:
+        r = (it.rarity or "Normal").strip()
+        o = _RARITY_PRICE_ORDER.get(r, 99)
+        return (o, it.id)
+
+    return sorted(items, key=key)
+
 
 class PricingService:
     def __init__(self, source: PriceSource, cache: PriceCache) -> None:
@@ -29,18 +48,19 @@ class PricingService:
         """Return ``{item.id: estimate|None}`` for each item."""
         result: dict[str, PriceEstimate | None] = {}
         sem = asyncio.Semaphore(8)
+        ordered = _items_sorted_for_price_queue(items)
 
         async def one(item: Item) -> None:
             async with sem:
                 result[item.id] = await self.price_for(league, item)
 
-        await asyncio.gather(*(one(i) for i in items))
+        await asyncio.gather(*(one(i) for i in ordered))
         return result
 
     async def warm(self, league: str, items: Iterable[Item]) -> int:
         """Fetch and cache prices for every item. Returns the number priced."""
         priced = 0
-        for item in items:
+        for item in _items_sorted_for_price_queue(items):
             estimate = await self.price_for(league, item)
             if estimate is not None:
                 priced += 1
