@@ -44,7 +44,8 @@ Authoritative detail: [INSTRUCTIONS.md](INSTRUCTIONS.md) section **“Product ex
 - **Image export:** Client-side PNG (two layouts) in [`frontend/src/features/items/ItemImageExport.tsx`](frontend/src/features/items/ItemImageExport.tsx) (`html-to-image`); no mandatory server render on small VM.
 - **Stat summary:** [`backend/app/domain/stat_summary.py`](backend/app/domain/stat_summary.py) (heuristic MVP); expand data files later.
 - **Queue:** **Redis + arq** for background work; per–API throttling in [`backend/app/services/third_party_ratelimit.py`](backend/app/services/third_party_ratelimit.py); job `refresh_trade_filter_catalog` in worker. No RabbitMQ unless requirements outgrow this.
-- **Pricing (hybrid):** Aggregators (e.g. poe.ninja) for bulk/cache + optional community APIs; for detail-pane “refined” numbers, the **public** GGG PoE2 **trade JSON** API (search + listing fetch) may compute a **median** of comparable sales — not browser HTML scraping. Label as indicative / snapshot, not a live market guarantee. See [docs/pricing_estimates.md](docs/pricing_estimates.md) and [docs/trade_deeplinks.md](docs/trade_deeplinks.md).
+- **Pricing (hybrid):** Aggregators (e.g. poe.ninja) for bulk/cache + optional community APIs; for detail-pane “refined” numbers, the **public** GGG PoE2 **trade JSON** API (search + listing fetch) may compute a **median** of comparable sales — not browser HTML scraping. Label as indicative / snapshot, not a live market guarantee. **All** server-side trade2 calls (worker + `POST /api/trade/search`) share a **global Redis lock** (`tp3:ggg_trade:lock` in `third_party_ratelimit.py`): wait before each call, extend TTL after HTTP 200 (min interval + extra spacing), and on **429** parse `Please wait N seconds` (plus buffer, capped) so the app backs off instead of hammering GGG. Env: `GGG_TRADE_*` in `deploy/env/.env.example`. See [docs/pricing_estimates.md](docs/pricing_estimates.md) and [docs/trade_deeplinks.md](docs/trade_deeplinks.md). The item detail pane only **enqueues** a refined estimate after an explicit user action (refresh), not automatically on open/login.
+- **Admin console:** Overview shows arq job breakdown, Redis **throttle** key PTTLs (including `ggg_trade2_lock`), price-job samples with **Updated** (UTC) from last `save_job_state`, and optional **manual** or **user-started** live refresh to `/admin/api/summary` (no auto-poll on login when live refresh is enabled). See [admin/README.md](admin/README.md).
 - **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) (bundled template→stat hash map) + [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py); deep link POST in [`backend/app/services/trade_search_submit.py`](backend/app/services/trade_search_submit.py); see [docs/trade_deeplinks.md](docs/trade_deeplinks.md); weighted/sum filters later.
 
 ---
@@ -274,7 +275,11 @@ border-rarity-*  (same names)
 | `CORS_ALLOW_ORIGINS` | JSON array string, e.g. `["https://app.hideoutbutler.com"]` or dev equivalent |
 | `PRICING_SOURCE` | `static` (dev) or `poe_ninja` |
 | `DEFAULT_VALUABLE_THRESHOLD_CHAOS` | Starting threshold for valuable item highlights |
+| `GGG_TRADE_MIN_INTERVAL_SEC` | Base seconds in the global trade2 lock after each **successful** GGG response (alias: `GGG_TRADE_FETCH_MIN_INTERVAL_SEC`) |
+| `GGG_TRADE_EXTRA_SPACING_SEC` | Extra seconds added to that lock TTL (default 5; total ≈ min + extra) |
+| `GGG_TRADE_429_BUFFER_SEC` / `GGG_TRADE_429_FALLBACK_SEC` / `GGG_TRADE_429_MAX_WAIT_SEC` | On HTTP 429: add buffer to parsed wait, fallback if unparseable, cap |
 | `SECURITY_CONTACT_EMAIL` | Optional ops / security contact (e.g. disclosure; not read by app code) |
+| `ADMIN_DASHBOARD_REFRESH_SEC` | `0` = no JS polling; `>0` enables **Refresh now** / **Start auto-refresh** on the Overview (operators choose when to poll) |
 
 ---
 
@@ -361,4 +366,7 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 | `README.md` | Human quick start, feature list, links |
 | `DEPLOY.md` | VM setup, Cloudflare, origin PEM/key paths, compose commands |
 | `GGG_API.md` | GGG OAuth registration, redirect URIs, flows |
+| `docs/pricing_estimates.md` | Hybrid tier A/B/C, GGG lock + 429 behaviour, `GGG_TRADE_*` env, async jobs |
+| `docs/trade_deeplinks.md` | Trade2 POST/GET contract, User-Agent, server-side throttling pointer |
+| `admin/README.md` | Admin routes, dashboard refresh controls, throttle / job tables |
 | `SECURITY.md` | Checklist; disclosure via `SECURITY_CONTACT_EMAIL` (optional in `.env`) |

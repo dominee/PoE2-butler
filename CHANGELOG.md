@@ -4,6 +4,22 @@ Notable **user-facing behavior** and **visual/UI** updates for PoE2 Butler. Inte
 
 ---
 
+## 2026-04-28
+
+### GGG trade2 rate limiting (server)
+
+- **Global Redis lock** coordinates every trade2 **search POST**, **list GET**, and **fetch GET** (price-estimate worker and “open on trade” style API). After each successful response, the lock enforces **minimum interval + extra spacing** (configurable, see `deploy/env/.env.example`). On **HTTP 429**, the lock TTL follows GGG’s “Please wait *N* seconds” message (plus buffer, with fallback and a maximum cap) so the stack backs off instead of retrying immediately.
+
+### App · refined price estimate
+
+- The detail pane **does not** automatically start a background refined estimate when you select an item; use **Refresh pricing** (or equivalent) to enqueue work.
+
+### Admin console
+
+- **Overview:** optional dashboard polling is **not** started automatically when `ADMIN_DASHBOARD_REFRESH_SEC` is set; use **Refresh now** or **Start auto-refresh**. The **Throttles** table shows GGG lock state; **Sample jobs** includes an **Updated** column (last job state write, UTC).
+
+---
+
 ## 2026-04-26
 
 ### Trade site (PoE2)

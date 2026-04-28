@@ -28,23 +28,45 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 - The displayed estimate uses the **median** of available listing chaos equivalents in the sample to reduce the effect of outliers.
 - The API may also expose `divine` or `exalted` **denominations** in `PriceEstimate` when convenient for the UI, with `chaos_equiv` the canonical value for highlights.
 
-## Asynchronous jobs
+## Asynchronous jobs and Redis state
 
-- A **refined** estimate (especially tier C) is scheduled on the **arq** worker and state is kept in **Redis** (`poe2b:price_job:*` keys).
-- The client **polls** `GET /api/pricing/estimate/{job_id}`; duplicate requests for the same user + item + league de-duplicate to one job id.
-- The worker applies third-party rate limits in `backend/app/services/third_party_ratelimit.py` (separate keys for GGG trade fetch vs poe.ninja).
+- A **refined** estimate (especially tier C) is scheduled on the **arq** worker. State is stored in **Redis** at `poe2b:price_job:{uuid}` as JSON (`PriceJobState`).
+- Every `save_job_state` write sets **`updated_at`** to the current time (UTC ISO-8601) for observability.
+- The client **polls** `GET /api/pricing/estimate/{job_id}`. Duplicate requests for the same user + item + league de-duplicate to one job id via `poe2b:price_dedup:*`.
+- **UI:** the SPA only **POSTs** `/api/pricing/estimate` after an explicit user action (e.g. “Refresh pricing”), not automatically when opening the detail pane or on session load—see `useRefinedPriceEstimate(..., autoStart: false)` in `frontend/src/api/hooks.ts`.
 
-## Rate limits and production behaviour
+## GGG trade2 rate limiting (critical)
 
-- GGG and community sites expect conservative request spacing and a clear **User-Agent** (this repo uses the same product + contact pattern as other GGG HTTP clients).
-- Set `pricing_trade_estimate_enabled=0` to disable tier C entirely if you need to stay on aggregators only.
+Implementation: [`backend/app/services/third_party_ratelimit.py`](../backend/app/services/third_party_ratelimit.py) and call sites in [`trade_search_submit.py`](../backend/app/services/trade_search_submit.py), [`trade_listings.py`](../backend/app/services/trade_listings.py), and the pricing estimate engine.
 
-## Environment (see [deploy/env/.env.example](deploy/env/.env.example))
+- **One global lock** in Redis: key `tp3:ggg_trade:lock`. Before any trade2 HTTP call, the process **awaits** this lock to expire (spacing or 429 cooldown).
+- After each **HTTP 200**, the lock is set for **`ceil(ggg_trade_min_interval_sec + ggg_trade_extra_spacing_sec)`** seconds (integer seconds, at least 1). Defaults in code skew conservative; adjust via env in production.
+- On **HTTP 429**, the response body is parsed for `Please wait N seconds`. The lock is set for **`min(N + buffer, max_cap)`** seconds, with a **fallback** if the message cannot be parsed, and a **hard cap** to avoid unbounded waits.
+- The same lock applies to **trade search** from the app (`POST /api/trade/search` → `submit_trade_search`) so UI and workers do not each run independent burst traffic.
 
-- `PRICING_TRADE_ESTIMATE_ENABLED` — allow tier C (default `1` in example).
-- `PRICING_SCOUT_BASE_URL` — optional future tier B; empty disables.
-- `PRICING_MIN_TRADE_LISTINGS` — stop relaxing when search `total` is at least this.
-- `GGG_TRADE_FETCH_MIN_INTERVAL_SEC` — minimum delay between GGG search/fetch steps.
+The admin **Overview** → **Price jobs (background)** section lists throttle keys (including `ggg_trade2_lock` PTTL) and a **Sample jobs** table with an **Updated** column reflecting `updated_at` from Redis.
+
+## Other third-party throttling
+
+- poe.ninja and other vendors use separate Redis keys in `third_party_ratelimit.py` (`tp3:*:next`); they are **not** the same as the GGG trade2 global lock.
+
+## Environment (see [deploy/env/.env.example](../deploy/env/.env.example))
+
+| Variable | Role |
+|----------|------|
+| `PRICING_TRADE_ESTIMATE_ENABLED` | `0` disables tier C; aggregators / lookup still work |
+| `PRICING_SCOUT_BASE_URL` | Optional future tier B; empty disables |
+| `PRICING_MIN_TRADE_LISTINGS` | Stop relaxing when search `total` ≥ this |
+| `GGG_TRADE_MIN_INTERVAL_SEC` | Base part of the post-success lock TTL (alias: `GGG_TRADE_FETCH_MIN_INTERVAL_SEC`) |
+| `GGG_TRADE_EXTRA_SPACING_SEC` | **Added** to the min interval for the post-success lock (default 5) |
+| `GGG_TRADE_429_BUFFER_SEC` | Added to GGG’s parsed “wait N seconds” on 429 |
+| `GGG_TRADE_429_FALLBACK_SEC` | Lock TTL if the 429 body does not include a parseable wait (default 300) |
+| `GGG_TRADE_429_MAX_WAIT_SEC` | Upper bound for the 429 lock TTL |
+
+## Production behaviour
+
+- GGG and community sites expect conservative spacing and a clear **User-Agent** (this repo uses the same product + contact pattern as other GGG HTTP clients).
+- If tier C is too aggressive for your deployment, set `PRICING_TRADE_ESTIMATE_ENABLED=0` or raise `GGG_TRADE_*` values.
 
 ## Limitations
 

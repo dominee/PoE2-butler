@@ -34,6 +34,10 @@ Before POSTing, `backend/app/services/trade_stat_index.py` loads `GET {trade_sta
 
 All server-side calls to GGG trade endpoints use the same identifiable pattern as other GGG HTTP clients in this repo (OAuth client id, version, contact `dev@hell.sk`, product suffix). See `trade_search_user_agent()` in `backend/app/services/trade_stat_catalog.py`.
 
+## Server-side rate limiting (this repo)
+
+`POST` (create search), `GET` (list ids), and `GET` (fetch) share a **global Redis lock** so all callers (hybrid **price** worker, **trade search** API) serialize against GGG’s trade2 limits. Waits, success spacing, and **HTTP 429** backoffs are implemented in `backend/app/services/third_party_ratelimit.py` and wired from `submit_trade_search` / listing helpers. Configure via `GGG_TRADE_*` in `deploy/env/.env.example`. Operational visibility: admin **Overview** → throttle rows and [pricing_estimates.md](pricing_estimates.md) § *GGG trade2 rate limiting*.
+
 ## Sanitized POST body
 
 `backend/app/services/trade_ggg_body.py` implements `ggg_search_body_from_result_payload()`, which:

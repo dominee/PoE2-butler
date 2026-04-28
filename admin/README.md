@@ -42,9 +42,20 @@ in quotes**—quoted values often leave `$$` unexpanded so bcrypt sees garbage.
 
 ### Live dashboard refresh
 
-Set `ADMIN_DASHBOARD_REFRESH_SEC` to a positive integer (e.g. `30`) to poll
-`GET /admin/api/summary` from the Overview page and update headline numbers
-without a full reload. `0` (default) disables polling.
+- `ADMIN_DASHBOARD_REFRESH_SEC=0` (default): no JavaScript auto-poll; the
+  Overview still loads a fresh bundle on **first render** (server-side). Use a
+  normal browser reload to refresh numbers.
+- `ADMIN_DASHBOARD_REFRESH_SEC>0` (e.g. `30`): the Overview shows **Refresh now**
+  (one-shot `GET /admin/api/summary`) and **Start auto-refresh** (repeating poll
+  every *N* seconds) plus **Stop auto-refresh**. Polling does **not** start
+  automatically after login (operators choose when to poll or enable live
+  updates).
+
+**Price jobs (background)** on the same page includes arq function breakdown
+(unpickle when possible), Redis `poe2b:price_job:*` / dedupe stats, a
+**Throttles** table (PTTL for keys such as `tp3:ggg_trade:lock` and vendor
+`next` slots), and **Sample jobs (latest)** with columns including **Updated**
+(UTC) from the last `save_job_state` write in the backend.
 
 ## Routes
 
