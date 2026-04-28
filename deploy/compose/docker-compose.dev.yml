@@ -121,6 +121,35 @@ services:
     labels:
       - "traefik.enable=false"   # routing handled by static dynamic.dev.yml
 
+  # arq worker: must share ``edge`` with the API so outbound HTTPS/DNS works (trade2 is public GGG).
+  # ``internal`` alone blocks egress (see Errno -3 name resolution on pathofexile.com).
+  worker:
+    build:
+      context: ../../backend
+    container_name: poe2b-worker
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/env/.env.dev
+    environment:
+      ENVIRONMENT: dev
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
+      REDIS_URL: redis://redis:6379/0
+      GGG_OAUTH_BASE_URL: http://mock-ggg:9000
+      GGG_API_BASE_URL: http://mock-ggg:9000
+    command:
+      - arq
+      - app.workers.arq_worker.WorkerSettings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-ggg:
+        condition: service_started
+    networks:
+      - edge
+      - internal
+
   frontend:
     build:
       context: ../../frontend
