@@ -206,6 +206,8 @@ export interface PriceJobState {
   item_id: string;
   item_name?: string;
   league: string;
+  /** ISO-8601 UTC, set on each job state write */
+  updated_at?: string;
 }
 
 export interface PricingResponse {

@@ -99,6 +99,7 @@
           <th>Item</th>
           <th>Step</th>
           <th title="Chaos equivalent when present">c</th>
+          <th title="Last Redis job state write (UTC)">Updated</th>
           <th>Err</th>
         </tr>
       </thead>
@@ -115,10 +116,11 @@
           <td class="pe-item-name" style="max-width:14rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.item_id or '' }}"><span>{{ j.item_label or j.item_id }}</span></td>
           <td class="muted" style="max-width:12rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.message or j.step or '' }}">{{ (j.message or j.step or "—") | truncate(48) }}</td>
           <td>{% if j.chaos_equiv is not none %}{{ (j.chaos_equiv | float) | round(2) }}{% else %}—{% endif %}</td>
+          <td class="muted" style="max-width:12rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.updated_at or '' }}"><code style="font-size:0.85em">{{ j.updated_at or "—" }}</code></td>
           <td class="muted" style="max-width:10rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.error or '' }}">{{ (j.error or "—") | truncate(32) }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="muted">No job keys found.</td></tr>
+        <tr><td colspan="8" class="muted">No job keys found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

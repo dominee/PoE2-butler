@@ -76,7 +76,8 @@ async def await_ggg_trade_slot(redis: Redis, settings: Settings) -> None:
 
 async def ggg_trade_mark_success(redis: Redis, settings: Settings) -> None:
     """After a successful GGG trade2 response, enforce min spacing before the next call."""
-    ex = max(1, int(math.ceil(float(settings.ggg_trade_min_interval_sec))))
+    base = float(settings.ggg_trade_min_interval_sec) + float(settings.ggg_trade_extra_spacing_sec)
+    ex = max(1, int(math.ceil(base)))
     await redis.set(KEY_GGG_TRADE_LOCK, "1", ex=ex)
 
 

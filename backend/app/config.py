@@ -80,6 +80,8 @@ class Settings(BaseSettings):
             "ggg_trade_fetch_min_interval_sec",
         ),
     )
+    # Added on top of min_interval for the global trade2 lock after each HTTP 200.
+    ggg_trade_extra_spacing_sec: float = 5.0
     ggg_trade_429_buffer_sec: int = 15
     ggg_trade_429_fallback_sec: int = 300
     ggg_trade_429_max_wait_sec: int = 600

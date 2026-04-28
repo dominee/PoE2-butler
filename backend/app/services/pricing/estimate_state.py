@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -22,6 +23,7 @@ class PriceJobState(BaseModel):
     item_id: str = ""
     item_name: str = ""
     league: str = ""
+    updated_at: str = ""
 
 
 def job_key(job_id: str) -> str:
@@ -33,7 +35,9 @@ def dedup_key(user_id: str, item_id: str, league: str) -> str:
 
 
 async def save_job_state(redis, job_id: str, state: PriceJobState, *, ttl_sec: int = 3600) -> None:
-    await redis.set(job_key(job_id), state.model_dump_json(), ex=ttl_sec)
+    now = datetime.now(UTC).replace(microsecond=0).isoformat()
+    stamped = state.model_copy(update={"updated_at": now})
+    await redis.set(job_key(job_id), stamped.model_dump_json(), ex=ttl_sec)
 
 
 async def load_job_state(redis, job_id: str) -> PriceJobState | None:

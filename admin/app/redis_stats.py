@@ -207,6 +207,8 @@ def _price_job_sample_row(redis_key: str, d: dict[str, Any]) -> dict[str, Any]:
     if err is not None:
         es = str(err)
         e_short = es[:240] + ("…" if len(es) > 240 else "")
+    upd = d.get("updated_at")
+    updated_display = str(upd).strip() if isinstance(upd, str) and upd.strip() else None
     return {
         "job_id": (jid[:8] + "…") if len(jid) > 12 else jid,
         "job_id_full": jid,
@@ -219,6 +221,7 @@ def _price_job_sample_row(redis_key: str, d: dict[str, Any]) -> dict[str, Any]:
         "message": str(d.get("message") or "")[:160],
         "chaos_equiv": chaos,
         "error": e_short,
+        "updated_at": updated_display,
     }
 
 
