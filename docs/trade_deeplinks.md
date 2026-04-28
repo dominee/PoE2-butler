@@ -23,7 +23,8 @@ Verified against `https://www.pathofexile.com/api/trade2/search` (2026):
 | **Unique name** | For `rarity: unique`, set `query.name` to the unique’s display name (e.g. `"Headhunter"`) together with `query.type` as the base (e.g. `"Heavy Belt"`). Without `name`, the trade site matches every item of that base. |
 | **Rarity** | `query.filters.type_filters.filters.rarity.option` uses only GGG-supported values: `normal`, `magic`, `rare`, `unique`, `uniquefoil`, `nonunique`. The `type_filters` group sets `disabled: false`. Currency, gems, divination cards, and quest items have **no** rarity filter (those strings are not valid trade rarity options). |
 | **Stats** | `query.stats` is a list of blocks `{ "type": "and", "filters": [ … ] }`. Each filter uses GGG stat ids like `explicit.stat_<numeric_hash>` and optional `value` `{ "min", "max" }`. Implicit / explicit / rune / enchant prefixes differ (`implicit.stat_…`, `rune.stat_…`, etc.). |
-| **Poll results** | `GET https://www.pathofexile.com/api/trade2/search/{league}/{id}` returns listing keys; not used by Hideout Butler today. |
+| **Poll results** | `GET https://www.pathofexile.com/api/trade2/search/{league}/{id}` returns `result` (listing id strings) and `total`. Used by the **hybrid price estimate** worker to sample listings (see [pricing_estimates.md](pricing_estimates.md)). |
+| **Fetch item JSON** | `GET https://www.pathofexile.com/api/trade2/fetch/{id1},{id2},...?query={search_id}` returns full listing payloads (include `listing.price`). Batches are small (typically up to ~10 ids per request). Same `User-Agent` as other GGG trade calls. |
 
 ## Stat id resolution
 

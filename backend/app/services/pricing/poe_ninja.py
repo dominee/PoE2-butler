@@ -102,3 +102,18 @@ class PoeNinjaSource:
         self._cache[cache_key] = data
         self._cache_ts[cache_key] = now
         return data
+
+    async def currency_chaos_map(self, league: str) -> dict[str, float]:
+        """Lowercased currency display names -> chaos value (for trade listing conversion)."""
+        data = await self._fetch_bucket(league, "Currency")
+        lines = data.get("lines", []) if isinstance(data, dict) else []
+        out: dict[str, float] = {"chaos": 1.0, "chaos orb": 1.0}
+        for line in lines:
+            if not isinstance(line, dict):
+                continue
+            name = str(line.get("currencyTypeName") or line.get("name") or "").strip()
+            v = line.get("chaosValue") or line.get("chaosEquivalent")
+            if not name or v is None:
+                continue
+            out[name.lower()] = float(v)
+        return out

@@ -9,6 +9,7 @@ import {
   useStashTab,
 } from "@/api/hooks";
 import type { Item, ItemRarity } from "@/api/types";
+import { CurrencyExchangeHint } from "@/features/app/CurrencyExchangeHint";
 import { ItemCard } from "@/features/items/ItemCard";
 import { useUIStore } from "@/store/uiStore";
 
@@ -155,6 +156,8 @@ export function StashBrowser({
           </button>
         </div>
       </div>
+
+      <CurrencyExchangeHint league={league} />
 
       <div className="flex flex-wrap items-center gap-2 rounded-md border border-ink-800 bg-ink-900/60 px-3 py-2">
         <label className="sr-only" htmlFor="stash-search">

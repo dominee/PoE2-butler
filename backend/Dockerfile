@@ -13,15 +13,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# Install dependencies first (layer caching)
-COPY pyproject.toml ./
-RUN uv sync --no-dev --no-install-project
+# Install dependencies first (layer caching). Use lockfile so Linux/arm64 gets wheels
+# (e.g. greenlet) that match `uv lock` on the host; a bare resolve can pick versions
+# without aarch64 wheels.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy app source, alembic config and install the project itself
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
-RUN uv sync --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project
 
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
     && chown -R app:app /app

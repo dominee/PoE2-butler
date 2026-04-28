@@ -2,8 +2,10 @@ import { useState } from "react";
 
 import {
   useCreateShare,
+  useCurrencyRates,
   useItemText,
   usePriceLookup,
+  useRefinedPriceEstimate,
   useRevokeShare,
   useTradeSearch,
   useUpdatePrefs,
@@ -16,7 +18,12 @@ import { PANE_RARITY_BORDER, RARITY_NAME_CLASS } from "@/features/items/itemVisu
 import type { Item, ItemRarity, Prefs } from "@/api/types";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
-import { computeItemScore } from "./itemMetrics";
+import {
+  computeItemScore,
+  currencyRatesToChaosPair,
+  formatChaosAsDivExLine,
+  formatPriceEstimateLine,
+} from "./itemMetrics";
 import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
@@ -54,6 +61,15 @@ export function ItemDetailPane({
 
   const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
   const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
+  const currencyRatesQ = useCurrencyRates(isApp ? league : null);
+  const currencyChaos = currencyRatesToChaosPair(currencyRatesQ.data);
+  const tradeTol = localTolerance ?? prefs?.trade_tolerance_pct ?? 10;
+  const refinedQ = useRefinedPriceEstimate(
+    isApp ? league : null,
+    item,
+    tradeTol,
+    Boolean(isApp && league && item),
+  );
 
   if (!item) {
     return (
@@ -63,7 +79,7 @@ export function ItemDetailPane({
     );
   }
 
-  const tolerance = localTolerance ?? prefs?.trade_tolerance_pct ?? 10;
+  const tolerance = tradeTol;
   const visibleProps = usefulProperties(item.properties);
   const visibleReqs = usefulProperties(item.requirements);
   const { prefixes, suffixes } = splitExplicitMods(item.explicit_mods, item.rarity);
@@ -190,7 +206,49 @@ export function ItemDetailPane({
           </div>
           {price && (
             <div className="mt-1">
-              <PriceBadge price={price} threshold={prefs?.valuable_threshold_chaos} />
+              <PriceBadge
+                price={price}
+                threshold={prefs?.valuable_threshold_chaos}
+                currencyChaos={currencyChaos}
+              />
+            </div>
+          )}
+          {isApp && league && (
+            <div className="mt-1 space-y-0.5 text-[11px] text-ink-500">
+              {refinedQ.job?.status === "queued" || refinedQ.job?.status === "running" ? (
+                <span>Refined estimate: working…</span>
+              ) : null}
+              {refinedQ.job?.status === "failed" && (
+                <span className="text-amber-300/90">Refined estimate unavailable (try again later)</span>
+              )}
+              {refinedQ.job?.status === "completed" &&
+                refinedQ.job.result &&
+                (refinedQ.job.result.estimate_method === "trade_median" ||
+                  refinedQ.job.result.estimate_method === "poe2scout") && (
+                  <div
+                    className="text-parchment-200/90"
+                    title={
+                      refinedQ.job.result.estimate_method === "trade_median"
+                        ? `Median from ${refinedQ.job.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
+                        : undefined
+                    }
+                  >
+                    <span className="text-ink-500">
+                      {refinedQ.job.result.estimate_method === "trade_median"
+                        ? "Trade median: "
+                        : "Refined: "}
+                    </span>
+                    <span className="font-mono text-ember-200/90">
+                      {currencyChaos
+                        ? formatChaosAsDivExLine(refinedQ.job.result.chaos_equiv, currencyChaos)
+                        : formatPriceEstimateLine(refinedQ.job.result)}
+                    </span>
+                    {refinedQ.job.result.estimate_method === "trade_median" &&
+                    refinedQ.job.result.sample_size != null ? (
+                      <span className="text-ink-600"> ({refinedQ.job.result.sample_size} listings)</span>
+                    ) : null}
+                  </div>
+                )}
             </div>
           )}
         </div>

@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     pricing_source: Literal["static", "poe_ninja"] = "static"
     pricing_base_url: str = "https://poe.ninja/api/data"
     default_valuable_threshold_chaos: int = 100
+    # Hybrid trade-based estimates (see docs/pricing_estimates.md)
+    pricing_trade_estimate_enabled: bool = True
+    pricing_scout_base_url: str = ""
+    pricing_min_trade_listings: int = 5
+    ggg_trade_fetch_min_interval_sec: float = 0.55
+    # Fallback when poe.ninja is not the active source (rough conversion to chaos)
+    trade_listing_divine_to_chaos: float = 250.0
+    trade_listing_exalt_to_chaos: float = 8.0
 
     # PoE2 trade site public filter metadata (optional; used by trade_stat_catalog).
     trade_filter_data_url: str = "https://www.pathofexile.com/api/trade2/data/filters"

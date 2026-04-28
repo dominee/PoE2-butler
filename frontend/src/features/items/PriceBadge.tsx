@@ -1,15 +1,20 @@
 import type { PriceEstimate } from "@/api/types";
-import { formatChaos } from "./itemMetrics";
+import { type CurrencyChaosPair, formatChaos, formatChaosAsDivExLine } from "./itemMetrics";
 
 export interface PriceBadgeProps {
   price: PriceEstimate | null | undefined;
   threshold?: number;
   compact?: boolean;
+  /** When set (e.g. from poe.ninja), show `div (ex)` instead of chaos only. */
+  currencyChaos?: CurrencyChaosPair | null;
 }
 
-export function PriceBadge({ price, threshold, compact }: PriceBadgeProps) {
+export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBadgeProps) {
   if (!price) return null;
   const valuable = threshold != null && price.chaos_equiv >= threshold;
+  const label = currencyChaos
+    ? formatChaosAsDivExLine(price.chaos_equiv, currencyChaos)
+    : `${formatChaos(price.chaos_equiv)}c`;
   return (
     <span
       className={[
@@ -23,7 +28,7 @@ export function PriceBadge({ price, threshold, compact }: PriceBadgeProps) {
       data-testid="price-badge"
     >
       <span aria-hidden="true">◈</span>
-      <span>{formatChaos(price.chaos_equiv)}c</span>
+      <span className="font-mono tabular-nums">{label}</span>
     </span>
   );
 }

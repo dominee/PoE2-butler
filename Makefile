@@ -164,19 +164,20 @@ check: ensure-node-modules
 	cd $(FRONTEND) && npm test
 
 # Full host-tool-independent gate:
-# - Runs backend/admin/mock/frontend checks in Docker containers.
+# - Runs backend/admin/mock/frontend checks in Docker containers (UV_LINK_MODE=copy
+#   avoids hardlink warnings when the repo is bind-mounted).
 # - Runs security scans used by security-review.yml in Docker as visibility-only
 #   (scan findings do not fail this target yet, matching current CI policy).
 test-all-docker:
 	@echo "==> [docker] backend lint + tests"
-	docker run --rm -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv sync --frozen || uv sync; uv run ruff check .; uv run pytest -ra"
+	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "(uv sync --frozen || uv sync) && uv run ruff check . && uv run pytest -ra"
 	@echo "==> [docker] admin lint + tests"
-	docker run --rm -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv sync --frozen || uv sync; uv run ruff check .; uv run pytest -ra"
+	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "(uv sync --frozen || uv sync) && uv run ruff check . && uv run pytest -ra"
 	@echo "==> [docker] mock-ggg lint"
-	docker run --rm -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv sync --frozen || uv sync; uv run ruff check ."
+	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "(uv sync --frozen || uv sync) && uv run ruff check ."
 	@echo "==> [docker] frontend lint + typecheck + unit tests"
 	docker run --rm -v "$(PWD):/work" -w /work/frontend node:22 \
 		sh -lc "npm install && npm run lint && npx tsc -b && npm test"

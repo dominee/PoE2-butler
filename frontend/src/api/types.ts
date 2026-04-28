@@ -190,11 +190,35 @@ export interface PriceEstimate {
   source: string;
   confidence: number;
   note: string | null;
+  /** e.g. ``aggregator`` | ``trade_median`` | ``poe2scout`` */
+  estimate_method?: string | null;
+  sample_size?: number | null;
+  relaxation_steps?: number | null;
+}
+
+export interface PriceJobState {
+  status: "queued" | "running" | "completed" | "failed";
+  step: string;
+  message: string;
+  result: PriceEstimate | null;
+  error: string | null;
+  user_id: string;
+  item_id: string;
+  league: string;
 }
 
 export interface PricingResponse {
   league: string;
   prices: Record<string, PriceEstimate | null>;
+}
+
+/** GET /api/pricing/currency-rates */
+export interface CurrencyRatesResponse {
+  league: string;
+  chaos_per_divine: number;
+  chaos_per_exalted: number;
+  exalted_per_divine: number | null;
+  source: string;
 }
 
 export interface StashColour {

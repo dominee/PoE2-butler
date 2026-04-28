@@ -7,12 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml ./
-RUN uv sync --no-dev --no-install-project
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 COPY config ./config
 COPY app ./app
-RUN uv sync --no-dev
+RUN uv sync --frozen --no-dev
 
 RUN useradd --uid 10002 --no-create-home --shell /usr/sbin/nologin mock \
     && chown -R mock:mock /app

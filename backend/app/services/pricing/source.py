@@ -23,6 +23,9 @@ class PriceEstimate(BaseModel):
     source: str
     confidence: float = 1.0
     note: str | None = None
+    estimate_method: str | None = None
+    sample_size: int | None = None
+    relaxation_steps: int | None = None
 
 
 class PriceSource(Protocol):

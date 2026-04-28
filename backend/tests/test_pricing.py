@@ -5,12 +5,28 @@ from __future__ import annotations
 import pytest
 from fakeredis.aioredis import FakeRedis
 
+from app.config import Settings
 from app.domain.item import Item
 from app.services.pricing.cache import PriceCache
+from app.services.pricing.currency_rates import resolve_currency_rates
 from app.services.pricing.matcher import match_item
 from app.services.pricing.service import PricingService
 from app.services.pricing.source import PriceEstimate, PriceUnit
 from app.services.pricing.static import StaticPriceSource
+
+
+@pytest.mark.asyncio
+async def test_resolve_currency_rates_static_fallback_ex_per_div() -> None:
+    s = Settings(
+        pricing_source="static",
+        trade_listing_divine_to_chaos=250,
+        trade_listing_exalt_to_chaos=10,
+    )
+    r = await resolve_currency_rates(s, "Dawn of the Hunt")
+    assert r["chaos_per_divine"] == 250.0
+    assert r["chaos_per_exalted"] == 10.0
+    assert r["exalted_per_divine"] == 25.0
+    assert r["source"] == "config_fallback"
 
 
 def _item(**kwargs) -> Item:

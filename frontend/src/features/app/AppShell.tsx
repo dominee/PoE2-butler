@@ -11,7 +11,9 @@ import {
 } from "@/api/hooks";
 import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
+import { CurrencyExchangeHint } from "@/features/app/CurrencyExchangeHint";
 import { AppFooter } from "@/features/app/AppFooter";
+import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import { CharacterTable } from "@/features/characters/CharacterTable";
@@ -183,7 +185,8 @@ export function AppShell() {
             Stash
           </button>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
+          <HeaderCurrencyRates league={selectedLeague} />
           <select
             value={selectedLeague ?? ""}
             onChange={(event) => setLeague(event.target.value || null)}
@@ -228,13 +231,16 @@ export function AppShell() {
           </section>
 
           <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-parchment-100/80">
-                {selectedCharacter ? `${selectedCharacter} — equipped` : "Select a character"}
-              </h2>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-parchment-100/80">
+                  {selectedCharacter ? `${selectedCharacter} — equipped` : "Select a character"}
+                </h2>
+                <CurrencyExchangeHint league={selectedLeague} className="mt-0.5" />
+              </div>
               {characterQ.data && (
                 <div
-                  className="ml-auto inline-flex rounded-md border border-ink-700 bg-ink-800 text-xs"
+                  className="inline-flex shrink-0 rounded-md border border-ink-700 bg-ink-800 text-xs"
                   role="radiogroup"
                   aria-label="Gear layout"
                 >
