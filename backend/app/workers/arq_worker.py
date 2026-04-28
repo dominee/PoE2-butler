@@ -31,6 +31,7 @@ from app.domain.item import parse_item
 from app.logging import configure_logging, get_logger
 from app.security.crypto import TokenCipher
 from app.services.pricing import PriceCache
+from app.services.pricing.estimate_engine import item_from_payload, run_hybrid_price_estimate
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.static import StaticPriceSource
@@ -122,6 +123,58 @@ async def warm_prices(ctx: dict, user_id: str, league: str) -> dict:
             await source.aclose()  # type: ignore[attr-defined]
 
 
+async def price_estimate_item(
+    ctx: dict,
+    job_id: str,
+    user_id: str,
+    league: str,
+    item_dict: dict,
+    tolerance_pct: float,
+) -> dict:
+    """Background hybrid price estimate (see :doc:`docs/pricing_estimates.md`)."""
+    log = get_logger("app.workers.price_estimate_item")
+    settings = get_settings()
+    redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    source = (
+        PoeNinjaSource(settings.pricing_base_url)
+        if settings.pricing_source == "poe_ninja"
+        else StaticPriceSource()
+    )
+    cache = PriceCache(redis)
+    pricing = PricingService(source, cache)
+    try:
+        item = item_from_payload(item_dict)
+        out = await run_hybrid_price_estimate(
+            settings,
+            redis,
+            user_id,
+            item,
+            league,
+            float(tolerance_pct),
+            job_id=job_id,
+            price_svc=pricing,
+        )
+        return {"ok": True, "chaos": out.chaos_equiv if out else None}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("price_estimate_item.failed", error=str(exc), job_id=job_id)
+        from app.services.pricing.estimate_state import PriceJobState, save_job_state
+
+        st = PriceJobState(
+            user_id=user_id,
+            item_id=str(item_dict.get("id", "")),
+            league=league,
+            status="failed",
+            error=str(exc)[:200],
+            message="error",
+        )
+        await save_job_state(redis, job_id, st)
+        return {"ok": False, "error": str(exc)}
+    finally:
+        if hasattr(source, "aclose"):
+            await source.aclose()  # type: ignore[attr-defined]
+        await redis.aclose()
+
+
 async def refresh_trade_filter_catalog(ctx: dict) -> dict:
     """Background refresh of GGG trade filter / stat metadata (see trade_stat_catalog)."""
     from app.services import trade_stat_catalog as tsc
@@ -164,7 +217,7 @@ async def shutdown(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    functions = [refresh_user, warm_prices, refresh_trade_filter_catalog]
+    functions = [refresh_user, warm_prices, price_estimate_item, refresh_trade_filter_catalog]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

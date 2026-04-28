@@ -182,6 +182,34 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
     return {"query": query, "sort": {"price": "asc"}}
 
 
+def stat_filters_for_exact_item(item: Item, tolerance_pct: float) -> list[dict[str, Any]]:
+    """Stat filter rows for an exact search (same rules as :func:`build_exact_search`)."""
+    if tolerance_pct < 0:
+        raise ValueError("tolerance_pct_must_be_non_negative")
+    return _stat_filters_for_exact(_bucketize(item), tolerance_pct)
+
+
+def build_exact_search_with_stat_filters(
+    item: Item,
+    stat_filters: list[dict[str, Any]],
+    *,
+    tolerance_pct: float = 10.0,
+    league: str | None = None,
+) -> dict[str, Any]:
+    """Build exact search payload using a (possibly relaxed) stat filter list."""
+    if tolerance_pct < 0:
+        raise ValueError("tolerance_pct_must_be_non_negative")
+    payload = _query_shell(item, stat_filters)
+    payload["mode"] = "exact"
+    payload["tolerance_pct"] = tolerance_pct
+    return {
+        "mode": "exact",
+        "league": league or item.inventory_id or "",
+        "url": build_trade_url(league or ""),
+        "payload": payload,
+    }
+
+
 def build_exact_search(
     item: Item,
     *,
@@ -195,7 +223,7 @@ def build_exact_search(
     """
     if tolerance_pct < 0:
         raise ValueError("tolerance_pct_must_be_non_negative")
-    stats = _stat_filters_for_exact(_bucketize(item), tolerance_pct)
+    stats = stat_filters_for_exact_item(item, tolerance_pct)
     payload = _query_shell(item, stats)
     payload["mode"] = "exact"
     payload["tolerance_pct"] = tolerance_pct

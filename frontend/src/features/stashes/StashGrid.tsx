@@ -1,4 +1,5 @@
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
+import { itemIconDisplayUrl } from "@/features/items/itemRarityFavicon";
 import { formatChaos } from "@/features/items/itemMetrics";
 import { stripTags } from "@/utils/modText";
 
@@ -97,39 +98,27 @@ export function StashGrid({
               />
             )}
 
-            {/* Item icon — primary content */}
-            {item.icon ? (
-              <>
-                <img
-                  src={item.icon}
-                  alt=""
-                  className="h-full w-full object-contain"
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                    if (e.currentTarget.nextElementSibling) {
-                      (e.currentTarget.nextElementSibling as HTMLElement).style.display = "flex";
-                    }
-                  }}
-                />
-                {/* Fallback text (hidden while image loads) */}
-                <div
-                  className="hidden h-full w-full flex-col items-center justify-center gap-0.5 px-0.5 text-center leading-tight"
-                  aria-hidden="true"
-                >
-                  <span className="line-clamp-2">{item.name || item.type_line}</span>
-                </div>
-              </>
-            ) : (
-              /* No icon — text fallback */
-              <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center leading-tight">
-                {item.name && <span className="line-clamp-2 font-display">{item.name}</span>}
-                {!item.name && <span className="line-clamp-2">{item.type_line}</span>}
-                {item.stack_size != null && (
-                  <span className="text-parchment-100/90">x{item.stack_size}</span>
-                )}
+            {/* Item icon — primary content (CDN or rarity placeholder) */}
+            <>
+              <img
+                src={itemIconDisplayUrl(item)}
+                alt=""
+                className="h-full w-full object-contain"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  if (e.currentTarget.nextElementSibling) {
+                    (e.currentTarget.nextElementSibling as HTMLElement).style.display = "flex";
+                  }
+                }}
+              />
+              <div
+                className="hidden h-full w-full flex-col items-center justify-center gap-0.5 px-0.5 text-center leading-tight"
+                aria-hidden="true"
+              >
+                <span className="line-clamp-2">{item.name || item.type_line}</span>
               </div>
-            )}
+            </>
 
             {/* Stack size badge (bottom-left, always visible) */}
             {item.stack_size != null && item.stack_size > 1 && (

@@ -2,6 +2,7 @@ import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
 import { stripTags } from "@/utils/modText";
 
 import { PriceBadge } from "./PriceBadge";
+import { itemIconDisplayUrl } from "./itemRarityFavicon";
 
 const RARITY_CLASSNAME: Record<ItemRarity, string> = {
   Normal: "text-rarity-normal border-ink-600",
@@ -81,9 +82,9 @@ export function ItemCard({
       )}
       <div className="flex items-start justify-between gap-2">
         {/* Icon thumbnail */}
-        {item.icon && !compact && (
+        {!compact && (
           <img
-            src={item.icon}
+            src={itemIconDisplayUrl(item)}
             alt=""
             className="mt-0.5 h-8 w-8 shrink-0 object-contain"
             loading="lazy"

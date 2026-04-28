@@ -15,6 +15,7 @@ from redis.asyncio import Redis
 # Key prefix: ``tp3:{vendor}`` — one logical slot per job tick (fixed window).
 KEY_POE_NINJA = "tp3:poe_ninja"
 KEY_GGG_TRADE_META = "tp3:ggg_trade_data"
+KEY_GGG_TRADE_FETCH = "tp3:ggg_trade_fetch"
 KEY_GENERIC = "tp3:generic"
 
 # Default minimum spacing between calls for hot loops (seconds).

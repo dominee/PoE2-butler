@@ -44,7 +44,7 @@ Authoritative detail: [INSTRUCTIONS.md](INSTRUCTIONS.md) section **“Product ex
 - **Image export:** Client-side PNG (two layouts) in [`frontend/src/features/items/ItemImageExport.tsx`](frontend/src/features/items/ItemImageExport.tsx) (`html-to-image`); no mandatory server render on small VM.
 - **Stat summary:** [`backend/app/domain/stat_summary.py`](backend/app/domain/stat_summary.py) (heuristic MVP); expand data files later.
 - **Queue:** **Redis + arq** for background work; per–API throttling in [`backend/app/services/third_party_ratelimit.py`](backend/app/services/third_party_ratelimit.py); job `refresh_trade_filter_catalog` in worker. No RabbitMQ unless requirements outgrow this.
-- **Pricing phase 1:** Aggregators (e.g. poe.ninja) + trade **links**; label as aggregate, not live market; **no** GGG trade scraping.
+- **Pricing (hybrid):** Aggregators (e.g. poe.ninja) for bulk/cache + optional community APIs; for detail-pane “refined” numbers, the **public** GGG PoE2 **trade JSON** API (search + listing fetch) may compute a **median** of comparable sales — not browser HTML scraping. Label as indicative / snapshot, not a live market guarantee. See [docs/pricing_estimates.md](docs/pricing_estimates.md) and [docs/trade_deeplinks.md](docs/trade_deeplinks.md).
 - **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) (bundled template→stat hash map) + [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py); deep link POST in [`backend/app/services/trade_search_submit.py`](backend/app/services/trade_search_submit.py); see [docs/trade_deeplinks.md](docs/trade_deeplinks.md); weighted/sum filters later.
 
 ---

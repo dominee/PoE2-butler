@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./client";
@@ -7,10 +9,12 @@ import type {
   CharacterDetail,
   CharactersResponse,
   CreateShareResponse,
+  CurrencyRatesResponse,
   Item,
   LeaguesResponse,
   Me,
   Prefs,
+  PriceJobState,
   PricingResponse,
   PublicItemResponse,
   RefreshResponse,
@@ -110,6 +114,8 @@ export function useRefresh() {
       qc.invalidateQueries({ queryKey: queryKeys.leagues });
       qc.invalidateQueries({ queryKey: queryKeys.me });
       qc.invalidateQueries({ queryKey: ["activity"] });
+      qc.invalidateQueries({ queryKey: ["currency-rates"] });
+      qc.invalidateQueries({ queryKey: ["prices"] });
     },
   });
 }
@@ -201,6 +207,19 @@ export function usePriceLookup(league: string | null, items: Item[]) {
   });
 }
 
+/** Divine/Exalted chaos rates and ex-per-div (poe.ninja or server fallbacks). */
+export function useCurrencyRates(league: string | null) {
+  return useQuery<CurrencyRatesResponse>({
+    queryKey: ["currency-rates", league],
+    queryFn: () =>
+      api.get<CurrencyRatesResponse>(
+        `/api/pricing/currency-rates?league=${encodeURIComponent(league ?? "")}`,
+      ),
+    enabled: Boolean(league),
+    staleTime: 120_000,
+  });
+}
+
 export function useStashSearch(league: string | null, q: string) {
   return useQuery<StashSearchResponse>({
     queryKey: queryKeys.stashSearch(league, q),
@@ -221,6 +240,66 @@ export function useActivity(league: string | null) {
     enabled: Boolean(league),
     staleTime: 30_000,
   });
+}
+
+/**
+ * Enqueues a hybrid (aggregator + trade median) job and polls Redis-backed status.
+ * See ``docs/pricing_estimates.md``.
+ */
+export function useRefinedPriceEstimate(
+  league: string | null,
+  item: Item | null,
+  tolerancePct: number,
+  enabled: boolean,
+) {
+  const sessionKey = league && item ? `${league}::${item.id}` : "";
+  const [jobId, setJobId] = useState<string | null>(null);
+  const prevKey = useRef<string>("");
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (sessionKey === prevKey.current) return;
+    prevKey.current = sessionKey;
+    setJobId(null);
+    started.current = false;
+  }, [sessionKey]);
+
+  useEffect(() => {
+    if (!sessionKey || !enabled || !item) return;
+    if (started.current) return;
+    started.current = true;
+    (async () => {
+      try {
+        const r = await api.post<{ job_id: string; deduped: boolean }>("/api/pricing/estimate", {
+          league,
+          item,
+          tolerance_pct: tolerancePct,
+        });
+        setJobId(r.job_id);
+      } catch {
+        started.current = false;
+      }
+    })();
+  }, [sessionKey, enabled, item, league, tolerancePct]);
+
+  const jobQ = useQuery<PriceJobState>({
+    queryKey: ["price-estimate", jobId],
+    queryFn: () =>
+      api.get<PriceJobState>(`/api/pricing/estimate/${encodeURIComponent(jobId ?? "")}`),
+    enabled: Boolean(jobId),
+    refetchInterval: (q) => {
+      const s = q.state.data?.status;
+      if (s === "completed" || s === "failed") return false;
+      return 1000;
+    },
+  });
+
+  return {
+    jobId,
+    job: jobQ.data,
+    isLoading: jobQ.isLoading || jobQ.isFetching,
+    error: jobQ.error,
+  };
 }
 
 export function useLogout() {
