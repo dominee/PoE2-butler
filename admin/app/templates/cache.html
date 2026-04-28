@@ -30,6 +30,7 @@
 </section>
 <section>
   <h2>Queue (arq)</h2>
+  <p class="muted" style="margin:0 0 0.5rem">See <strong>Price jobs (background)</strong> below for per-function queue breakdown and job rows.</p>
   <table class="data">
     <tbody>
       <tr><th>Queued</th><td>{{ queue.queued }}</td></tr>
@@ -37,4 +38,6 @@
     </tbody>
   </table>
 </section>
+
+{% include "partials/price_estimates.html" %}
 {% endblock %}

@@ -115,6 +115,8 @@
   <p class="muted" style="margin:0"><code id="m-last-sn">{{ metrics_iso.last_snapshot_at or "—" }}</code></p>
 </section>
 
+{% include "partials/price_estimates.html" %}
+
 {% if dashboard_refresh_sec > 0 %}
 <p class="refresh-hint">Live refresh every {{ dashboard_refresh_sec }}s via <code>/admin/api/summary</code>.</p>
 <script>
@@ -142,6 +144,34 @@
       set("t-redis-clients", j.redis.connected_clients != null ? j.redis.connected_clients : "—");
       set("t-redis-evict", j.redis.evicted_keys != null ? j.redis.evicted_keys : "—");
       set("t-redis-exp", j.redis.expired_keys != null ? j.redis.expired_keys : "—");
+      var pe = j.price_estimates || {};
+      var arq = j.arq_jobs || {};
+      set("m-pe-scanned", pe.scanned != null ? pe.scanned : "—");
+      set("m-pe-dedup", pe.dedup_keys != null ? pe.dedup_keys : "—");
+      set("m-pe-inflight", pe.in_flight_states != null ? pe.in_flight_states : "—");
+      var tslots = pe.throttle_slots || [];
+      var tOn = 0;
+      for (var ti = 0; ti < tslots.length; ti++) { if (tslots[ti].active) tOn++; }
+      set("m-pe-throttle-on", tOn + " / " + tslots.length);
+      var st = pe.by_status || {};
+      set("m-pe-st-queued", st.queued != null ? st.queued : "—");
+      set("m-pe-st-running", st.running != null ? st.running : "—");
+      set("m-pe-st-completed", st.completed != null ? st.completed : "—");
+      set("m-pe-st-failed", st.failed != null ? st.failed : "—");
+      set("m-pe-st-unknown", st.unknown != null ? st.unknown : "—");
+      var qEl = document.getElementById("arq-queued-fns");
+      if (qEl) qEl.textContent = JSON.stringify(arq.queued_by_function || {});
+      var iEl = document.getElementById("arq-inprog-fns");
+      if (iEl) iEl.textContent = JSON.stringify(arq.in_progress_by_function || {});
+      var fq = document.querySelector("[data-arq-fq]");
+      var fip = document.querySelector("[data-arq-fip]");
+      if (fq) fq.textContent = arq.unpickle_failed_queued != null ? arq.unpickle_failed_queued : 0;
+      if (fip) fip.textContent = arq.unpickle_failed_in_progress != null ? arq.unpickle_failed_in_progress : 0;
+      var un = document.querySelector("[data-arq-unpickle-note]");
+      if (un) {
+        if (arq.unpickle_note) { un.textContent = arq.unpickle_note; un.style.display = ""; }
+        else { un.textContent = ""; un.style.display = "none"; }
+      }
     } catch (e) {}
   }
   setInterval(tick, sec * 1000);

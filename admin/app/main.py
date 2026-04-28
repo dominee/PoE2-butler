@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -17,14 +18,18 @@ from admin.app.db import list_users, recent_snapshots
 from admin.app.middleware import AdminSecurityHeaders, IPAllowlistMiddleware
 from admin.app.redis_stats import (
     backend_health,
-    price_cache_summary,
     probe_ok,
-    queue_summary,
-    redis_summary,
 )
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _STATIC_DIR = Path(__file__).parent / "static"
+
+
+def _jinja_tojson(v: object) -> str:
+    return json.dumps(v, ensure_ascii=True, default=str, separators=(",", ":"))
+
+
+TEMPLATES.env.filters["tojson"] = _jinja_tojson
 
 
 def _session_manager() -> SessionManager:
@@ -172,15 +177,18 @@ def _register_routes(app: FastAPI) -> None:
         request: Request,
         session: AdminSession = Depends(_require_session),
     ) -> HTMLResponse:
+        bundle = await load_dashboard_bundle()
         return TEMPLATES.TemplateResponse(
             request,
             "cache.html",
             {
                 "session": session,
                 "active": "cache",
-                "redis": await redis_summary(),
-                "price_cache": await price_cache_summary(),
-                "queue": await queue_summary(),
+                "redis": bundle["redis"],
+                "price_cache": bundle["price_cache"],
+                "queue": bundle["queue"],
+                "price_estimates": bundle.get("price_estimates") or {},
+                "arq_jobs": bundle.get("arq_jobs") or {},
             },
         )
 

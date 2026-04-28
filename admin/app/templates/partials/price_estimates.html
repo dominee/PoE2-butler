@@ -1,0 +1,123 @@
+{# Background hybrid price jobs: Redis poe2b:price_job:*, dedupe, arq queue unpickle. #}
+<section class="pe-section" id="price-estimates-obs" data-pe-root>
+  <h2>Price jobs (background)</h2>
+  <p class="muted pe-sub">
+    <code>poe2b:price_job:*</code> JSON state, <code>poe2b:price_dedup:*</code> dedupe keys, arq
+    <code>arq:queue</code> / <code>arq:in-progress</code> (by function when unpickle works), and
+    <code>tp3:*:next</code> throttle slots.
+  </p>
+
+  <div class="pe-digest pe-arq-split">
+    <div>
+      <h3>arq — queued by function</h3>
+      <pre class="arq-dump" id="arq-queued-fns">{{ (arq_jobs.queued_by_function or {}) | tojson }}</pre>
+    </div>
+    <div>
+      <h3>arq — in progress by function</h3>
+      <pre class="arq-dump" id="arq-inprog-fns">{{ (arq_jobs.in_progress_by_function or {}) | tojson }}</pre>
+    </div>
+  </div>
+  <p class="muted pe-note" data-arq-unpickle-note style="{% if not arq_jobs.unpickle_note %}display:none{% endif %}">
+    {{ arq_jobs.unpickle_note or "" }}
+  </p>
+  <p class="muted pe-tiny" data-arq-fail>
+    Unpickle failures (queued / in-prog):
+    <span data-arq-fq>{{ arq_jobs.unpickle_failed_queued or 0 }}</span> /
+    <span data-arq-fip>{{ arq_jobs.unpickle_failed_in_progress or 0 }}</span>
+  </p>
+
+  <div class="pe-digest pe-grid-4" data-pe-digest>
+    <div class="metric-card">
+      <span class="label">Scanned <code>price_job</code> keys</span>
+      <span class="value" id="m-pe-scanned" data-pe-scanned>{{ price_estimates.scanned or 0 }}</span>
+      {% if price_estimates.partial_scan %}
+      <span class="sub badge badge-warn">partial scan (cap)</span>
+      {% endif %}
+    </div>
+    <div class="metric-card">
+      <span class="label">Dedupe keys</span>
+      <span class="value" id="m-pe-dedup" data-pe-dedup>{{ price_estimates.dedup_keys or 0 }}</span>
+    </div>
+    <div class="metric-card">
+      <span class="label">In flight (queued+running)</span>
+      <span class="value" id="m-pe-inflight" data-pe-inflight>{{ price_estimates.in_flight_states or 0 }}</span>
+    </div>
+    <div class="metric-card">
+      <span class="label">Throttle slots active</span>
+      <span class="value" data-pe-throttle-on>
+        {% set _tslots = price_estimates.throttle_slots or [] %}
+        <span id="m-pe-throttle-on">{{ _tslots | selectattr("active") | list | length }} / {{ _tslots | length }}</span>
+      </span>
+    </div>
+  </div>
+
+  <h3>By status</h3>
+  <div class="pe-status" data-pe-status>
+    {% set bs = price_estimates.by_status or {} %}
+    <span class="pe-pill pe-q" data-st="queued">queued <strong id="m-pe-st-queued" data-pe-st-queued>{{ bs.get("queued", 0) }}</strong></span>
+    <span class="pe-pill pe-run" data-st="running">running <strong id="m-pe-st-running" data-pe-st-running>{{ bs.get("running", 0) }}</strong></span>
+    <span class="pe-pill pe-ok" data-st="completed">done <strong id="m-pe-st-completed" data-pe-st-completed>{{ bs.get("completed", 0) }}</strong></span>
+    <span class="pe-pill pe-bad" data-st="failed">failed <strong id="m-pe-st-failed" data-pe-st-failed>{{ bs.get("failed", 0) }}</strong></span>
+    <span class="pe-pill" data-st="unknown">unknown <strong id="m-pe-st-unknown" data-pe-st-unknown>{{ bs.get("unknown", 0) }}</strong></span>
+  </div>
+
+  <h3>Throttles (next available)</h3>
+  <table class="data pe-throttle" data-pe-throttle-table>
+    <thead>
+      <tr>
+        <th>Vendor</th>
+        <th>Active</th>
+        <th>Key</th>
+        <th>PTTL ms</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in price_estimates.throttle_slots or [] %}
+      <tr data-tname="{{ row.name }}">
+        <td><code>{{ row.name }}</code></td>
+        <td>{% if row.active %}<span class="badge badge-warn">wait</span>{% else %}<span class="badge badge-ok">ready</span>{% endif %}</td>
+        <td><code class="muted pe-key">{{ row.key }}</code></td>
+        <td data-pttl>{{ row.pttl_ms or 0 }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No throttle rows (empty config).</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Sample jobs (latest)</h3>
+  <div class="table-wrap">
+    <table class="data" data-pe-sample>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>League</th>
+          <th>Job</th>
+          <th>Item</th>
+          <th>Step</th>
+          <th title="Chaos equivalent when present">c</th>
+          <th>Err</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in price_estimates.sample or [] %}
+        <tr>
+          <td>
+            <span class="pe-js {{ "pe-js-" + j.status if j.status in ['queued','running','completed','failed'] else 'pe-js-unknown' }}">
+              {{ j.status }}
+            </span>
+          </td>
+          <td><code>{{ j.league or "—" }}</code></td>
+          <td><code title="{{ j.job_id_full or '' }}">{{ j.job_id }}</code></td>
+          <td><code title="{{ j.item_id or '' }}">{{ j.item_id }}</code></td>
+          <td class="muted" style="max-width:12rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.message or j.step or '' }}">{{ (j.message or j.step or "—") | truncate(48) }}</td>
+          <td>{% if j.chaos_equiv is not none %}{{ (j.chaos_equiv | float) | round(2) }}{% else %}—{% endif %}</td>
+          <td class="muted" style="max-width:10rem;overflow:hidden;text-overflow:ellipsis" title="{{ j.error or '' }}">{{ (j.error or "—") | truncate(32) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">No job keys found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

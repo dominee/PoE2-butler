@@ -61,6 +61,14 @@ def test_bundle_for_json_serializes_datetimes() -> None:
         "redis": {},
         "price_cache": {"key_count": 0, "sample": []},
         "queue": {"queued": 0, "in_progress": 0},
+        "price_estimates": {"scanned": 0, "by_status": {}, "sample": []},
+        "arq_jobs": {
+            "queued_by_function": {},
+            "in_progress_by_function": {},
+            "unpickle_failed_queued": 0,
+            "unpickle_failed_in_progress": 0,
+            "unpickle_note": None,
+        },
         "health": {},
         "upstream_ok": True,
     }
@@ -117,6 +125,21 @@ async def test_api_summary_returns_json(
             },
             "price_cache": {"key_count": 0, "sample": []},
             "queue": {"queued": 0, "in_progress": 0},
+            "price_estimates": {
+                "scanned": 0,
+                "dedup_keys": 0,
+                "in_flight_states": 0,
+                "by_status": {},
+                "sample": [],
+                "throttle_slots": [],
+            },
+            "arq_jobs": {
+                "queued_by_function": {"price_estimate_item": 1},
+                "in_progress_by_function": {},
+                "unpickle_failed_queued": 0,
+                "unpickle_failed_in_progress": 0,
+                "unpickle_note": None,
+            },
             "health": {
                 "/healthz": {
                     "status_code": 200,
@@ -149,3 +172,5 @@ async def test_api_summary_returns_json(
     assert data["totals"]["users"] == 3
     assert data["upstream_ok"] is True
     assert data["health"]["/healthz"]["version"] == "0.0.1"
+    assert "price_estimates" in data and "arq_jobs" in data
+    assert data["arq_jobs"]["queued_by_function"].get("price_estimate_item") == 1

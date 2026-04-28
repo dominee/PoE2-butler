@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 
 from admin.app.db import count_snapshots_by_kind, count_totals, dashboard_metrics
 from admin.app.redis_stats import (
+    arq_job_function_breakdown,
     backend_health,
     price_cache_summary,
+    price_estimate_observability,
     probe_ok,
     queue_summary,
     redis_summary,
@@ -39,10 +42,21 @@ async def load_dashboard_bundle() -> dict[str, Any]:
     metrics = await dashboard_metrics()
     snapshots_by_kind = await count_snapshots_by_kind()
     mix = snapshot_mix_bars(snapshots_by_kind, totals["snapshots"])
-    redis = await redis_summary()
-    price_cache = await price_cache_summary()
-    queue = await queue_summary()
-    health = await backend_health()
+    (
+        redis,
+        price_cache,
+        queue,
+        arq_jobs,
+        price_estimates,
+        health,
+    ) = await asyncio.gather(
+        redis_summary(),
+        price_cache_summary(),
+        queue_summary(),
+        arq_job_function_breakdown(),
+        price_estimate_observability(),
+        backend_health(),
+    )
     upstream_ok = all(probe_ok(v) for v in health.values()) if health else False
     return {
         "totals": totals,
@@ -56,6 +70,8 @@ async def load_dashboard_bundle() -> dict[str, Any]:
         "redis": redis,
         "price_cache": price_cache,
         "queue": queue,
+        "price_estimates": price_estimates,
+        "arq_jobs": arq_jobs,
         "health": health,
         "upstream_ok": upstream_ok,
     }
@@ -76,6 +92,8 @@ def bundle_for_json(bundle: dict[str, Any]) -> dict[str, Any]:
             "sample": bundle["price_cache"]["sample"],
         },
         "queue": bundle["queue"],
+        "price_estimates": bundle.get("price_estimates") or {},
+        "arq_jobs": bundle.get("arq_jobs") or {},
         "health": bundle["health"],
         "upstream_ok": bundle["upstream_ok"],
     }

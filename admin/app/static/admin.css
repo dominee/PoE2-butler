@@ -371,3 +371,112 @@ details ul {
   color: var(--ink-muted);
   margin-top: 1rem;
 }
+
+/* Price estimate / arq observability */
+.pe-section {
+  margin-top: 1.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.pe-section h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pe-sub,
+.pe-note,
+.pe-tiny {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.pe-digest.pe-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.pe-arq-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.pe-arq-split h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+}
+
+pre.arq-dump {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  background: var(--panel-elevated);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  max-height: 10rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pe-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.pe-pill {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.pe-pill strong {
+  font-weight: 600;
+  margin-left: 0.2rem;
+}
+
+.pe-pill.pe-q { border-color: rgba(200, 180, 120, 0.45); }
+.pe-pill.pe-run { border-color: rgba(120, 180, 220, 0.5); }
+.pe-pill.pe-ok { border-color: rgba(100, 180, 100, 0.45); }
+.pe-pill.pe-bad { border-color: rgba(200, 100, 100, 0.45); }
+
+.pe-throttle th {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.pe-key {
+  font-size: 0.7rem;
+}
+
+span.pe-js {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+span.pe-js-unknown {
+  color: var(--ink-muted);
+}
