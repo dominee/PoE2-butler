@@ -198,7 +198,7 @@ def _register_routes(app: FastAPI) -> None:
         request: Request,
         session: AdminSession = Depends(_require_session),
     ) -> HTMLResponse:
-        rows = await top_queued_price_estimate_jobs(limit=10)
+        rows = await top_queued_price_estimate_jobs(limit=50)
         await enrich_price_queue_rows(rows)
         return TEMPLATES.TemplateResponse(
             request,

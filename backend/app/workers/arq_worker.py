@@ -9,10 +9,11 @@ Entry point for the ``arq`` CLI::
 * ``refresh_user`` — re-fetch GGG snapshots for a user.
 * ``warm_prices`` — pre-fill pricing cache (poe.ninja or static) with
   :func:`app.services.third_party_ratelimit.throttle` around hot loops.
-* ``backfill_item_price_estimates`` — queue hybrid estimates (stash-only or stash+gear);
+* ``backfill_item_price_estimates`` — hybrid estimates (stash-only or stash+gear);
   missing DB rows first, then oldest ``computed_at``, capped by ``pricing_backfill_max_items``.
-  Triggered from **Apprise** (``POST /api/pricing/apprise``). Uses a **longer arq timeout**
-  (see ``arq_backfill_job_timeout_seconds``).
+  Writes each capped item to Redis as ``queued`` before work starts so admin **Price queue**
+  shows the full batch. Triggered from **Apprise** (``POST /api/pricing/apprise``). Uses a
+  **longer arq timeout** (see ``arq_backfill_job_timeout_seconds``).
 * ``refresh_trade_filter_catalog`` — download/cache PoE2 trade filter metadata
   (used by :mod:`app.services.trade_stat_catalog`).
 
@@ -32,12 +33,17 @@ from app.clients.ggg import GGGClient
 from app.config import get_settings
 from app.db.base import _session_factory
 from app.db.models import SnapshotKind, User
-from app.domain.item import parse_item
+from app.domain.item import Item, parse_item
 from app.logging import configure_logging, get_logger
 from app.security.crypto import TokenCipher
 from app.services.pricing import PriceCache
-from app.services.pricing.estimate_engine import item_from_payload, run_hybrid_price_estimate
+from app.services.pricing.estimate_engine import (
+    _item_display_name,
+    item_from_payload,
+    run_hybrid_price_estimate,
+)
 from app.services.pricing.estimate_persist import upsert_price_job_state
+from app.services.pricing.estimate_state import PriceJobState, save_job_state
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.static import StaticPriceSource
@@ -163,7 +169,6 @@ async def price_estimate_item(
         return {"ok": True, "chaos": out.chaos_equiv if out else None}
     except Exception as exc:  # noqa: BLE001
         log.warning("price_estimate_item.failed", error=str(exc), job_id=job_id)
-        from app.services.pricing.estimate_state import PriceJobState, save_job_state
 
         display = ""
         n = item_dict.get("name")
@@ -259,14 +264,29 @@ async def backfill_item_price_estimates(
             had.sort(key=lambda t: meta[t[0]])
             ordered = missing + had
             cap = max(0, settings.pricing_backfill_max_items)
+            todo: list[tuple[str, dict, str, Item]] = []
             for iid, raw in ordered[:cap]:
-                await throttle(redis, KEY_POE_NINJA)
-                job_id = str(uuid.uuid4())
                 try:
                     item = parse_item(raw)
                 except Exception:
                     log.info("backfill_item.parse_skip", item_id=iid)
                     continue
+                todo.append((iid, raw, str(uuid.uuid4()), item))
+
+            n_batch = len(todo)
+            for idx, (iid, _raw, job_id, item) in enumerate(todo):
+                q = PriceJobState(
+                    user_id=str(user_id),
+                    item_id=iid,
+                    item_name=_item_display_name(item),
+                    league=league,
+                    status="queued",
+                    message=f"queued ({idx + 1}/{n_batch})",
+                )
+                await save_job_state(redis, job_id, q)
+
+            for iid, _raw, job_id, item in todo:
+                await throttle(redis, KEY_POE_NINJA)
                 try:
                     await run_hybrid_price_estimate(
                         settings,
