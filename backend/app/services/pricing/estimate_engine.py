@@ -11,7 +11,12 @@ from app.services.pricing.poe2_scout import Poe2ScoutSource
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.source import PriceEstimate, PriceUnit
-from app.services.trade_listings import sample_median_listing_chaos, trade_search_list_result
+from app.services.trade_listings import (
+    sample_median_listing_chaos,
+    trade_currency_chaos_fallback,
+    trade_listing_ids_from_search_post,
+    trade_search_collect_string_ids,
+)
 from app.services.trade_relaxation import apply_relaxation_step, stat_filter_drop_indices
 from app.services.trade_search_submit import submit_trade_search
 from app.services.trade_stat_index import enrich_trade_payload_stat_ids, ensure_trade_stats_index
@@ -32,22 +37,14 @@ def _poe_ninja_from_settings(settings: Settings) -> PoeNinjaSource | None:
 
 
 async def build_chaos_currency_map(settings: Settings, league: str) -> dict[str, float]:
+    base = trade_currency_chaos_fallback(settings)
     poe = _poe_ninja_from_settings(settings)
     if poe is not None and league:
         m = await poe.currency_chaos_map(league)
         await poe.aclose()
         if m:
-            return m
-    d = float(settings.trade_listing_divine_to_chaos)
-    e = float(settings.trade_listing_exalt_to_chaos)
-    return {
-        "chaos": 1.0,
-        "chaos orb": 1.0,
-        "divine": d,
-        "divine orb": d,
-        "exalted": e,
-        "exalted orb": e,
-    }
+            base.update(m)
+    return base
 
 
 def _value_display_units(
@@ -146,7 +143,9 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
         enrich_trade_payload_stat_ids(pl)
         last_total = 0
         for _attempt in range(200):
-            sid, submit_rl = await submit_trade_search(settings, league, pl, redis=redis)
+            sid, post_body, submit_rl = await submit_trade_search(
+                settings, league, pl, redis=redis
+            )
             if submit_rl:
                 st.message = "GGG rate limit (trade search) — waiting before retry"
                 await save_job_state(redis, job_id, st)
@@ -154,14 +153,18 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
             if not sid:
                 log.info("price_estimate.search_submit_failed", step=step)
                 break
-            total, ids, list_rl = await trade_search_list_result(
-                settings, league, sid, redis=redis
-            )
+            post_ids, post_total = trade_listing_ids_from_search_post(post_body)
+            if post_ids:
+                total, ids, list_rl = post_total, post_ids, False
+            else:
+                total, ids, list_rl = await trade_search_collect_string_ids(
+                    settings, league, sid, redis=redis
+                )
             if list_rl:
                 st.message = "GGG rate limit (trade list) — waiting before retry"
                 await save_job_state(redis, job_id, st)
                 continue
-            if not ids or total == 0:
+            if not ids:
                 break
             med, n, sample_rl = await sample_median_listing_chaos(
                 settings,
@@ -171,6 +174,7 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
                 min_samples=1,
                 cap_ids=32,
                 redis=redis,
+                list_ids=ids,
             )
             if sample_rl:
                 st.message = "GGG rate limit (trade fetch) — waiting before retry"
@@ -180,7 +184,10 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
                 chosen_median, chosen_n, used_steps = med, n, step
                 last_total = total
             break
-        if last_total >= settings.pricing_min_trade_listings and chosen_median > 0:
+        if chosen_median > 0 and (
+            last_total >= settings.pricing_min_trade_listings
+            or chosen_n >= settings.pricing_min_trade_listings
+        ):
             break
 
     if chosen_median > 0:

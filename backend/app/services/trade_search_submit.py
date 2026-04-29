@@ -34,15 +34,20 @@ async def submit_trade_search(
     result_payload: dict[str, Any],
     *,
     redis: Redis | None = None,
-) -> tuple[str | None, bool]:
-    """POST a sanitized body to GGG; return ``(search_id, rate_limited)``.
+) -> tuple[str | None, dict[str, Any] | None, bool]:
+    """POST a sanitized body to GGG; return ``(search_id, post_json, rate_limited)``.
+
+    On HTTP 200, *post_json* is the parsed response body (includes ``id``, ``result``,
+    ``total``). As of 2026, PoE2 trade2 returns the first page of listing id strings in
+    ``POST`` ``result``; a follow-up ``GET`` for the same id often returns only
+    ``id`` + ``query`` without ``result``, so callers must read ids from *post_json*.
 
     When *redis* is set, enforces :func:`await_ggg_trade_slot` and records 429 / success
     for the global GGG trade2 lock.
     """
     league = (league or "").strip()
     if not league:
-        return None, False
+        return None, None, False
     body = ggg_search_body_from_result_payload(result_payload)
     url = trade_search_post_url(settings, league)
     if redis is not None:
@@ -60,11 +65,16 @@ async def submit_trade_search(
             )
     except (httpx.HTTPError, OSError) as exc:
         log.warning("trade_search.submit_transport_error", url=url, error=str(exc))
-        return None, False
+        return None, None, False
 
     if r.status_code == 429:
         if redis is not None:
-            w = await ggg_trade_register_429(redis, settings, r.text)
+            w = await ggg_trade_register_429(
+                redis,
+                settings,
+                r.text,
+                retry_after_header=r.headers.get("Retry-After"),
+            )
             log.warning(
                 "trade_search.submit_429",
                 wait_registered_sec=w,
@@ -77,7 +87,7 @@ async def submit_trade_search(
                 status_code=429,
                 body_preview=r.text[:500] if r.text else "",
             )
-        return None, True
+        return None, None, True
 
     if r.status_code != 200:
         log.warning(
@@ -86,18 +96,18 @@ async def submit_trade_search(
             status_code=r.status_code,
             body_preview=r.text[:500] if r.text else "",
         )
-        return None, False
+        return None, None, False
 
     try:
         data: dict[str, Any] = r.json()
     except json.JSONDecodeError:
         log.warning("trade_search.submit_bad_json", url=url)
-        return None, False
+        return None, None, False
 
     sid = data.get("id")
     if not isinstance(sid, str) or not sid.strip():
         log.warning("trade_search.submit_missing_id", url=url, keys=list(data.keys()))
-        return None, False
+        return None, None, False
     if redis is not None:
         await ggg_trade_mark_success(redis, settings)
-    return sid.strip(), False
+    return sid.strip(), data, False

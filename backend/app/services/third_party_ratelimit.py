@@ -30,6 +30,18 @@ _DEFAULT_INTERVAL = 0.35
 _GGG_WAIT_RE = re.compile(r"Please wait (\d+)\s*seconds", re.IGNORECASE)
 
 
+def parse_retry_after_header(value: str | None) -> int | None:
+    """Parse ``Retry-After`` (seconds) from a GGG HTTP 429 response."""
+    if not value:
+        return None
+    v = value.strip().split(",")[0].strip()
+    try:
+        n = int(v)
+    except ValueError:
+        return None
+    return max(1, min(n, 86400))
+
+
 def parse_ggg_rate_limit_wait_sec(body: str) -> int | None:
     """Parse ``Please wait N seconds`` from GGG JSON error body."""
     if not body:
@@ -76,17 +88,29 @@ async def await_ggg_trade_slot(redis: Redis, settings: Settings) -> None:
 
 async def ggg_trade_mark_success(redis: Redis, settings: Settings) -> None:
     """After a successful GGG trade2 response, enforce min spacing before the next call."""
-    base = float(settings.ggg_trade_min_interval_sec) + float(settings.ggg_trade_extra_spacing_sec)
+    # GGG trade policy is strict (search/list/fetch share limits). Values like 0.55s from
+    # mis-tuned env cause 429 storms; keep a hard floor so production safety wins over dev speed.
+    min_gap = max(10.0, float(settings.ggg_trade_min_interval_sec))
+    base = min_gap + float(settings.ggg_trade_extra_spacing_sec)
     ex = max(1, int(math.ceil(base)))
     await redis.set(KEY_GGG_TRADE_LOCK, "1", ex=ex)
 
 
-async def ggg_trade_register_429(redis: Redis, settings: Settings, body: str) -> int:
-    """Set lock TTL from GGG's ``Please wait N seconds`` (plus buffer), capped."""
+async def ggg_trade_register_429(
+    redis: Redis,
+    settings: Settings,
+    body: str,
+    *,
+    retry_after_header: str | None = None,
+) -> int:
+    """Set lock TTL from GGG JSON body and/or ``Retry-After`` (plus buffer), capped."""
     buf = int(settings.ggg_trade_429_buffer_sec)
     fb = int(settings.ggg_trade_429_fallback_sec)
     cap = int(settings.ggg_trade_429_max_wait_sec)
-    w = parse_ggg_rate_limit_wait_sec(body) or fb
-    total = min(cap, w + buf)
+    body_w = parse_ggg_rate_limit_wait_sec(body)
+    hdr_w = parse_retry_after_header(retry_after_header)
+    parts = [x for x in (body_w, hdr_w) if x is not None]
+    w0 = max(parts) if parts else fb
+    total = min(cap, w0 + buf)
     await redis.set(KEY_GGG_TRADE_LOCK, "429", ex=max(1, total))
     return total

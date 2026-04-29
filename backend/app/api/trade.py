@@ -57,7 +57,7 @@ async def trade_search(
     if body.mode == "exact":
         result = build_exact_search(body.item, tolerance_pct=tolerance, league=body.league)
         enrich_trade_payload_stat_ids(result["payload"])
-        search_id, _ = await submit_trade_search(
+        search_id, _, _ = await submit_trade_search(
             settings, result["league"], result["payload"], redis=redis
         )
         url = (
@@ -75,7 +75,7 @@ async def trade_search(
     if body.mode == "upgrade":
         result = build_upgrade_search(body.item, league=body.league)
         enrich_trade_payload_stat_ids(result["payload"])
-        search_id, _ = await submit_trade_search(
+        search_id, _, _ = await submit_trade_search(
             settings, result["league"], result["payload"], redis=redis
         )
         url = (

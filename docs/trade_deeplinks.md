@@ -4,7 +4,7 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 
 ## What the app does
 
-The **Same item on trade** and **Upgrade search** actions call `POST /api/trade/search`. The backend builds a PoE2-shaped `query` + `sort`, then **POSTs** that JSON to Grinding Gear Games’ public trade API to obtain a short-lived **search id**. The response `url` opens the official trade UI:
+The **Same item on trade** and **Upgrade search** actions call `POST /api/trade/search`. The backend builds a PoE2-shaped `query` + `sort`, then **POSTs** that JSON to Grinding Gear Games’ public trade API to obtain a short-lived **search id** (and, for tier C / internal callers, the full **POST** JSON including the first **`result`** page). The response `url` opens the official trade UI:
 
 `https://www.pathofexile.com/trade2/search/poe2/<league>/<search_id>`
 
@@ -17,13 +17,13 @@ Verified against `https://www.pathofexile.com/api/trade2/search` (2026):
 | Piece | Detail |
 |--------|--------|
 | **Create search** | `POST {trade_search_api_base}/{url-encoded-league}` with JSON body `{ "query": { … }, "sort": { … } }`. Default base: `https://www.pathofexile.com/api/trade2/search`. |
-| **Response** | JSON object with string `id` (and `result`, `total`, etc.). |
+| **Response** | JSON object with string `id`, optional `result` (first page of listing id strings), `total`, etc. |
 | **Browser URL** | `https://www.pathofexile.com/trade2/search/poe2/{league}/{id}` — same `id` as returned by POST. |
 | **Base item** | PoE2 expects the item base name as a **plain string** in `query.type` (e.g. `"Dualstring Bow"`). The older PoE1-style `filters.type_filters.filters.type.option` object is **invalid** here and yields `400 Invalid query`. |
 | **Unique name** | For `rarity: unique`, set `query.name` to the unique’s display name (e.g. `"Headhunter"`) together with `query.type` as the base (e.g. `"Heavy Belt"`). Without `name`, the trade site matches every item of that base. |
 | **Rarity** | `query.filters.type_filters.filters.rarity.option` uses only GGG-supported values: `normal`, `magic`, `rare`, `unique`, `uniquefoil`, `nonunique`. The `type_filters` group sets `disabled: false`. Currency, gems, divination cards, and quest items have **no** rarity filter (those strings are not valid trade rarity options). |
 | **Stats** | `query.stats` is a list of blocks `{ "type": "and", "filters": [ … ] }`. Each filter uses GGG stat ids like `explicit.stat_<numeric_hash>` and optional `value` `{ "min", "max" }`. Implicit / explicit / rune / enchant prefixes differ (`implicit.stat_…`, `rune.stat_…`, etc.). |
-| **Poll results** | `GET https://www.pathofexile.com/api/trade2/search/{league}/{id}` returns `result` (listing id strings) and `total`. Used by the **hybrid price estimate** worker to sample listings (see [pricing_estimates.md](pricing_estimates.md)). |
+| **Poll results** | `GET https://www.pathofexile.com/api/trade2/search/{league}/{id}` may return only `id` + echoed `query` (no `result` / `total`) for programmatic clients. **Use the `result` array from the successful `POST` response** as the first page of listing ids. Optional: paginate with `GET …?start=N` when the API includes `result` (e.g. null slots); the hybrid price worker uses POST ids first, then falls back to GET paging. |
 | **Fetch item JSON** | `GET https://www.pathofexile.com/api/trade2/fetch/{id1},{id2},...?query={search_id}` returns full listing payloads (include `listing.price`). Batches are small (typically up to ~10 ids per request). Same `User-Agent` as other GGG trade calls. |
 
 ## Stat id resolution
@@ -36,7 +36,7 @@ All server-side calls to GGG trade endpoints use the same identifiable pattern a
 
 ## Server-side rate limiting (this repo)
 
-`POST` (create search), `GET` (list ids), and `GET` (fetch) share a **global Redis lock** so all callers (hybrid **price** worker, **trade search** API) serialize against GGG’s trade2 limits. Waits, success spacing, and **HTTP 429** backoffs are implemented in `backend/app/services/third_party_ratelimit.py` and wired from `submit_trade_search` / listing helpers. Configure via `GGG_TRADE_*` in `deploy/env/.env.example`. Operational visibility: admin **Overview** → throttle rows and [pricing_estimates.md](pricing_estimates.md) § *GGG trade2 rate limiting*.
+`POST` (create search), optional **`GET`** (list / paging when `result` is present), and **`GET`** (fetch listings) share a **global Redis lock** so all callers (hybrid **price** worker, **trade search** API) serialize against GGG’s trade2 limits. Waits, success spacing, and **HTTP 429** backoffs are implemented in `third_party_ratelimit.py` and wired from `submit_trade_search` / `trade_listings.py`. Configure via `GGG_TRADE_*` in `deploy/env/.env.example`. Operational visibility: admin **Overview** → throttle rows and [pricing_estimates.md](pricing_estimates.md) § *GGG trade2 rate limiting*.
 
 ## Sanitized POST body
 
@@ -51,8 +51,8 @@ All server-side calls to GGG trade endpoints use the same identifiable pattern a
 CI and local unit tests **must not** depend on live GGG responses:
 
 - **Body shaping**: `backend/tests/test_trade_ggg_body.py`, `backend/tests/test_trade_url.py`.
-- **HTTP submit**: `backend/tests/test_trade_search_submit.py` patches `httpx.AsyncClient`.
-- **Route**: `backend/tests/test_auth_flow.py` patches `ensure_trade_stats_index` and `submit_trade_search` so CI does not call GGG.
+- **HTTP submit**: `backend/tests/test_trade_search_submit.py` patches `httpx.AsyncClient` (assert on `(search_id, post_json, rate_limited)` from `submit_trade_search`).
+- **Route**: `backend/tests/test_auth_flow.py` patches `ensure_trade_stats_index` and `submit_trade_search` (triple return) so CI does not call GGG.
 
 ## Limitations
 

@@ -50,8 +50,10 @@ async def test_submit_trade_search_returns_id() -> None:
         "sort": {"price": "asc"},
     }
     with patch("app.services.trade_search_submit.httpx.AsyncClient", return_value=fake):
-        sid, rate_limited = await submit_trade_search(settings, "Standard", payload)
+        sid, body, rate_limited = await submit_trade_search(settings, "Standard", payload)
     assert sid == "MockSearchId42"
+    assert body is not None
+    assert body.get("total") == 0
     assert rate_limited is False
     assert fake.posted_url is not None
     assert fake.posted_url.endswith("/Standard")
@@ -62,8 +64,9 @@ async def test_submit_trade_search_returns_id() -> None:
 @pytest.mark.asyncio
 async def test_submit_trade_search_empty_league_returns_none() -> None:
     settings = Settings()
-    sid, rate_limited = await submit_trade_search(settings, "   ", {"query": {}, "sort": {}})
+    sid, body, rate_limited = await submit_trade_search(settings, "   ", {"query": {}, "sort": {}})
     assert sid is None
+    assert body is None
     assert rate_limited is False
 
 
@@ -81,8 +84,9 @@ async def test_submit_trade_search_non_200_returns_none() -> None:
 
     settings = Settings()
     with patch("app.services.trade_search_submit.httpx.AsyncClient", return_value=BadClient()):
-        sid, rate_limited = await submit_trade_search(
+        sid, body, rate_limited = await submit_trade_search(
             settings, "Standard", {"query": {}, "sort": {}}
         )
     assert sid is None
+    assert body is None
     assert rate_limited is False
