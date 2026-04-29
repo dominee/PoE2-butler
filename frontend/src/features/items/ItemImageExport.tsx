@@ -9,7 +9,7 @@ import {
   type CurrencyChaosPair,
   computeItemScore,
 } from "./itemMetrics";
-import { DivExPriceText, PriceEstimateBrightText } from "./DivExPriceText";
+import { RefinedEstimateValueRow } from "./DivExPriceText";
 import { itemRollScoreState } from "./modRollMetrics";
 import { ExplicitModLine, ModDivider, ModSection, ModText, PANE_SECTION_HEADING } from "./ItemModPresentation";
 import { PercentBar } from "./PercentBar";
@@ -56,30 +56,13 @@ function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
           (refinedJob.result.estimate_method === "trade_median" ||
             refinedJob.result.estimate_method === "poe2scout") && (
             <div
-              className="text-parchment-200/90"
               title={
                 refinedJob.result.estimate_method === "trade_median"
                   ? `Median from ${refinedJob.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
                   : undefined
               }
             >
-              <span className="text-parchment-200/90">
-                {refinedJob.result.estimate_method === "trade_median" ? "Trade median: " : "Refined: "}
-              </span>
-              <span className="text-parchment-200/90">
-                {refinedJob.result.estimate_method === "trade_median" ? "Trade median: " : "Refined: "}
-              </span>
-              <span className="font-mono tabular-nums">
-                {currencyChaos ? (
-                  <DivExPriceText chaosEquiv={refinedJob.result.chaos_equiv} rates={currencyChaos} />
-                ) : (
-                  <PriceEstimateBrightText estimate={refinedJob.result} />
-                )}
-              </span>
-              {refinedJob.result.estimate_method === "trade_median" &&
-              refinedJob.result.sample_size != null ? (
-                <span className="text-parchment-200/75"> ({refinedJob.result.sample_size} listings)</span>
-              ) : null}
+              <RefinedEstimateValueRow result={refinedJob.result} currencyChaos={currencyChaos} />
             </div>
           )}
       </div>

@@ -57,3 +57,33 @@ export function PriceEstimateBrightText({
     </span>
   );
 }
+
+/** Trade median / refined line with bright div, ex, and listing count digits. */
+export function RefinedEstimateValueRow({
+  result,
+  currencyChaos,
+}: {
+  result: PriceEstimate;
+  currencyChaos: CurrencyChaosPair | null;
+}) {
+  const isMedian = result.estimate_method === "trade_median";
+  const label = isMedian ? "Trade median: " : "Refined: ";
+  const showListings = isMedian && result.sample_size != null;
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-0.5 text-[11px] leading-snug">
+      <span className="text-parchment-200/90">{label}</span>
+      {currencyChaos ? (
+        <DivExPriceText chaosEquiv={result.chaos_equiv} rates={currencyChaos} />
+      ) : (
+        <PriceEstimateBrightText estimate={result} />
+      )}
+      {showListings ? (
+        <>
+          <span className="text-white/72"> (</span>
+          <span className="font-mono tabular-nums text-white/92">{result.sample_size}</span>
+          <span className="text-white/70"> listings)</span>
+        </>
+      ) : null}
+    </span>
+  );
+}

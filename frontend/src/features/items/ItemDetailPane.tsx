@@ -29,7 +29,7 @@ import {
   computeItemScore,
   currencyRatesToChaosPair,
 } from "./itemMetrics";
-import { DivExPriceText, PriceEstimateBrightText } from "./DivExPriceText";
+import { RefinedEstimateValueRow } from "./DivExPriceText";
 import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
@@ -274,30 +274,16 @@ export function ItemDetailPane({
                 (refinedQ.job.result.estimate_method === "trade_median" ||
                   refinedQ.job.result.estimate_method === "poe2scout") && (
                   <div
-                    className="text-parchment-200/90"
                     title={
                       refinedQ.job.result.estimate_method === "trade_median"
                         ? `Median from ${refinedQ.job.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
                         : undefined
                     }
                   >
-                    <span className="text-parchment-200/90">
-                      {refinedQ.job.result.estimate_method === "trade_median"
-                        ? "Trade median: "
-                        : "Refined: "}
-                    </span>
-                    {currencyChaos ? (
-                      <DivExPriceText
-                        chaosEquiv={refinedQ.job.result.chaos_equiv}
-                        rates={currencyChaos}
-                      />
-                    ) : (
-                      <PriceEstimateBrightText estimate={refinedQ.job.result} />
-                    )}
-                    {refinedQ.job.result.estimate_method === "trade_median" &&
-                    refinedQ.job.result.sample_size != null ? (
-                      <span className="text-ui-muted"> ({refinedQ.job.result.sample_size} listings)</span>
-                    ) : null}
+                    <RefinedEstimateValueRow
+                      result={refinedQ.job.result}
+                      currencyChaos={currencyChaos}
+                    />
                   </div>
                 )}
             </div>
