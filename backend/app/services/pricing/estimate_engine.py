@@ -171,10 +171,11 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
                 league,
                 sid,
                 chaos_map,
-                min_samples=1,
+                min_samples=3,
                 cap_ids=32,
                 redis=redis,
                 list_ids=ids,
+                robust_median=True,
             )
             if sample_rl:
                 st.message = "GGG rate limit (trade fetch) — waiting before retry"
@@ -199,7 +200,7 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
             chaos_equiv=round(chosen_median, 2),
             source="ggg_trade2",
             confidence=0.75 if chosen_n < settings.pricing_min_trade_listings else 0.9,
-            note="Median of recent trade listings; indicative only",
+            note="Median of instant-buyout listings (outlier-resistant); indicative only",
             estimate_method="trade_median",
             sample_size=chosen_n,
             relaxation_steps=used_steps,

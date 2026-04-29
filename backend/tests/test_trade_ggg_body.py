@@ -8,9 +8,11 @@ from app.services.trade_ggg_body import ggg_search_body_from_result_payload
 def test_ggg_body_strips_app_keys_and_stat_metadata() -> None:
     internal = {
         "query": {
-            "status": {"option": "online"},
+            "status": {"option": "securable"},
             "type": "Dualstring Bow",
-            "filters": {"type_filters": {"filters": {"rarity": {"option": "rare"}}}},
+            "filters": {
+                "type_filters": {"filters": {"rarity": {"option": "rare"}}},
+            },
             "stats": [
                 {
                     "type": "and",
@@ -46,7 +48,9 @@ def test_ggg_body_strips_app_keys_and_stat_metadata() -> None:
 def test_ggg_body_drops_stat_filters_without_id() -> None:
     internal = {
         "query": {
-            "status": {"option": "online"},
+            "status": {"option": "securable"},
+            "type": "Dualstring Bow",
+            "filters": {},
             "stats": [
                 {
                     "type": "and",

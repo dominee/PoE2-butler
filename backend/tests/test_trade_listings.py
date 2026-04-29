@@ -9,6 +9,7 @@ from app.services import trade_listings as tl
 from app.services.trade_listings import (
     listing_chaos_value,
     median_chaos,
+    median_chaos_robust,
     trade_currency_chaos_fallback,
 )
 
@@ -16,6 +17,17 @@ from app.services.trade_listings import (
 def test_median_odd_even() -> None:
     assert median_chaos([1, 2, 3, 4, 5]) == 3.0
     assert median_chaos([1, 2, 3, 4]) == 2.5
+
+
+def test_median_robust_drops_upper_outlier_cluster() -> None:
+    # Many low buyouts + two mirror-tier asks; robust median stays in the bulk.
+    lows = [50.0, 52.0, 48.0, 55.0, 51.0]
+    highs = [2_000_000.0, 2_100_000.0]
+    assert median_chaos_robust(lows + highs) == median_chaos(lows)
+
+
+def test_median_robust_small_sample_is_plain_median() -> None:
+    assert median_chaos_robust([10.0, 20.0]) == 15.0
 
 
 def test_listing_chaos_chaos() -> None:
@@ -59,7 +71,9 @@ def test_trade_listing_ids_from_search_post() -> None:
 
 
 @pytest.mark.asyncio
-async def test_trade_search_collect_string_ids_skips_null_only_pages(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_trade_search_collect_string_ids_skips_null_only_pages(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[int] = []
 
     async def fake_list(

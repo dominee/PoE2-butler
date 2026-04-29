@@ -46,7 +46,11 @@ async def test_submit_trade_search_returns_id() -> None:
     fake = _FakeClient()
     settings = Settings()
     payload = {
-        "query": {"status": {"option": "online"}, "type": "Dualstring Bow"},
+        "query": {
+            "status": {"option": "securable"},
+            "type": "Dualstring Bow",
+            "filters": {},
+        },
         "sort": {"price": "asc"},
     }
     with patch("app.services.trade_search_submit.httpx.AsyncClient", return_value=fake):
@@ -58,7 +62,7 @@ async def test_submit_trade_search_returns_id() -> None:
     assert fake.posted_url is not None
     assert fake.posted_url.endswith("/Standard")
     assert fake.posted_json is not None
-    assert fake.posted_json["query"]["status"]["option"] == "online"
+    assert fake.posted_json["query"]["status"]["option"] == "securable"
 
 
 @pytest.mark.asyncio

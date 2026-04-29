@@ -163,18 +163,27 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
     PoE2 expects base item name as a plain string in ``query["type"]``, not
     ``type_filters.filters.type`` (that shape is invalid). Rarity uses
     ``filters.type_filters.filters.rarity`` alongside ``type`` when set.
+
+    **Instant Buyout** uses top-level ``query.status.option = "securable"``.
+    The filter metadata groups that as ``status_filters`` in
+    ``GET /api/trade2/data/filters``, but ``POST …/search`` rejects
+    ``query.filters.status_filters`` (``Unknown filter group``).
+
+    We do **not** send ``trade_filters.sale_type`` with JSON ``null`` for
+    “Buyout or Fixed Price”: GGG returns ``Invalid sale type``. Securable
+    listings are already instant-buyout scope; omitting ``trade_filters`` keeps
+    the payload valid.
     """
-    query: dict[str, Any] = {
-        "status": {"option": "online"},
-    }
+    query: dict[str, Any] = {"status": {"option": "securable"}}
     if item.base_type:
         query["type"] = item.base_type
     # Uniques are identified by ``name`` + ``type`` (base); ``type`` alone matches every base.
     if item.rarity == "Unique" and item.name.strip():
         query["name"] = item.name.strip()
+    filt = query.setdefault("filters", {})
     rarity_option = RARITY_TO_TRADE_OPTION.get(item.rarity)
     if rarity_option:
-        tf = query.setdefault("filters", {}).setdefault("type_filters", {})
+        tf = filt.setdefault("type_filters", {})
         tf["disabled"] = False
         tf.setdefault("filters", {})["rarity"] = {"option": rarity_option}
     if stats:

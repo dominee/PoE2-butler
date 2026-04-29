@@ -31,7 +31,7 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 ## Median and display units
 
 - Listing ask prices are normalised to **chaos** using live league rates (Divine, Exalted, etc.) from **poe.ninja** when that source is active and returns data (PoE2 exchange overview, league name or economy slug from [`/poe2/api/data/index-state`](https://poe.ninja/poe2/api/data/index-state)); otherwise **`trade_currency_chaos_fallback`** supplies approximate chaos values for GGG’s compact `listing.price.currency` ids (see `TRADE_LISTING_*` in [`deploy/env/.env.example`](../deploy/env/.env.example))).
-- The displayed estimate uses the **median** of available listing chaos equivalents in the sample to reduce the effect of outliers.
+- The displayed estimate uses a **robust median** of instant-buyout listing chaos equivalents (upper-tail outlier resistance) over a batched sample; see `trade_listings.median_chaos_robust` and `docs/trade_deeplinks.md`.
 - The API may also expose `divine` or `exalted` **denominations** in `PriceEstimate` when convenient for the UI, with `chaos_equiv` the canonical value for highlights.
 
 ## Asynchronous jobs and Redis state

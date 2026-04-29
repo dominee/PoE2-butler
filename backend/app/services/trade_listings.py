@@ -6,6 +6,7 @@ Uses the public JSON API (no OAuth). See :doc:`docs/trade_deeplinks.md`.
 from __future__ import annotations
 
 import json
+import math
 from typing import Any
 from urllib.parse import quote
 
@@ -79,7 +80,8 @@ def trade_currency_chaos_fallback(settings: Settings) -> dict[str, float]:
         "regal-shard": per_ex(44),
         "artificers-shard": per_ex(60),
         "fracturing-orb": cex * 2.0,
-        "mirror": cex * 8000.0,
+        # PoE2: mirror trades near thousands of divines; ex-based ex*8000 is far too low.
+        "mirror": max(cdiv * 9000.0, cex * 8000.0),
         "hinekoras-lock": cex * 5.0,
     }
 
@@ -93,6 +95,32 @@ def median_chaos(values: list[float]) -> float:
     if n % 2:
         return s[m]
     return (s[m - 1] + s[m]) / 2.0
+
+
+def median_chaos_robust(values: list[float]) -> float:
+    """Median with upper-tail resistance (Tukey-style fence on high asks).
+
+    Very expensive outliers (e.g. mirror-priced rows mixed with normal buyouts)
+    are excluded only when they sit clearly above an IQR-derived ceiling, so the
+    bulk of the market still drives the estimate.
+    """
+    s = sorted(v for v in values if v > 0 and math.isfinite(v))
+    n = len(s)
+    if n == 0:
+        return 0.0
+    if n <= 2:
+        return median_chaos(s)
+    lo_i = (n - 1) // 4
+    hi_i = max(0, (3 * (n - 1)) // 4)
+    q1, q3 = s[lo_i], s[hi_i]
+    if q1 > q3:
+        q1, q3 = q3, q1
+    iqr = max(q3 - q1, max(q3, 1e-9) * 1e-6)
+    upper = q3 + 3.0 * iqr
+    kept = [x for x in s if x <= upper]
+    if len(kept) < max(2, (n + 1) // 2):
+        kept = s
+    return median_chaos(kept)
 
 
 def _match_currency_to_chaos(
@@ -230,7 +258,7 @@ async def trade_search_collect_string_ids(
     start = 0
     last_total = 0
     collected: list[str] = []
-    for page in range(max_pages):
+    for _page in range(max_pages):
         total, chunk, list_rl, page_len = await trade_search_list_result(
             settings, league, search_id, start=start, redis=redis
         )
@@ -319,15 +347,20 @@ async def sample_median_listing_chaos(
     search_id: str,
     chaos_per_name: dict[str, float],
     *,
-    min_samples: int = 5,
+    min_samples: int = 3,
     cap_ids: int = 32,
     redis: Redis | None = None,
     list_ids: list[str] | None = None,
+    robust_median: bool = True,
 ) -> tuple[float, int, bool]:
     """Batched fetches; return ``(median, sample_count, rate_limited)``.
 
     When *list_ids* is set (caller already ran list pagination), skip the
     duplicate list GET — same policy bucket as search POST / fetch.
+
+    Fetches up to *cap_ids* listings (batched) before aggregating so the median
+    is not dominated by a single early row. When *robust_median* is true, applies
+    :func:`median_chaos_robust` to damp ultra-high buyout outliers.
     """
     if list_ids is not None:
         ids = [x for x in list_ids if isinstance(x, str) and x.strip()]
@@ -355,8 +388,7 @@ async def sample_median_listing_chaos(
             v = listing_chaos_value(row, chaos_per_name)
             if v is not None and v > 0:
                 all_prices.append(v)
-        if len(all_prices) >= min_samples:
-            break
-    if not all_prices:
-        return 0.0, 0, False
-    return median_chaos(all_prices), len(all_prices), False
+    if len(all_prices) < min_samples:
+        return 0.0, len(all_prices), False
+    med_fn = median_chaos_robust if robust_median else median_chaos
+    return med_fn(all_prices), len(all_prices), False

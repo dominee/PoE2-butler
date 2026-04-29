@@ -6,6 +6,11 @@ Notable **user-facing behavior** and **visual/UI** updates for PoE2 Butler. Inte
 
 ## 2026-04-29
 
+### App · refined trade median (GGG)
+
+- **Same item on trade** and the detail-pane **Refresh pricing** pipeline POST trade2 searches with **Instant Buyout** .
+- Listing samples use a **robust median** (upper-tail outlier resistance) over more fetched rows, and the fallback **mirror → chaos** conversion anchors on **divine** so mirror-tier asks do not collapse to a tiny chaos value.
+
 ### App · live currency rates (poe.ninja PoE2)
 
 - **Header / trade conversion** now uses poe.ninja’s **PoE2** economy JSON when the PoE1-style URL fails or returns no data, and dev compose defaults to **`PRICING_BASE_URL=https://poe.ninja`**. If your env still has `…/api/data`, you get an automatic PoE2 fallback for currency so Fate of the Vaal (and similar) no longer stick on placeholder div/ex/chaos numbers.
