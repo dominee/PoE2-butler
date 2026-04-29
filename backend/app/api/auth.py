@@ -28,7 +28,7 @@ from app.security.pkce import (
     generate_state,
 )
 from app.security.sessions import PendingAuth, PendingAuthStore, SessionStore
-from app.services.snapshot import refresh_user_snapshot
+from app.services.snapshot import refresh_stashes, refresh_user_snapshot
 
 log = get_logger("app.api.auth")
 
@@ -168,6 +168,22 @@ async def callback(
             cipher=cipher,
             revalidate_character_list=False,
         )
+        league_for_stash = (snap_user.preferred_league or "").strip()
+        if league_for_stash:
+            try:
+                await refresh_stashes(
+                    session=snap_db,
+                    user=snap_user,
+                    ggg=ggg,
+                    cipher=cipher,
+                    league=league_for_stash,
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "auth.initial_stash_failed",
+                    league=league_for_stash,
+                    error=str(exc),
+                )
         await snap_db.commit()
 
     # Reload user so preferred_league written by refresh_user_snapshot is visible

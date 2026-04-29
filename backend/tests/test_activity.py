@@ -10,6 +10,7 @@ import pytest
 from app.api.activity import _diff_tab, _item_changed
 from app.db import base as db_base
 from app.db.models import Snapshot, SnapshotKind
+from app.services.snapshot import upsert_snapshot
 from tests.test_auth_flow import _full_login
 
 LEAGUE = "Dawn of the Hunt"
@@ -71,6 +72,34 @@ async def test_activity_get_requires_auth(app_stack) -> None:  # type: ignore[no
     _app, client, _mock = app_stack
     r = await client.get("/api/activity", params={"league": LEAGUE})
     assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_activity_upsert_insert_has_prev_baseline(app_stack) -> None:  # type: ignore[no-untyped-def]
+    """First stash tab write seeds prev_payload so activity is tracked (diff may be empty)."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = (await client.get("/api/me")).json()
+    user_id = uuid.UUID(me["id"])
+    fac = db_base._session_factory()
+    tab = _tab_payload("Seed", [_raw_item("seed1", "S", "+1 to life")])
+    async with fac() as session:
+        await upsert_snapshot(
+            session,
+            user_id=user_id,
+            kind=SnapshotKind.STASH_TAB,
+            key=TAB_KEY,
+            payload=tab,
+        )
+        await session.commit()
+
+    r = await client.get("/api/activity", params={"league": LEAGUE})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["has_prev"] is True
+    assert body["total_new"] == 0
+    assert body["total_changed"] == 0
+    assert body["entries"] == []
 
 
 @pytest.mark.asyncio

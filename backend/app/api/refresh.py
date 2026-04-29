@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +41,14 @@ class RefreshResponse(BaseModel):
     dependencies=[Depends(require_csrf)],
 )
 async def refresh(
+    league: str | None = Query(
+        None,
+        description=(
+            "League whose stash tabs (and matching character gear) to refresh. "
+            "Defaults to the account preferred league so the UI league selector "
+            "and GET /api/activity?league=… stay aligned."
+        ),
+    ),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
     ggg: GGGClient = Depends(get_ggg_client),
@@ -61,6 +69,8 @@ async def refresh(
     # already serves summaries without ?revalidate=1, and character detail refills on GET.
     revalidate_list = "mock-ggg" not in api and "127.0.0.1" not in api
 
+    stash_league = (league or "").strip() or (user.preferred_league or "").strip()
+
     # Keep stash snapshots in sync with the manual refresh button so the
     # activity panel (diff against prev_payload) gets fresh data too.
     outcome = await refresh_user_snapshot(
@@ -68,14 +78,13 @@ async def refresh(
         user=user,
         ggg=ggg,
         cipher=cipher,
-        include_stashes_for_league=user.preferred_league,
+        include_stashes_for_league=stash_league or None,
         revalidate_character_list=revalidate_list,
     )
     await delete_character_snapshots(db, user.id)
-    league = (user.preferred_league or "").strip()
-    if league:
+    if stash_league:
         await refresh_character_gear_snapshots(
-            session=db, user=user, ggg=ggg, cipher=cipher, league=league
+            session=db, user=user, ggg=ggg, cipher=cipher, league=stash_league
         )
     await db.commit()
     return RefreshResponse(

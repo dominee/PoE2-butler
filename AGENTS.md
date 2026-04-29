@@ -178,7 +178,7 @@ class Snapshot(Base):
     prev_payload: Mapped[dict|None]  # previous snapshot (for activity diff)
 ```
 
-`upsert_snapshot` in `backend/app/services/snapshot.py` shifts `payload → prev_payload` before writing the new data.
+`upsert_snapshot` in `backend/app/services/snapshot.py` shifts `payload → prev_payload` on update; **first insert** also stores a baseline copy in `prev_payload` so `GET /api/activity` can report `has_prev` immediately. OAuth callback runs `refresh_stashes` after leagues resolve `preferred_league` so stash tabs exist before the first manual refresh.
 
 **Item parsing** (`backend/app/domain/item.py`):
 
@@ -247,7 +247,7 @@ border-rarity-*  (same names)
 
 ### Snapshot refresh
 
-`POST /api/refresh` → `refresh_user_snapshot` → fetches profile / leagues / characters / stashes from GGG → upserts snapshots in Postgres (shifting `payload → prev_payload`). Does **not** enqueue pricing. **`POST /api/pricing/apprise`** queues stash hybrid estimates (missing DB rows first, capped).
+`POST /api/refresh` (optional query `league=` — defaults to `User.preferred_league` so the header league matches stash tabs and `GET /api/activity`) → `refresh_user_snapshot` → fetches profile / leagues / characters / stashes from GGG → upserts snapshots in Postgres (shifting `payload → prev_payload`). Does **not** enqueue pricing. **`POST /api/pricing/apprise`** queues stash hybrid estimates (missing DB rows first, capped).
 
 ### Activity diff
 

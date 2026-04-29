@@ -107,8 +107,13 @@ export function useCharacter(name: string | null) {
 
 export function useRefresh() {
   const qc = useQueryClient();
-  return useMutation<RefreshResponse>({
-    mutationFn: () => api.post<RefreshResponse>("/api/refresh"),
+  return useMutation<RefreshResponse, Error, { league?: string | null } | void>({
+    mutationFn: (vars) => {
+      const raw = vars && typeof vars === "object" ? vars.league : undefined;
+      const l = typeof raw === "string" && raw.trim() ? raw.trim() : "";
+      const suffix = l ? `?league=${encodeURIComponent(l)}` : "";
+      return api.post<RefreshResponse>(`/api/refresh${suffix}`);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["characters"] });
       qc.invalidateQueries({ queryKey: ["character"] });

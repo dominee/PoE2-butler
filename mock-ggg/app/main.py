@@ -468,6 +468,7 @@ async def reset_activity() -> HTMLResponse:
         <p>Stash tab counters cleared. The next refresh in the app will store the
         <em>previous</em> (smaller) snapshot, and the subsequent Refresh will
         detect the new items.</p>
+        <p style="color:#8a8;font-size:0.85rem;margin-top:1rem">Fixture accounts (no Poe.ninja TOML): counters also reset the per-tab fetch pattern that alternates stash size between refreshes so the activity log is not stuck empty.</p>
         </body></html>"""
     )
 
@@ -747,4 +748,25 @@ async def stash_tab(league: str, tab_id: str, request: Request) -> JSONResponse:
     if call_n == 0 and "prev_contents" in data and tab_id in data["prev_contents"]:
         return JSONResponse(data["prev_contents"][tab_id])
 
-    return JSONResponse(data["contents"][tab_id])
+    base = data["contents"][tab_id]
+    # Fixture leagues without ``prev_contents`` would otherwise return the same JSON on
+    # every GET, so Postgres ``prev_payload`` vs ``payload`` never differs and the app
+    # activity log stays empty. Alternate a slightly smaller item list on odd fetches so
+    # consecutive refreshes produce visible new/removed churn (dev ergonomics).
+    if "prev_contents" not in data:
+        payload = copy.deepcopy(base)
+        items = list(payload.get("items") or [])
+        if call_n % 2 == 1 and len(items) > 1:
+            keep = max(1, (len(items) * 2) // 3)
+            payload["items"] = items[:keep]
+        return JSONResponse(payload)
+
+    # Leagues with ``prev_contents``: first GET returns that snapshot; later GETs use
+    # ``contents``. Fixtures often duplicate the same blob, which would keep activity
+    # empty forever — reuse the odd-fetch slice churn used for static-only fixtures.
+    payload = copy.deepcopy(base)
+    items = list(payload.get("items") or [])
+    if call_n % 2 == 1 and len(items) > 1:
+        keep = max(1, (len(items) * 2) // 3)
+        payload["items"] = items[:keep]
+    return JSONResponse(payload)

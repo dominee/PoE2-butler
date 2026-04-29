@@ -6,6 +6,7 @@ the OAuth callback and from the ``arq`` worker.
 
 from __future__ import annotations
 
+import copy
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -51,7 +52,18 @@ async def upsert_snapshot(
     existing = await get_latest_snapshot(session, user_id, kind, key)
     now = datetime.now(UTC)
     if existing is None:
-        session.add(Snapshot(user_id=user_id, kind=kind, key=key, payload=payload, fetched_at=now))
+        # Baseline copy so GET /api/activity can treat the tab as tracked immediately;
+        # the first refresh then shifts payload → prev_payload and surfaces real diffs.
+        session.add(
+            Snapshot(
+                user_id=user_id,
+                kind=kind,
+                key=key,
+                payload=payload,
+                prev_payload=copy.deepcopy(payload),
+                fetched_at=now,
+            )
+        )
     else:
         # Preserve current payload as previous before overwriting — this is the
         # basis for the activity log diff on the next refresh.

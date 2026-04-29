@@ -205,7 +205,7 @@ export function AppShell() {
           <button
             type="button"
             className="btn-ghost inline-flex items-center gap-1.5 text-sm"
-            onClick={() => refresh.mutate()}
+            onClick={() => refresh.mutate({ league: selectedLeague })}
             disabled={refresh.isPending}
           >
             <HeaderSyncIcon className="h-4 w-4 shrink-0 opacity-90" />

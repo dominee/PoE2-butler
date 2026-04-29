@@ -1,8 +1,10 @@
 """Activity log: diff current vs previous stash/character snapshots.
 
 Returns new items (added since last refresh) and changed items (mods or
-stats differ).  Relies on ``Snapshot.prev_payload`` which is populated by
-``upsert_snapshot`` each time a snapshot is refreshed.
+stats differ).  Uses ``Snapshot.prev_payload``: on each update
+``upsert_snapshot`` shifts ``payload → prev_payload``; the **first** insert
+for a key also stores a baseline copy in ``prev_payload`` so the UI can show
+``has_prev`` without requiring two refresh cycles.
 """
 
 from __future__ import annotations

@@ -28,10 +28,15 @@ function ItemRow({
   onSelect,
 }: {
   item: Item;
-  status: "new" | "changed";
+  status: "new" | "changed" | "removed";
   onSelect: (item: Item) => void;
 }) {
-  const dot = status === "new" ? "bg-emerald-400" : "bg-amber-400";
+  const dot =
+    status === "new"
+      ? "bg-emerald-400"
+      : status === "changed"
+        ? "bg-amber-400"
+        : "bg-ink-500";
   const label = item.name || item.type_line;
 
   return (
@@ -41,7 +46,12 @@ function ItemRow({
       className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs transition hover:bg-ink-700 focus:outline-none"
     >
       <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
-      <span className="min-w-0 truncate text-parchment-100/80">{stripTags(label)}</span>
+      <span
+        className={`min-w-0 truncate text-parchment-100/80 ${status === "removed" ? "line-through opacity-70" : ""}`}
+      >
+        {stripTags(label)}
+        {status === "removed" ? " (removed)" : ""}
+      </span>
     </button>
   );
 }
@@ -67,6 +77,9 @@ function TabSection({
       {entry.changed_items.map(({ new: item }) => (
         <ItemRow key={item.id} item={item} status="changed" onSelect={onSelect} />
       ))}
+      {entry.removed_items.map((item) => (
+        <ItemRow key={`rm-${item.id}`} item={item} status="removed" onSelect={onSelect} />
+      ))}
     </div>
   );
 }
@@ -77,7 +90,10 @@ export function ActivityLog({ league, onSelectItem }: ActivityLogProps) {
   const [collapsed, setCollapsed] = useState(true);
   const activityQ = useActivity(league);
   const data = activityQ.data;
-  const totalEvents = (data?.total_new ?? 0) + (data?.total_changed ?? 0);
+  const totalRemoved =
+    data?.entries.reduce((n, e) => n + (e.removed_items?.length ?? 0), 0) ?? 0;
+  const totalEvents =
+    (data?.total_new ?? 0) + (data?.total_changed ?? 0) + totalRemoved;
 
   return (
     <aside
