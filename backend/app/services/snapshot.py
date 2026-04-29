@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient, GGGError
 from app.config import get_settings
 from app.db.models import Snapshot, SnapshotKind, User
+from app.domain.character import parse_summaries
 from app.domain.league import parse_leagues, pick_current_league
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
@@ -80,6 +81,44 @@ async def delete_character_snapshots(session: AsyncSession, user_id: uuid.UUID) 
             Snapshot.kind == SnapshotKind.CHARACTER,
         )
     )
+
+
+async def refresh_character_gear_snapshots(
+    *,
+    session: AsyncSession,
+    user: User,
+    ggg: GGGClient,
+    cipher: TokenCipher,
+    league: str,
+) -> None:
+    """Re-fetch and persist CHARACTER rows for every account toon in ``league``.
+
+    Manual :func:`delete_character_snapshots` clears lazy detail caches; without this
+    follow-up fetch, equipped gear would be missing until each character is opened again.
+    """
+    league = league.strip()
+    if not league:
+        return
+    snap = await get_latest_snapshot(session, user.id, SnapshotKind.CHARACTERS)
+    if snap is None:
+        return
+    summaries = parse_summaries(snap.payload)
+    in_league = [c for c in summaries if (c.league or "").strip() == league]
+    for c in in_league:
+        name = (c.name or "").strip()
+        if not name:
+            continue
+        try:
+            await ensure_character_detail(
+                session=session, user=user, ggg=ggg, cipher=cipher, name=name
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning(
+                "snapshot.character_gear_refresh_failed",
+                user_id=str(user.id),
+                character=name,
+                error=str(exc),
+            )
 
 
 async def refresh_user_snapshot(

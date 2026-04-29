@@ -9,7 +9,7 @@ Notable **user-facing behavior** and **visual/UI** updates for PoE2 Butler. Inte
 ### App · refined trade median (GGG)
 
 - **Same item on trade** and the detail-pane **Refresh pricing** pipeline POST trade2 searches with **Instant Buyout** .
-- **Refined estimates** are saved to the **database** when the worker finishes so the detail pane can reload them after you switch items or restart the app; **Refresh** (header) also queues a capped backfill that fills **missing** estimates before refreshing **older** ones (`PRICING_BACKFILL_MAX_ITEMS`).
+- **Refined estimates** are saved to the **database** when the worker finishes so the detail pane can reload them after you switch items or restart the app; **Apprise** (header) queues a capped stash-only backfill that fills **missing** estimates before refreshing **older** ones (`PRICING_BACKFILL_MAX_ITEMS`). **Refresh** updates inventory snapshots only and does not queue pricing.
 - Listing samples use a **robust median** (upper-tail outlier resistance) over more fetched rows, and the fallback **mirror → chaos** conversion anchors on **divine** so mirror-tier asks do not collapse to a tiny chaos value.
 
 ### App · live currency rates (poe.ninja PoE2)

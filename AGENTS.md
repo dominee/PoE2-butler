@@ -247,7 +247,7 @@ border-rarity-*  (same names)
 
 ### Snapshot refresh
 
-`POST /api/refresh` → `refresh_user_snapshot(user_id, db)` → fetches profile / leagues / characters / stashes from GGG API → upserts snapshots in Postgres (shifting `payload → prev_payload`).
+`POST /api/refresh` → `refresh_user_snapshot` → fetches profile / leagues / characters / stashes from GGG → upserts snapshots in Postgres (shifting `payload → prev_payload`). Does **not** enqueue pricing. **`POST /api/pricing/apprise`** queues stash hybrid estimates (missing DB rows first, capped).
 
 ### Activity diff
 

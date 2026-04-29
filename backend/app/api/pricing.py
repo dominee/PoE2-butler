@@ -169,3 +169,32 @@ async def start_price_estimate(
         tol,
     )
     return PriceEstimateEnqueued(job_id=job_id, deduped=False)
+
+
+class AppriseQueued(BaseModel):
+    ok: bool = True
+    league: str
+
+
+@router.post(
+    "/apprise",
+    summary="Queue stash hybrid price estimates (missing DB rows first; capped)",
+    dependencies=[Depends(require_csrf)],
+)
+async def apprise_stash_prices(
+    user: User = Depends(get_current_user),
+    league: str | None = Query(
+        default=None,
+        description="League id; defaults to the signed-in user's preferred league.",
+    ),
+) -> AppriseQueued:
+    """Enqueue ``backfill_item_price_estimates`` for **stash tabs only** in ``league``."""
+    lg = (league or user.preferred_league or "").strip()
+    if not lg:
+        raise HTTPException(status_code=400, detail="league_required")
+    try:
+        pool = await get_arq_pool()
+        await pool.enqueue_job("backfill_item_price_estimates", str(user.id), lg, True)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=503, detail="queue_unavailable") from exc
+    return AppriseQueued(league=lg)

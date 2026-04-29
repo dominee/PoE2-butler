@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
+from urllib.parse import quote
 
 import pytest
 
@@ -105,3 +106,25 @@ async def test_start_estimate_enqueues_job(app_stack) -> None:
         body = resp.json()
         assert "job_id" in body
         mpool.return_value.enqueue_job.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_apprise_enqueues_stash_backfill(app_stack) -> None:
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    csrf = client.cookies.get("poe2b_csrf")
+    me = await client.get("/api/me")
+    assert me.status_code == 200
+    league = me.json().get("preferred_league") or "Fate of the Vaal"
+    with patch("app.api.pricing.get_arq_pool", new_callable=AsyncMock) as mpool:
+        mpool.return_value.enqueue_job = AsyncMock()
+        resp = await client.post(
+            f"/api/pricing/apprise?league={quote(league)}",
+            headers={"X-CSRF-Token": csrf} if csrf else {},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json().get("ok") is True
+        mpool.return_value.enqueue_job.assert_called_once()
+        args = mpool.return_value.enqueue_job.call_args[0]
+        assert args[0] == "backfill_item_price_estimates"
+        assert args[3] is True

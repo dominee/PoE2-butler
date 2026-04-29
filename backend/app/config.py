@@ -73,8 +73,7 @@ class Settings(BaseSettings):
     pricing_trade_estimate_enabled: bool = True
     pricing_scout_base_url: str = ""
     pricing_min_trade_listings: int = 5
-    # After manual /api/refresh, backfill at most this many hybrid estimates (stash + gear),
-    # prioritising items with no stored estimate, then oldest ``computed_at``.
+    # Cap for ``POST /api/pricing/apprise`` stash backfill (missing DB rows first, then oldest).
     pricing_backfill_max_items: int = 40
     # Arq default job timeout is 300s; most jobs should finish well under this cap.
     arq_job_timeout_seconds: int = 7200

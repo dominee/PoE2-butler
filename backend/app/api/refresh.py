@@ -19,8 +19,11 @@ from app.deps import (
 )
 from app.security.crypto import TokenCipher
 from app.security.sessions import RefreshCooldown
-from app.services.price_queue import get_arq_pool
-from app.services.snapshot import delete_character_snapshots, refresh_user_snapshot
+from app.services.snapshot import (
+    delete_character_snapshots,
+    refresh_character_gear_snapshots,
+    refresh_user_snapshot,
+)
 
 router = APIRouter(prefix="/api/refresh", tags=["refresh"])
 
@@ -32,7 +35,11 @@ class RefreshResponse(BaseModel):
     errors: list[str] = []
 
 
-@router.post("", summary="Refresh snapshot data", dependencies=[Depends(require_csrf)])
+@router.post(
+    "",
+    summary="Refresh snapshot data (no pricing jobs)",
+    dependencies=[Depends(require_csrf)],
+)
 async def refresh(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -65,15 +72,12 @@ async def refresh(
         revalidate_character_list=revalidate_list,
     )
     await delete_character_snapshots(db, user.id)
-    await db.commit()
     league = (user.preferred_league or "").strip()
     if league:
-        try:
-            pool = await get_arq_pool()
-            await pool.enqueue_job("backfill_item_price_estimates", str(user.id), league)
-        except Exception:
-            # Refresh already succeeded; queue failures should not block the user.
-            pass
+        await refresh_character_gear_snapshots(
+            session=db, user=user, ggg=ggg, cipher=cipher, league=league
+        )
+    await db.commit()
     return RefreshResponse(
         profile=outcome.profile,
         leagues=outcome.leagues,

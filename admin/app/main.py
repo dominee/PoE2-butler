@@ -14,11 +14,12 @@ from fastapi.templating import Jinja2Templates
 from admin.app.auth import AdminSession, AuthError, SessionManager
 from admin.app.config import AdminSettings, get_admin_settings
 from admin.app.dashboard_data import bundle_for_json, load_dashboard_bundle
-from admin.app.db import list_users, recent_snapshots
+from admin.app.db import enrich_price_queue_rows, list_users, recent_snapshots
 from admin.app.middleware import AdminSecurityHeaders, IPAllowlistMiddleware
 from admin.app.redis_stats import (
     backend_health,
     probe_ok,
+    top_queued_price_estimate_jobs,
 )
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -190,6 +191,19 @@ def _register_routes(app: FastAPI) -> None:
                 "price_estimates": bundle.get("price_estimates") or {},
                 "arq_jobs": bundle.get("arq_jobs") or {},
             },
+        )
+
+    @app.get("/admin/price-queue", response_class=HTMLResponse)
+    async def price_queue(
+        request: Request,
+        session: AdminSession = Depends(_require_session),
+    ) -> HTMLResponse:
+        rows = await top_queued_price_estimate_jobs(limit=10)
+        await enrich_price_queue_rows(rows)
+        return TEMPLATES.TemplateResponse(
+            request,
+            "price_queue.html",
+            {"session": session, "active": "price_queue", "rows": rows},
         )
 
     @app.get("/admin/upstream", response_class=HTMLResponse)

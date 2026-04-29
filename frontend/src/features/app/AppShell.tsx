@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  useApprise,
   useCharacter,
   useCharacters,
   useLeagues,
@@ -28,6 +29,7 @@ export function AppShell() {
   const leaguesQ = useLeagues();
   const prefsQ = usePrefs();
   const refresh = useRefresh();
+  const apprise = useApprise();
   const logout = useLogout();
 
   const selectedLeague = useUIStore((state) => state.selectedLeague);
@@ -207,6 +209,19 @@ export function AppShell() {
             disabled={refresh.isPending}
           >
             {refresh.isPending ? "Refreshing\u2026" : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost text-sm"
+            title="Queue hybrid price checks for stash items (no estimate first; capped)"
+            aria-label="Apprise: queue stash price checks"
+            onClick={() => {
+              if (!selectedLeague) return;
+              apprise.mutate({ league: selectedLeague });
+            }}
+            disabled={!selectedLeague || apprise.isPending}
+          >
+            {apprise.isPending ? "Apprising\u2026" : "Apprise"}
           </button>
           <button type="button" className="btn-ghost text-sm" onClick={() => logout.mutate()}>
             Logout

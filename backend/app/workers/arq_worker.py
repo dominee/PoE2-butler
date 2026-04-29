@@ -9,9 +9,10 @@ Entry point for the ``arq`` CLI::
 * ``refresh_user`` — re-fetch GGG snapshots for a user.
 * ``warm_prices`` — pre-fill pricing cache (poe.ninja or static) with
   :func:`app.services.third_party_ratelimit.throttle` around hot loops.
-* ``backfill_item_price_estimates`` — after a manual stash refresh, persist hybrid
-  estimates for a capped subset (no DB row first, then oldest ``computed_at``).
-  Uses a **longer arq timeout** than other jobs (see ``arq_backfill_job_timeout_seconds``).
+* ``backfill_item_price_estimates`` — queue hybrid estimates (stash-only or stash+gear);
+  missing DB rows first, then oldest ``computed_at``, capped by ``pricing_backfill_max_items``.
+  Triggered from **Apprise** (``POST /api/pricing/apprise``). Uses a **longer arq timeout**
+  (see ``arq_backfill_job_timeout_seconds``).
 * ``refresh_trade_filter_catalog`` — download/cache PoE2 trade filter metadata
   (used by :mod:`app.services.trade_stat_catalog`).
 
@@ -208,8 +209,14 @@ async def price_estimate_item(
         await redis.aclose()
 
 
-async def backfill_item_price_estimates(ctx: dict, user_id: str, league: str) -> dict:
-    """Persist hybrid estimates after refresh: missing rows first, then oldest ``computed_at``."""
+async def backfill_item_price_estimates(
+    ctx: dict, user_id: str, league: str, stash_only: bool = False
+) -> dict:
+    """Persist hybrid estimates: missing rows first, then oldest ``computed_at``.
+
+    When ``stash_only`` is True, only stash tab items are considered (Apprise).
+    Otherwise stash tabs and equipped character items are included.
+    """
     log = get_logger("app.workers.backfill_item_price_estimates")
     settings = get_settings()
     league = league.strip()
@@ -235,7 +242,18 @@ async def backfill_item_price_estimates(ctx: dict, user_id: str, league: str) ->
                 return {"ok": False, "reason": "missing_user"}
             tol = float(user.trade_tolerance_pct)
             meta = await list_estimate_meta_for_league(session, user_id=user.id, league=league)
-            raws = await _collect_stash_and_gear_raws(session, user.id, league)
+            raws = (
+                await _collect_stash_raws(session, user.id, league)
+                if stash_only
+                else await _collect_stash_and_gear_raws(session, user.id, league)
+            )
+            log.info(
+                "backfill_item.start",
+                user_id=user_id,
+                league=league,
+                stash_only=stash_only,
+                candidates=len(raws),
+            )
             missing = [(iid, raw) for iid, raw in raws if iid not in meta]
             had = [(iid, raw) for iid, raw in raws if iid in meta]
             had.sort(key=lambda t: meta[t[0]])
@@ -314,8 +332,8 @@ async def _all_character_snapshots(session, user_id):
     return [s.payload for s in res.scalars().all()]
 
 
-async def _collect_stash_and_gear_raws(session, user_id: uuid.UUID, league: str) -> list[tuple[str, dict]]:
-    """Stable order: stash tabs as listed, then character equipment."""
+async def _collect_stash_raws(session, user_id: uuid.UUID, league: str) -> list[tuple[str, dict]]:
+    """Stash tab items only, stable tab order."""
     out: list[tuple[str, dict]] = []
     seen: set[str] = set()
 
@@ -330,16 +348,37 @@ async def _collect_stash_and_gear_raws(session, user_id: uuid.UUID, league: str)
 
     list_snap = await get_latest_snapshot(session, user_id, SnapshotKind.STASH_LIST, key=league)
     if list_snap is None:
-        return out
+        return []
     for tab in list_snap.payload.get("tabs", []) or []:
         tid = tab.get("id")
         if not tid:
             continue
-        snap = await get_latest_snapshot(session, user_id, SnapshotKind.STASH_TAB, key=f"{league}:{tid}")
+        snap = await get_latest_snapshot(
+            session, user_id, SnapshotKind.STASH_TAB, key=f"{league}:{tid}"
+        )
         if snap is None:
             continue
         for raw in snap.payload.get("items", []) or []:
             push(raw)
+    return out
+
+
+async def _collect_stash_and_gear_raws(
+    session, user_id: uuid.UUID, league: str
+) -> list[tuple[str, dict]]:
+    """Stable order: stash tabs as listed, then character equipment."""
+    out = await _collect_stash_raws(session, user_id, league)
+    seen = {iid for iid, _ in out}
+
+    def push(raw: object) -> None:
+        if not isinstance(raw, dict):
+            return
+        iid = str(raw.get("id") or "").strip()
+        if not iid or iid in seen:
+            return
+        seen.add(iid)
+        out.append((iid, raw))
+
     for payload in await _all_character_snapshots(session, user_id):
         for raw in payload.get("equipment", []) or []:
             push(raw)

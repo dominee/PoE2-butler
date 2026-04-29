@@ -6,6 +6,7 @@ import { api } from "./client";
 import { useUIStore } from "@/store/uiStore";
 import type {
   ActivityResponse,
+  AppriseQueued,
   CharacterDetail,
   CharactersResponse,
   CreateShareResponse,
@@ -115,8 +116,23 @@ export function useRefresh() {
       qc.invalidateQueries({ queryKey: queryKeys.me });
       qc.invalidateQueries({ queryKey: ["activity"] });
       qc.invalidateQueries({ queryKey: ["currency-rates"] });
-      qc.invalidateQueries({ queryKey: ["prices"] });
+      qc.invalidateQueries({ queryKey: ["stashes"] });
+      qc.invalidateQueries({ queryKey: ["stash-tab"] });
+      qc.invalidateQueries({ queryKey: ["stash-search"] });
+    },
+  });
+}
+
+export function useApprise() {
+  const qc = useQueryClient();
+  return useMutation<AppriseQueued, Error, { league: string | null }>({
+    mutationFn: ({ league }) => {
+      const q = league ? `?league=${encodeURIComponent(league)}` : "";
+      return api.post<AppriseQueued>(`/api/pricing/apprise${q}`);
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["persisted-price-estimate"] });
+      qc.invalidateQueries({ queryKey: ["prices"] });
     },
   });
 }

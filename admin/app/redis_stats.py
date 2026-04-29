@@ -94,7 +94,7 @@ def _as_job_id_b(member: bytes | str | bytearray | memoryview) -> bytes:
     return str(member).encode()
 
 
-async def arq_job_function_breakdown(
+async def arq_job_function_breakdown(  # noqa: PLR0912
     *,
     max_queued: int = 50,
     max_in_progress: int = 50,
@@ -215,6 +215,64 @@ def _decode_json_value(raw: Any) -> dict[str, Any] | None:
     except (TypeError, json.JSONDecodeError, ValueError, UnicodeError):
         return None
     return d if isinstance(d, dict) else None
+
+
+def _price_job_tail_id(redis_key: str) -> str:
+    if isinstance(redis_key, str) and ":" in redis_key:
+        return redis_key.rsplit(":", 1)[-1]
+    return str(redis_key)
+
+
+async def top_queued_price_estimate_jobs(
+    *,
+    limit: int = 10,
+    max_scan: int = 4000,
+) -> list[dict[str, Any]]:
+    """Pick up to ``limit`` ``queued`` / ``running`` hybrid estimate jobs (Redis SCAN)."""
+    redis = get_redis()
+    inflight: list[dict[str, Any]] = []
+    scanned = 0
+    cursor = 0
+    while True:
+        cursor, keys = await redis.scan(cursor=cursor, match="poe2b:price_job:*", count=400)
+        for k in keys:
+            scanned += 1
+            if scanned > max_scan:
+                break
+            d = _decode_json_value(await redis.get(k))
+            if not d:
+                continue
+            st = d.get("status")
+            if st not in ("queued", "running"):
+                continue
+            rk = k.decode() if isinstance(k, (bytes, bytearray)) else str(k)
+            jid = _price_job_tail_id(rk)
+            name_raw = d.get("item_name")
+            item_name = (
+                name_raw.strip()[:200] if isinstance(name_raw, str) and name_raw.strip() else ""
+            )
+            inflight.append(
+                {
+                    "job_id_full": jid,
+                    "job_id_display": (jid[:8] + "…") if len(jid) > 12 else jid,
+                    "status": st,
+                    "user_id": str(d.get("user_id") or "").strip(),
+                    "item_id": str(d.get("item_id") or "").strip(),
+                    "item_name": item_name,
+                    "league": str(d.get("league") or "").strip(),
+                    "step": str(d.get("step") or "")[:120],
+                    "message": str(d.get("message") or "")[:200],
+                    "updated_at": str(d.get("updated_at") or "").strip(),
+                }
+            )
+        if scanned > max_scan or cursor == 0:
+            break
+
+    running = [r for r in inflight if r.get("status") == "running"]
+    queued = [r for r in inflight if r.get("status") == "queued"]
+    running.sort(key=lambda r: r.get("updated_at") or "", reverse=True)
+    queued.sort(key=lambda r: r.get("updated_at") or "", reverse=True)
+    return (running + queued)[: max(0, limit)]
 
 
 def _chaos_equiv(res: Any) -> float | None:

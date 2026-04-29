@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Price queue · Admin{% endblock %}
+{% block content %}
+<section>
+  <h2>Hybrid price jobs (top {{ rows | length }})</h2>
+  <p class="muted" style="margin:0 0 1rem">
+    In-flight rows from Redis <code>poe2b:price_job:*</code> with status
+    <strong>running</strong> then <strong>queued</strong> (newest <code>updated_at</code> first).
+    Character profile is resolved when the item id appears on a stored <code>character</code>
+    snapshot for that user; otherwise stash or offline.
+  </p>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Account</th>
+          <th>Character</th>
+          <th>Item</th>
+          <th>League</th>
+          <th>Updated (UTC)</th>
+          <th>Job</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><span class="badge {% if r.status == 'running' %}badge-warn{% else %}badge-ok{% endif %}">{{ r.status }}</span></td>
+          <td><code>{{ r.account or "—" }}</code></td>
+          <td style="max-width:18rem;overflow:hidden;text-overflow:ellipsis" title="{{ r.character_profile or '' }}">{{ r.character_profile or "—" }}</td>
+          <td style="max-width:16rem;overflow:hidden;text-overflow:ellipsis" title="{{ r.item_name or r.item_id }}">
+            {% if r.item_name %}<strong>{{ r.item_name }}</strong>{% endif %}
+            {% set iid = r.item_id or '' %}
+            {% if iid %}
+            <div class="muted" style="font-size:0.85em"><code>{{ iid[:28] }}{% if iid|length > 28 %}…{% endif %}</code></div>
+            {% endif %}
+          </td>
+          <td><code>{{ r.league or "—" }}</code></td>
+          <td class="muted" style="max-width:12rem;font-size:0.9em">{{ r.updated_at or "—" }}</td>
+          <td><code title="{{ r.job_id_full }}">{{ r.job_id_display }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No queued or running price estimate jobs in Redis.</p>
+  {% endif %}
+</section>
+{% endblock %}

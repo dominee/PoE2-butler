@@ -154,6 +154,11 @@ export interface RefreshResponse {
   errors: string[];
 }
 
+export interface AppriseQueued {
+  ok: boolean;
+  league: string;
+}
+
 export interface TradeSearchResponse {
   mode: "exact" | "upgrade";
   league: string;

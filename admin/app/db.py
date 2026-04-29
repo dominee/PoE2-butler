@@ -10,6 +10,7 @@ console expects ``ADMIN_DATABASE_URL`` to point at Postgres (same as prod).
 
 from __future__ import annotations
 
+import uuid
 from functools import lru_cache
 
 from sqlalchemy import text
@@ -114,3 +115,94 @@ async def dashboard_metrics() -> dict:
             "snapshots_24h": int(m["snapshots_24h"] or 0),
             "last_snapshot_at": m["last_snapshot_at"],
         }
+
+
+def _item_ids_from_character_payload(payload: object) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    out: set[str] = set()
+    for slot in ("equipment", "items"):
+        arr = payload.get(slot)
+        if not isinstance(arr, list):
+            continue
+        for raw in arr:
+            if isinstance(raw, dict) and raw.get("id") is not None:
+                s = str(raw["id"]).strip()
+                if s:
+                    out.add(s)
+    return out
+
+
+def _character_profile_label(payload: object, fallback_key: str) -> str:
+    if not isinstance(payload, dict):
+        return fallback_key or "—"
+    ch = payload.get("character")
+    if isinstance(ch, dict):
+        n = str(ch.get("name") or "").strip()
+        cl = str(ch.get("class") or "").strip()
+        lv = ch.get("level")
+        if n:
+            bits = [n]
+            if cl:
+                bits.append(cl)
+            if lv is not None:
+                try:
+                    bits.append(f"Lv.{int(lv)}")
+                except (TypeError, ValueError):
+                    bits.append(f"Lv.{lv}")
+            return " · ".join(bits)
+    return (fallback_key or "").strip() or "—"
+
+
+async def enrich_price_queue_rows(rows: list[dict]) -> None:
+    """Add ``account`` (GGG name) and ``character_profile`` using Postgres snapshots."""
+    if not rows:
+        return
+
+    uids: dict[str, str] = {}
+    for r in rows:
+        u = str(r.get("user_id") or "").strip()
+        if not u:
+            continue
+        try:
+            uids[u] = str(uuid.UUID(u))
+        except ValueError:
+            continue
+
+    engine = get_engine()
+    async with engine.connect() as conn:
+        user_names: dict[str, str] = {}
+        char_rows: dict[str, list[tuple[str, dict]]] = {}
+        for uid_key, uid_val in uids.items():
+            urow = (
+                await conn.execute(
+                    text("SELECT ggg_account_name FROM users WHERE id = CAST(:id AS uuid)"),
+                    {"id": uid_val},
+                )
+            ).first()
+            user_names[uid_key] = str(urow._mapping["ggg_account_name"]) if urow else "—"
+
+            sres = await conn.execute(
+                text(
+                    "SELECT key, payload FROM snapshots "
+                    "WHERE user_id = CAST(:id AS uuid) AND kind = 'character'"
+                ),
+                {"id": uid_val},
+            )
+            lst: list[tuple[str, dict]] = []
+            for srow in sres.mappings():
+                p = srow["payload"]
+                pl = p if isinstance(p, dict) else {}
+                lst.append((str(srow["key"] or ""), pl))
+            char_rows[uid_key] = lst
+
+    for r in rows:
+        uid = str(r.get("user_id") or "").strip()
+        r["account"] = user_names.get(uid, "—")
+        iid = str(r.get("item_id") or "").strip()
+        prof: str | None = None
+        for _key, payload in char_rows.get(uid, []):
+            if iid and iid in _item_ids_from_character_payload(payload):
+                prof = _character_profile_label(payload, _key)
+                break
+        r["character_profile"] = prof if prof else "— (stash or unknown)"

@@ -41,7 +41,7 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 - When a job reaches a **terminal** state (`completed` or `failed`), the worker **upserts** a row in **`item_price_estimates`** (unique on `user_id` + `league` + `item_id`) so the result survives Redis TTL and app restarts. The stored **`tolerance_pct`** must match the client query for `GET /api/pricing/estimate/item` to return that row (**204** if missing or tolerance changed).
 - The client **polls** `GET /api/pricing/estimate/{job_id}` after `POST /api/pricing/estimate`. Duplicate POSTs for the same user + item + league de-duplicate to one job id via `poe2b:price_dedup:*`.
 - **UI:** on opening the detail pane, the SPA **GETs** `/api/pricing/estimate/item` first (TanStack `persisted-price-estimate`); **POST** runs only after **Refresh pricing** (increments `rerunKey` in `useRefinedPriceEstimate`).
-- After **Refresh** (`POST /api/refresh`), the API enqueues **`backfill_item_price_estimates`**: up to **`PRICING_BACKFILL_MAX_ITEMS`** (default 40) hybrid runs for stash + equipped items, **items with no DB row first**, then **oldest `computed_at`** (so existing estimates are refreshed only after gaps are filled).
+- **Apprise** (`POST /api/pricing/apprise`) enqueues **`backfill_item_price_estimates`** for **stash tabs only** in the chosen league: up to **`PRICING_BACKFILL_MAX_ITEMS`** (default 40) hybrid runs, **items with no DB row first**, then **oldest `computed_at`**. Header **Refresh** (`POST /api/refresh`) updates snapshots only and **does not** queue pricing.
 
 ## GGG trade2 rate limiting (critical)
 
@@ -65,7 +65,7 @@ The admin **Overview** → **Price jobs (background)** section lists throttle ke
 | `PRICING_TRADE_ESTIMATE_ENABLED` | `0` disables tier C; aggregators / lookup still work |
 | `PRICING_SCOUT_BASE_URL` | Optional future tier B; empty disables |
 | `PRICING_MIN_TRADE_LISTINGS` | Stop relaxing when search `total` ≥ this |
-| `PRICING_BACKFILL_MAX_ITEMS` | Cap for hybrid estimates queued after `POST /api/refresh` (missing rows first, then oldest) |
+| `PRICING_BACKFILL_MAX_ITEMS` | Cap for hybrid estimates queued by **Apprise** (`POST /api/pricing/apprise`; missing rows first, then oldest) |
 | `GGG_TRADE_MIN_INTERVAL_SEC` | Base part of the post-success lock TTL (alias: `GGG_TRADE_FETCH_MIN_INTERVAL_SEC`) |
 | `GGG_TRADE_EXTRA_SPACING_SEC` | **Added** to the min interval for the post-success lock (default 5) |
 | `GGG_TRADE_429_BUFFER_SEC` | Added to GGG’s parsed “wait N seconds” on 429 |
