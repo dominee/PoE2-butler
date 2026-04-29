@@ -9,6 +9,26 @@
     Character profile is resolved when the item id appears on a stored <code>character</code>
     snapshot for that user; otherwise stash or offline.
   </p>
+  <p class="muted" style="margin:0 0 1rem">
+    <strong>Remove</strong> deletes the Redis job key only. A <strong>running</strong> worker can
+    recreate the key on its next progress write. <strong>Clear queue</strong> removes every
+    <code>queued</code> / <code>running</code> hybrid job state found by scan (same caveat for
+    running jobs).
+  </p>
+  {% if notice == "removed" %}
+  <p class="notice-banner notice-ok">Removed that job from Redis.</p>
+  {% elif notice == "missing" %}
+  <p class="notice-banner">No Redis key for that job id (already expired or removed).</p>
+  {% elif notice == "invalid_job" %}
+  <p class="notice-banner error-banner">Invalid job id (must be a UUID).</p>
+  {% elif notice == "cleared" %}
+  <p class="notice-banner notice-ok">Cleared {{ cleared_n }} in-flight job key(s) from Redis.</p>
+  {% endif %}
+  <div class="toolbar-row" style="margin-bottom:1rem">
+    <form method="post" action="/admin/price-queue/clear" class="inline-form" onsubmit="return confirm('Remove all queued and running hybrid price jobs from Redis?');">
+      <button type="submit" class="danger">Clear whole queue</button>
+    </form>
+  </div>
   {% if rows %}
   <div class="table-wrap">
     <table class="data">
@@ -21,6 +41,7 @@
           <th>League</th>
           <th>Updated (UTC)</th>
           <th>Job</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -39,6 +60,12 @@
           <td><code>{{ r.league or "—" }}</code></td>
           <td class="muted" style="max-width:12rem;font-size:0.9em">{{ r.updated_at or "—" }}</td>
           <td><code title="{{ r.job_id_full }}">{{ r.job_id_display }}</code></td>
+          <td class="table-actions">
+            <form method="post" action="/admin/price-queue/remove" class="inline-form">
+              <input type="hidden" name="job_id" value="{{ r.job_id_full }}" />
+              <button type="submit" class="input-like btn-compact">Remove</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

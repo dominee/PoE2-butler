@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import pickle
 import time
+import uuid
 from collections import Counter
 from functools import lru_cache
 from typing import Any
@@ -201,6 +202,19 @@ _THROTTLE_TOKENS: tuple[tuple[str, str], ...] = (
 
 _VALID_JOB_STATUS = frozenset({"queued", "running", "completed", "failed"})
 
+PRICE_JOB_KEY_PREFIX = "poe2b:price_job:"
+
+
+def normalize_price_job_id(job_id: str) -> str | None:
+    """Return canonical job id string or None if not a valid UUID."""
+    raw = job_id.strip()
+    if not raw:
+        return None
+    try:
+        return str(uuid.UUID(raw))
+    except ValueError:
+        return None
+
 
 def _decode_json_value(raw: Any) -> dict[str, Any] | None:
     if not raw:
@@ -273,6 +287,49 @@ async def top_queued_price_estimate_jobs(
     running.sort(key=lambda r: r.get("updated_at") or "", reverse=True)
     queued.sort(key=lambda r: r.get("updated_at") or "", reverse=True)
     return (running + queued)[: max(0, limit)]
+
+
+async def delete_price_job_key(job_id: str) -> tuple[bool, str]:
+    """Delete ``poe2b:price_job:{job_id}`` if ``job_id`` is a valid UUID.
+
+    Returns ``(True, "deleted")`` if a key was removed, ``(True, "missing")`` if the
+    id was valid but the key was absent, ``(False, "invalid_job_id")`` otherwise.
+    """
+    jid = normalize_price_job_id(job_id)
+    if jid is None:
+        return False, "invalid_job_id"
+    redis = get_redis()
+    n = await redis.delete(f"{PRICE_JOB_KEY_PREFIX}{jid}")
+    return True, "deleted" if n else "missing"
+
+
+async def clear_inflight_price_estimate_jobs(*, max_scan: int = 20000) -> int:
+    """Delete Redis keys for hybrid jobs with status ``queued`` or ``running`` (SCAN).
+
+    Does not cancel arq workers: a **running** job may recreate its Redis key on the
+    next ``save_job_state`` call.
+    """
+    redis = get_redis()
+    deleted = 0
+    scanned = 0
+    cursor = 0
+    while True:
+        cursor, keys = await redis.scan(cursor=cursor, match=f"{PRICE_JOB_KEY_PREFIX}*", count=400)
+        for k in keys:
+            scanned += 1
+            if scanned > max_scan:
+                break
+            d = _decode_json_value(await redis.get(k))
+            if not d:
+                continue
+            st = d.get("status")
+            if st not in ("queued", "running"):
+                continue
+            await redis.delete(k)
+            deleted += 1
+        if scanned > max_scan or cursor == 0:
+            break
+    return deleted
 
 
 def _chaos_equiv(res: Any) -> float | None:

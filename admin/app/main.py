@@ -18,6 +18,8 @@ from admin.app.db import enrich_price_queue_rows, list_users, recent_snapshots
 from admin.app.middleware import AdminSecurityHeaders, IPAllowlistMiddleware
 from admin.app.redis_stats import (
     backend_health,
+    clear_inflight_price_estimate_jobs,
+    delete_price_job_key,
     probe_ok,
     top_queued_price_estimate_jobs,
 )
@@ -198,13 +200,44 @@ def _register_routes(app: FastAPI) -> None:
         request: Request,
         session: AdminSession = Depends(_require_session),
     ) -> HTMLResponse:
+        notice = request.query_params.get("notice")
+        cleared_raw = request.query_params.get("n", "0")
+        try:
+            cleared_n = max(0, int(cleared_raw))
+        except ValueError:
+            cleared_n = 0
         rows = await top_queued_price_estimate_jobs(limit=50)
         await enrich_price_queue_rows(rows)
         return TEMPLATES.TemplateResponse(
             request,
             "price_queue.html",
-            {"session": session, "active": "price_queue", "rows": rows},
+            {
+                "session": session,
+                "active": "price_queue",
+                "rows": rows,
+                "notice": notice,
+                "cleared_n": cleared_n,
+            },
         )
+
+    @app.post("/admin/price-queue/remove")
+    async def price_queue_remove(
+        job_id: Annotated[str, Form()],
+        _session: AdminSession = Depends(_require_session),
+    ) -> RedirectResponse:
+        ok, outcome = await delete_price_job_key(job_id)
+        if not ok:
+            return RedirectResponse(url="/admin/price-queue?notice=invalid_job", status_code=303)
+        if outcome == "deleted":
+            return RedirectResponse(url="/admin/price-queue?notice=removed", status_code=303)
+        return RedirectResponse(url="/admin/price-queue?notice=missing", status_code=303)
+
+    @app.post("/admin/price-queue/clear")
+    async def price_queue_clear(
+        _session: AdminSession = Depends(_require_session),
+    ) -> RedirectResponse:
+        n = await clear_inflight_price_estimate_jobs()
+        return RedirectResponse(url=f"/admin/price-queue?notice=cleared&n={n}", status_code=303)
 
     @app.get("/admin/upstream", response_class=HTMLResponse)
     async def upstream(

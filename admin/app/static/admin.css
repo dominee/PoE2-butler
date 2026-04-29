@@ -328,6 +328,55 @@ button.primary:hover {
   filter: brightness(1.08);
 }
 
+button.danger {
+  padding: 0.5rem 0.85rem;
+  background: rgba(224, 112, 112, 0.15);
+  color: #f0b8b8;
+  border: 1px solid var(--bad);
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+button.danger:hover {
+  background: rgba(224, 112, 112, 0.28);
+}
+
+.inline-form {
+  display: inline;
+  margin: 0;
+}
+
+.inline-form button {
+  vertical-align: middle;
+}
+
+button.btn-compact {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.table-actions {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.notice-banner {
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--rule);
+  background: var(--panel-elevated);
+}
+
+.notice-banner.notice-ok {
+  border-color: rgba(108, 189, 122, 0.45);
+  color: #b8e6c0;
+  background: rgba(108, 189, 122, 0.1);
+}
+
 .muted {
   color: var(--ink-muted);
   font-size: 0.8rem;
