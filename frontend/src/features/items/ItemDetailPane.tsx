@@ -11,6 +11,7 @@ import {
   useUpdatePrefs,
   shareViewPath,
 } from "@/api/hooks";
+import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
 import {
@@ -27,9 +28,8 @@ import { copyTextToClipboard } from "@/utils/clipboard";
 import {
   computeItemScore,
   currencyRatesToChaosPair,
-  formatChaosAsDivExLine,
-  formatPriceEstimateLine,
 } from "./itemMetrics";
+import { DivExPriceText, PriceEstimateBrightText } from "./DivExPriceText";
 import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
@@ -98,8 +98,9 @@ export function ItemDetailPane({
 
   if (!item) {
     return (
-      <aside className="panel hidden h-full p-4 text-sm text-parchment-200/80 lg:block">
-        Select an item to see its details.
+      <aside className="relative panel hidden h-full overflow-hidden p-4 text-sm text-parchment-200/80 lg:block">
+        <CharacterPaneGothicBackdrop className="rounded-md" />
+        <p className="relative z-10">Select an item to see its details.</p>
       </aside>
     );
   }
@@ -285,11 +286,14 @@ export function ItemDetailPane({
                         ? "Trade median: "
                         : "Refined: "}
                     </span>
-                    <span className="font-mono text-ember-200/90">
-                      {currencyChaos
-                        ? formatChaosAsDivExLine(refinedQ.job.result.chaos_equiv, currencyChaos)
-                        : formatPriceEstimateLine(refinedQ.job.result)}
-                    </span>
+                    {currencyChaos ? (
+                      <DivExPriceText
+                        chaosEquiv={refinedQ.job.result.chaos_equiv}
+                        rates={currencyChaos}
+                      />
+                    ) : (
+                      <PriceEstimateBrightText estimate={refinedQ.job.result} />
+                    )}
                     {refinedQ.job.result.estimate_method === "trade_median" &&
                     refinedQ.job.result.sample_size != null ? (
                       <span className="text-ui-muted"> ({refinedQ.job.result.sample_size} listings)</span>

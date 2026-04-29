@@ -11,11 +11,13 @@
   body {
     @apply bg-ink-950 text-parchment-50;
     background-image: radial-gradient(
-        ellipse at top,
-        rgba(200, 160, 64, 0.08),
-        transparent 60%
+        ellipse 130% 90% at 50% -15%,
+        rgba(72, 28, 42, 0.22),
+        transparent 58%
       ),
-      radial-gradient(ellipse at bottom, rgba(70, 50, 110, 0.08), transparent 60%);
+      radial-gradient(ellipse 100% 55% at 100% 85%, rgba(38, 24, 58, 0.2), transparent 52%),
+      radial-gradient(ellipse 80% 50% at 0% 100%, rgba(18, 14, 22, 0.45), transparent 45%),
+      linear-gradient(180deg, #070708 0%, #0b0b0d 38%, #060607 100%);
     background-attachment: fixed;
   }
 }
@@ -33,7 +35,7 @@
       transition hover:border-ember-500 hover:text-ember-400;
   }
   .panel {
-    @apply rounded-md border border-ink-700 bg-ink-900/80 shadow-pane backdrop-blur;
+    @apply rounded-md border border-ink-700/90 bg-ink-900/80 shadow-pane backdrop-blur;
   }
   /** Secondary body / meta text on dark panels (prefer over raw text-ink-500). */
   .text-ui-muted {

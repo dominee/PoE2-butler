@@ -39,7 +39,7 @@ export default {
         display: ["'Cinzel'", "serif"],
       },
       boxShadow: {
-        pane: "0 4px 24px rgba(0,0,0,0.5)",
+        pane: "0 4px 28px rgba(0,0,0,0.62), inset 0 1px 0 rgba(200,175,130,0.05)",
       },
     },
   },

@@ -1,5 +1,6 @@
 import type { PriceEstimate } from "@/api/types";
-import { type CurrencyChaosPair, formatChaos, formatChaosAsDivExLine } from "./itemMetrics";
+import { type CurrencyChaosPair, formatChaos } from "./itemMetrics";
+import { DivExPriceText } from "./DivExPriceText";
 
 export interface PriceBadgeProps {
   price: PriceEstimate | null | undefined;
@@ -12,9 +13,11 @@ export interface PriceBadgeProps {
 export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBadgeProps) {
   if (!price) return null;
   const valuable = threshold != null && price.chaos_equiv >= threshold;
-  const label = currencyChaos
-    ? formatChaosAsDivExLine(price.chaos_equiv, currencyChaos)
-    : `${formatChaos(price.chaos_equiv)}c`;
+  const label = currencyChaos ? (
+    <DivExPriceText chaosEquiv={price.chaos_equiv} rates={currencyChaos} valuable={valuable} />
+  ) : (
+    `${formatChaos(price.chaos_equiv)}c`
+  );
   return (
     <span
       className={[
@@ -28,7 +31,11 @@ export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBa
       data-testid="price-badge"
     >
       <span aria-hidden="true">◈</span>
-      <span className="font-mono tabular-nums">{label}</span>
+      {typeof label === "string" ? (
+        <span className="font-mono tabular-nums text-white/92">{label}</span>
+      ) : (
+        <span className="tabular-nums">{label}</span>
+      )}
     </span>
   );
 }

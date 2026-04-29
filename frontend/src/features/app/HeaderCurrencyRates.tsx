@@ -63,17 +63,17 @@ export function HeaderCurrencyRates({ league }: HeaderCurrencyRatesProps) {
 
   const line = (
     <>
-      <span className="text-ui-caption">1 div</span>
-      <span className="text-ui-caption"> ≈ </span>
-      <span className="font-mono tabular-nums text-white/92">
+      <span className="text-white/86">1 div</span>
+      <span className="text-white/86"> ≈ </span>
+      <span className="font-mono tabular-nums text-white/95">
         {exPerDiv != null ? exPerDiv.toFixed(1) : "—"}
       </span>
-      <span className="text-ui-caption"> ex</span>
-      <span className="text-ui-muted"> · </span>
-      <span className="text-ui-caption">1 ex</span>
-      <span className="text-ui-caption"> ≈ </span>
-      <span className="font-mono tabular-nums text-white/92">{chaosPerEx.toFixed(1)}</span>
-      <span className="text-ui-caption"> chaos</span>
+      <span className="text-white/86"> ex</span>
+      <span className="text-white/55"> · </span>
+      <span className="text-white/86">1 ex</span>
+      <span className="text-white/86"> ≈ </span>
+      <span className="font-mono tabular-nums text-white/95">{chaosPerEx.toFixed(1)}</span>
+      <span className="text-white/86"> chaos</span>
     </>
   );
 

@@ -15,9 +15,9 @@ export function CurrencyExchangeHint({ league, className = "" }: CurrencyExchang
       className={`text-[11px] text-parchment-200/90 ${className}`.trim()}
       title="From community economy data (poe.ninja or configured fallbacks) for this league"
     >
-      <span className="text-parchment-100/90">1 Divine ≈ </span>
-      <span className="font-mono tabular-nums text-white/92">{r.exalted_per_divine.toFixed(1)}</span>
-      <span className="text-parchment-100/90"> Exalted</span>
+      <span className="text-white/86">1 Divine ≈ </span>
+      <span className="font-mono tabular-nums text-white/95">{r.exalted_per_divine.toFixed(1)}</span>
+      <span className="text-white/86"> Exalted</span>
     </p>
   );
 }

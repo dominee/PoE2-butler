@@ -9,7 +9,7 @@ export interface CharacterGridProps {
 export function CharacterGrid({ characters, selected, onSelect }: CharacterGridProps) {
   if (characters.length === 0) {
     return (
-      <div className="panel p-4 text-sm text-ui-muted">
+      <div className="panel border-ink-800/80 p-4 text-sm text-ui-muted">
         No characters found for this league.
       </div>
     );

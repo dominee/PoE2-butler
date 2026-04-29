@@ -16,6 +16,7 @@ import { CurrencyExchangeHint } from "@/features/app/CurrencyExchangeHint";
 import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
+import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { CharacterTable } from "@/features/characters/CharacterTable";
@@ -167,7 +168,7 @@ export function AppShell() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-ink-800 bg-ink-900/60 px-4 py-2 backdrop-blur">
+      <header className="flex flex-wrap items-center gap-3 border-b border-ink-950 bg-ink-950/70 px-4 py-2 backdrop-blur">
         <h1 className="font-display text-lg text-ember-400">Hideout Butler</h1>
         <span className="text-sm text-parchment-100/80">{me.account_name}</span>
         <nav aria-label="Primary view" className="ml-3 flex gap-1 text-sm">
@@ -236,15 +237,25 @@ export function AppShell() {
         <main className="flex min-h-0 flex-1 overflow-hidden">
         <ActivityLog league={selectedLeague} onSelectItem={setSelectedItem} />
         <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px,1fr,360px]">
-          <section aria-label="Characters" className="flex flex-col gap-2 overflow-y-auto">
-            <h2 className="font-display text-parchment-100/80">Characters</h2>
-            {charactersQ.isLoading && <p className="text-ui-muted">Loading characters&hellip;</p>}
+          <section
+            aria-label="Characters"
+            className="relative flex min-h-0 flex-col gap-2 overflow-y-auto rounded-sm border border-ink-800/70 bg-ink-950/40 p-3 shadow-[inset_0_1px_0_rgba(200,170,120,0.04)]"
+          >
+            <CharacterPaneGothicBackdrop />
+            <h2 className="relative z-10 shrink-0 font-display text-parchment-100/85 tracking-wide">
+              Characters
+            </h2>
+            {charactersQ.isLoading && (
+              <p className="relative z-10 text-ui-muted">Loading characters&hellip;</p>
+            )}
             {charactersQ.data && (
-              <CharacterGrid
-                characters={charactersQ.data.characters}
-                selected={selectedCharacter}
-                onSelect={setCharacter}
-              />
+              <div className="relative z-10 min-h-0 flex-1">
+                <CharacterGrid
+                  characters={charactersQ.data.characters}
+                  selected={selectedCharacter}
+                  onSelect={setCharacter}
+                />
+              </div>
             )}
           </section>
 

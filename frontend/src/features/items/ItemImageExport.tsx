@@ -8,9 +8,8 @@ import { RARITY_NAME_CLASS } from "./itemVisualStyles";
 import {
   type CurrencyChaosPair,
   computeItemScore,
-  formatChaosAsDivExLine,
-  formatPriceEstimateLine,
 } from "./itemMetrics";
+import { DivExPriceText, PriceEstimateBrightText } from "./DivExPriceText";
 import { itemRollScoreState } from "./modRollMetrics";
 import { ExplicitModLine, ModDivider, ModSection, ModText, PANE_SECTION_HEADING } from "./ItemModPresentation";
 import { PercentBar } from "./PercentBar";
@@ -67,10 +66,15 @@ function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
               <span className="text-parchment-200/90">
                 {refinedJob.result.estimate_method === "trade_median" ? "Trade median: " : "Refined: "}
               </span>
-              <span className="font-mono tabular-nums text-white/92">
-                {currencyChaos
-                  ? formatChaosAsDivExLine(refinedJob.result.chaos_equiv, currencyChaos)
-                  : formatPriceEstimateLine(refinedJob.result)}
+              <span className="text-parchment-200/90">
+                {refinedJob.result.estimate_method === "trade_median" ? "Trade median: " : "Refined: "}
+              </span>
+              <span className="font-mono tabular-nums">
+                {currencyChaos ? (
+                  <DivExPriceText chaosEquiv={refinedJob.result.chaos_equiv} rates={currencyChaos} />
+                ) : (
+                  <PriceEstimateBrightText estimate={refinedJob.result} />
+                )}
               </span>
               {refinedJob.result.estimate_method === "trade_median" &&
               refinedJob.result.sample_size != null ? (
