@@ -53,7 +53,7 @@ export function StashIconGrid({
   activityMap,
 }: StashIconGridProps) {
   if (items.length === 0) {
-    return <p className="text-sm text-ink-500">No items in this tab.</p>;
+    return <p className="text-sm text-ui-muted">No items in this tab.</p>;
   }
 
   return (
@@ -143,7 +143,7 @@ export function StashIconGrid({
                 </span>
               )}
               {item.ilvl != null && (
-                <span className="text-[8px] text-ink-400">iLvl {item.ilvl}</span>
+                <span className="text-[8px] text-ui-muted">iLvl {item.ilvl}</span>
               )}
               {item.explicit_mods.slice(0, 3).map((mod, i) => (
                 <span key={i} className="line-clamp-1 text-[8px] text-rarity-magic/80">

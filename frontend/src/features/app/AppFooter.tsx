@@ -7,7 +7,7 @@ interface AppFooterProps {
 export function AppFooter({ className = "" }: AppFooterProps) {
   return (
     <footer className={className} aria-label="Legal disclaimer">
-      <p className="mx-auto max-w-5xl px-4 text-center text-xs text-ink-500">{GGG_DISCLAIMER}</p>
+      <p className="mx-auto max-w-5xl px-4 text-center text-xs text-ui-muted">{GGG_DISCLAIMER}</p>
     </footer>
   );
 }

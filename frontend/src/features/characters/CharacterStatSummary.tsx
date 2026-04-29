@@ -211,7 +211,7 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
         <h3 className={PANE_SECTION_HEADING}>Stat summary</h3>
         <button
           type="button"
-          className="shrink-0 rounded border border-ink-600/80 bg-ink-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-parchment-50/95 transition hover:border-ink-500 hover:bg-ink-900/80"
+          className="shrink-0 rounded border border-ink-600/80 bg-ink-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-parchment-50/95 transition hover:border-ink-500 hover:bg-ink-900/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/60"
           aria-expanded={expanded}
           aria-controls={panelId}
           onClick={() => setExpanded((e) => !e)}
@@ -227,9 +227,7 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
         >
           {briefGroups.map((cat) => (
             <section key={cat.id} aria-label={cat.label}>
-              <h4 className="text-[9px] font-semibold uppercase tracking-wide text-parchment-100">
-                {cat.label}
-              </h4>
+              <h4 className={PANE_SECTION_HEADING}>{cat.label}</h4>
               <ul className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 {cat.lines.map((b) => (
                   <li

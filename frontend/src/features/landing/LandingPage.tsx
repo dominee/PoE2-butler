@@ -14,7 +14,7 @@ export function LandingPage() {
         <a href="/api/auth/login" className="btn-primary mt-8">
           Sign in with GGG
         </a>
-        <p className="mt-4 text-xs uppercase tracking-wide text-ink-500">
+        <p className="mt-4 text-xs uppercase tracking-wide text-ui-muted">
           M0 foundations build
         </p>
       </main>

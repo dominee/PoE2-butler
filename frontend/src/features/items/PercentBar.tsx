@@ -12,7 +12,7 @@ const FILL_GRADIENT = "bg-gradient-to-r from-ink-600 to-ember-400";
 
 function valueTextClass(pct: number, variant: PercentBarProps["variant"]): string {
   const strong = variant === "t1" && pct >= 100 ? true : pct >= 92;
-  return strong ? "text-ember-400" : "text-ink-400";
+  return strong ? "text-ember-400" : "text-ui-caption";
 }
 
 export interface PercentBarProps {
@@ -43,7 +43,7 @@ export function PercentBar({
           title="No roll data for this line"
         />
         {showValue && (
-          <span className="w-9 shrink-0 text-right text-[10px] text-ink-600">—</span>
+          <span className="w-9 shrink-0 text-right text-[10px] text-ui-muted">—</span>
         )}
       </div>
     );

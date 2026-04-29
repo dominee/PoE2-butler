@@ -35,4 +35,12 @@
   .panel {
     @apply rounded-md border border-ink-700 bg-ink-900/80 shadow-pane backdrop-blur;
   }
+  /** Secondary body / meta text on dark panels (prefer over raw text-ink-500). */
+  .text-ui-muted {
+    @apply text-parchment-200/80;
+  }
+  /** Brighter captions and small labels. */
+  .text-ui-caption {
+    @apply text-parchment-100/90;
+  }
 }

@@ -43,7 +43,7 @@ export function HeaderCurrencyRates({ league }: HeaderCurrencyRatesProps) {
   if (q.isLoading && !r) {
     return (
       <p
-        className="min-w-0 text-[11px] text-ink-500"
+        className="min-w-0 text-[11px] text-ui-muted"
         aria-live="polite"
         aria-label="Loading currency rates"
       >
@@ -63,28 +63,28 @@ export function HeaderCurrencyRates({ league }: HeaderCurrencyRatesProps) {
 
   const line = (
     <>
-      <span className="text-ink-500">1 div</span>
-      <span className="text-ink-500"> ≈ </span>
-      <span className="font-mono tabular-nums text-parchment-200/90">
+      <span className="text-ui-caption">1 div</span>
+      <span className="text-ui-caption"> ≈ </span>
+      <span className="font-mono tabular-nums text-white/92">
         {exPerDiv != null ? exPerDiv.toFixed(1) : "—"}
       </span>
-      <span className="text-ink-500"> ex</span>
-      <span className="text-ink-600"> · </span>
-      <span className="text-ink-500">1 ex</span>
-      <span className="text-ink-500"> ≈ </span>
-      <span className="font-mono tabular-nums text-parchment-200/90">{chaosPerEx.toFixed(1)}</span>
-      <span className="text-ink-500"> chaos</span>
+      <span className="text-ui-caption"> ex</span>
+      <span className="text-ui-muted"> · </span>
+      <span className="text-ui-caption">1 ex</span>
+      <span className="text-ui-caption"> ≈ </span>
+      <span className="font-mono tabular-nums text-white/92">{chaosPerEx.toFixed(1)}</span>
+      <span className="text-ui-caption"> chaos</span>
     </>
   );
 
   return (
     <p
-      className="min-w-0 text-[11px] leading-tight"
+      className="min-w-0 text-[11px] leading-tight text-parchment-200/90"
       title={`Currency rates (cached). Source: ${r.source}. ${new Date(updated).toISOString()}`}
     >
       {line}
       {updated > 0 && (
-        <span className="ml-1.5 text-ink-600">({formatAgo(updated, now)})</span>
+        <span className="ml-1.5 text-ui-muted">({formatAgo(updated, now)})</span>
       )}
     </p>
   );

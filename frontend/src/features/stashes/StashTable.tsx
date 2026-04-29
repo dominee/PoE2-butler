@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Item, PriceEstimate } from "@/api/types";
 import { formatChaos } from "@/features/items/itemMetrics";
+import { ModText } from "@/features/items/ItemModPresentation";
 
 export interface StashTableProps {
   items: Item[];
@@ -65,7 +66,7 @@ export function StashTable({
       aria-label="Stash items"
     >
       <div
-        className="sticky top-0 z-10 grid grid-cols-[16px_minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] gap-2 border-b border-ink-700 bg-ink-900/95 px-3 py-2 text-[11px] uppercase tracking-wide text-ink-400"
+        className="sticky top-0 z-10 grid grid-cols-[16px_minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] gap-2 border-b border-ink-700 bg-ink-900/95 px-3 py-2 text-[11px] uppercase tracking-wide text-ui-muted"
         role="row"
       >
         <span aria-label="Activity status" />
@@ -93,7 +94,7 @@ export function StashTable({
                 style={{ height: ROW_HEIGHT }}
                 className={[
                   "grid w-full grid-cols-[16px_minmax(140px,1.5fr)_minmax(120px,1fr)_80px_60px_70px_1fr] items-center gap-2 px-3 text-left text-sm",
-                  "border-b border-ink-800 transition hover:bg-ink-800/70 focus:outline-none focus-visible:bg-ink-800",
+                  "border-b border-ink-800 transition hover:bg-ink-800/70 focus:outline-none focus-visible:bg-ink-800 focus-visible:ring-2 focus-visible:ring-ember-400/70 focus-visible:ring-inset",
                   isSelected ? "bg-ember-500/10 text-ember-200" : "text-parchment-100",
                   highlighted ? "ring-1 ring-yellow-400/70" : "",
                 ].join(" ")}
@@ -114,10 +115,10 @@ export function StashTable({
                 </span>
                 <span className="truncate">{item.name || "—"}</span>
                 <span className="truncate text-parchment-100/80">{item.base_type}</span>
-                <span className="text-xs uppercase tracking-wide text-ink-400">
+                <span className="text-xs uppercase tracking-wide text-ui-muted">
                   {item.rarity}
                 </span>
-                <span className="text-ink-400">{item.ilvl ?? "—"}</span>
+                <span className="text-ui-muted">{item.ilvl ?? "—"}</span>
                 <span
                   className={
                     valuable
@@ -128,7 +129,12 @@ export function StashTable({
                   {price ? `${formatChaos(price.chaos_equiv)}c` : "—"}
                 </span>
                 <span className="truncate text-xs text-rarity-magic/90">
-                  {item.explicit_mods.slice(0, 2).join(" · ")}
+                  {item.explicit_mods.slice(0, 2).map((m, i) => (
+                    <span key={i}>
+                      {i > 0 ? " · " : null}
+                      <ModText raw={m} />
+                    </span>
+                  ))}
                 </span>
               </button>
             );

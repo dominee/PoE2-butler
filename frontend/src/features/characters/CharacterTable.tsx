@@ -7,7 +7,7 @@
 
 import type { Item } from "@/api/types";
 import { itemIconDisplayUrl } from "@/features/items/itemRarityFavicon";
-import { stripTags } from "@/utils/modText";
+import { ModText } from "@/features/items/ItemModPresentation";
 
 const SLOT_LABELS: Record<string, string> = {
   Helm: "Helm",
@@ -41,7 +41,7 @@ export function CharacterTable({
   const allItems = [...equipped, ...jewels];
 
   if (allItems.length === 0) {
-    return <p className="text-sm text-ink-500">No items equipped.</p>;
+    return <p className="text-sm text-ui-muted">No items equipped.</p>;
   }
 
   return (
@@ -52,7 +52,7 @@ export function CharacterTable({
     >
       {/* Header */}
       <div
-        className="grid grid-cols-[120px_minmax(140px,2fr)_minmax(110px,1fr)_60px_80px_1fr] gap-2 border-b border-ink-700 bg-ink-900/95 px-3 py-2 text-[11px] uppercase tracking-wide text-ink-400"
+        className="grid grid-cols-[120px_minmax(140px,2fr)_minmax(110px,1fr)_60px_80px_1fr] gap-2 border-b border-ink-700 bg-ink-900/95 px-3 py-2 text-[11px] uppercase tracking-wide text-ui-muted"
         role="row"
       >
         <span>Slot</span>
@@ -75,14 +75,14 @@ export function CharacterTable({
             onClick={() => onSelect(item)}
             className={[
               "grid w-full grid-cols-[120px_minmax(140px,2fr)_minmax(110px,1fr)_60px_80px_1fr] items-center gap-2 px-3 py-2 text-left text-sm",
-              "border-b border-ink-800 transition hover:bg-ink-800/70 focus:outline-none focus-visible:bg-ink-800",
+              "border-b border-ink-800 transition hover:bg-ink-800/70 focus:outline-none focus-visible:bg-ink-800 focus-visible:ring-2 focus-visible:ring-ember-400/70 focus-visible:ring-inset",
               isSelected ? "bg-ember-500/10 text-ember-200" : "text-parchment-100",
             ].join(" ")}
             role="row"
             aria-selected={isSelected}
             data-testid="char-table-row"
           >
-            <span className="truncate text-xs text-ink-400">{slot}</span>
+            <span className="truncate text-xs text-ui-muted">{slot}</span>
             <span className="flex items-center gap-1.5 truncate">
               <img
                 src={itemIconDisplayUrl(item)}
@@ -93,13 +93,15 @@ export function CharacterTable({
               <span className="truncate">{item.name || item.type_line || "—"}</span>
             </span>
             <span className="truncate text-parchment-100/70">{item.base_type}</span>
-            <span className="text-ink-400">{item.ilvl ?? "—"}</span>
+            <span className="text-ui-muted">{item.ilvl ?? "—"}</span>
             <span className="text-xs text-parchment-100/80">—</span>
             <span className="truncate text-xs text-rarity-magic/90">
-              {item.explicit_mods
-                .slice(0, 2)
-                .map((m) => stripTags(m))
-                .join(" · ")}
+              {item.explicit_mods.slice(0, 2).map((m, i) => (
+                <span key={i}>
+                  {i > 0 ? " · " : null}
+                  <ModText raw={m} />
+                </span>
+              ))}
             </span>
           </button>
         );

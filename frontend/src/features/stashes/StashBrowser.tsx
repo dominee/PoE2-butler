@@ -11,6 +11,7 @@ import {
 import type { Item, ItemRarity } from "@/api/types";
 import { CurrencyExchangeHint } from "@/features/app/CurrencyExchangeHint";
 import { ItemCard } from "@/features/items/ItemCard";
+import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { useUIStore } from "@/store/uiStore";
 
 import { applyFilters, useStashFilters } from "./filters";
@@ -112,7 +113,7 @@ export function StashBrowser({
   if (!league) {
     return (
       <section aria-label="Stash" className="space-y-3">
-        <p className="text-ink-500">Select a league to browse stash tabs.</p>
+        <p className="text-ui-muted">Select a league to browse stash tabs.</p>
       </section>
     );
   }
@@ -258,12 +259,12 @@ export function StashBrowser({
           Clear
         </button>
         {!crossTabActive && (
-          <span className="ml-auto text-xs text-ink-400" aria-live="polite" aria-atomic="true">
+          <span className="ml-auto text-xs text-ui-muted" aria-live="polite" aria-atomic="true">
             Showing {filtered.length} / {items.length}
           </span>
         )}
         {crossTabActive && searchQ.data && (
-          <span className="ml-auto text-xs text-ink-400" aria-live="polite">
+          <span className="ml-auto text-xs text-ui-muted" aria-live="polite">
             {searchQ.data.total_items} items across {searchQ.data.results.length} tabs
           </span>
         )}
@@ -272,17 +273,17 @@ export function StashBrowser({
       {/* ── Cross-tab search results ───────────────────────────────────────── */}
       {crossTabActive && (
         <div className="flex flex-col gap-4 overflow-y-auto">
-          {searchQ.isLoading && <p className="text-ink-500">Searching all tabs&hellip;</p>}
+          {searchQ.isLoading && <p className="text-ui-muted">Searching all tabs&hellip;</p>}
           {searchQ.data?.results.length === 0 && (
-            <p className="text-sm text-ink-500">
+            <p className="text-sm text-ui-muted">
               No items found matching &ldquo;{searchQ.data.query}&rdquo; in any tab.
             </p>
           )}
           {searchQ.data?.results.map((group) => (
             <div key={group.tab_id}>
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-widest text-ink-400">
+              <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>
                 {group.tab_name}{" "}
-                <span className="text-ink-600">({group.items.length})</span>
+                <span className="text-ui-muted">({group.items.length})</span>
               </h3>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
                 {group.items.map((item) => (
@@ -303,7 +304,7 @@ export function StashBrowser({
       {/* ── Single-tab view ────────────────────────────────────────────────── */}
       {!crossTabActive && (
         <>
-          {tabQ.isLoading && <p className="text-ink-500">Loading tab&hellip;</p>}
+          {tabQ.isLoading && <p className="text-ui-muted">Loading tab&hellip;</p>}
           {tabQ.isError && (
             <p className="text-red-400">
               Couldn&apos;t load this tab. Try refreshing the stash.

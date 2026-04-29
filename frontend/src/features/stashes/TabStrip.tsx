@@ -18,7 +18,7 @@ function colourStyle(tab: StashTabSummary): React.CSSProperties | undefined {
 export function TabStrip({ tabs, selected, onSelect }: TabStripProps) {
   if (tabs.length === 0) {
     return (
-      <p className="text-ink-500" role="status">
+      <p className="text-ui-muted" role="status">
         No stash tabs yet — try Refresh.
       </p>
     );
@@ -49,7 +49,7 @@ export function TabStrip({ tabs, selected, onSelect }: TabStripProps) {
               data-testid="stash-tab"
             >
               <span>{tab.name}</span>
-              <span className="ml-2 text-[10px] uppercase text-ink-500">{tab.type}</span>
+              <span className="ml-2 text-[10px] uppercase text-ui-muted">{tab.type}</span>
             </button>
           </li>
         );

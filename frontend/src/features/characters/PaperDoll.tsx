@@ -53,7 +53,7 @@ export function PaperDoll({ equipped, selectedItemId, onSelectItem }: PaperDollP
                 onClick={onSelectItem}
               />
             ) : (
-              <div className="panel grid h-full min-h-[68px] place-items-center border border-dashed border-ink-700 text-xs text-ink-500">
+              <div className="panel grid h-full min-h-[68px] place-items-center border border-dashed border-ink-700 text-xs text-ui-muted">
                 {label}
               </div>
             )}

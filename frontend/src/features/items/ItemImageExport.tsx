@@ -485,7 +485,7 @@ export function ItemImageExportActions({
 
   return (
     <div className="shrink-0 space-y-1">
-      <p className="text-[10px] uppercase tracking-widest text-ink-500">Image export (Discord)</p>
+      <p className={PANE_SECTION_HEADING}>Image export (Discord)</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <div className="inline-flex items-stretch gap-0.5">
           <button
@@ -524,7 +524,7 @@ export function ItemImageExportActions({
           </button>
         </div>
       </div>
-      {msg && <p className="text-[11px] text-ink-500">{msg}</p>}
+      {msg && <p className="text-[11px] text-ui-muted">{msg}</p>}
       <div className="pointer-events-none fixed -left-[10000px] top-0 z-0" aria-hidden>
         <div ref={compactRef}>
           <ItemExportSnapshot item={item} variant="compact" />

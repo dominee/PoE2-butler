@@ -4,6 +4,7 @@ import { usePublicItem } from "@/api/hooks";
 import { ApiError } from "@/api/client";
 import { AppFooter } from "@/features/app/AppFooter";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
+import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
 export function PublicItemPage() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -12,7 +13,7 @@ export function PublicItemPage() {
   if (q.isLoading) {
     return (
       <div className="flex min-h-full flex-col">
-        <main className="flex flex-1 items-center justify-center p-8 text-ink-500">
+        <main className="flex flex-1 items-center justify-center p-8 text-ui-muted">
           Loading shared item&hellip;
         </main>
         <AppFooter className="pb-6" />
@@ -46,8 +47,8 @@ export function PublicItemPage() {
   return (
     <div className="flex min-h-full flex-col">
       <header className="shrink-0 border-b border-ink-800 bg-ink-900/60 px-4 py-3 text-sm text-parchment-100/80 backdrop-blur">
-        <p className="text-[10px] uppercase tracking-widest text-ink-500">Public snapshot</p>
-        <p className="mt-0.5 max-w-2xl text-ink-400">
+        <p className={PANE_SECTION_HEADING}>Public snapshot</p>
+        <p className="mt-0.5 max-w-2xl text-ui-muted">
           This page shows a read-only item snapshot. Anyone with the link can see it. Open the
           app to browse your private stash and create new share links.{" "}
           <a className="text-ember-400 hover:underline" href="/app">

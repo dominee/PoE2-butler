@@ -17,6 +17,7 @@ import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
+import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { CharacterTable } from "@/features/characters/CharacterTable";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { ItemCard } from "@/features/items/ItemCard";
@@ -158,7 +159,7 @@ export function AppShell() {
   if (meLoading || !me) {
     return (
       <div className="flex min-h-full flex-col">
-        <main className="flex-1 p-8 text-ink-500">Loading&hellip;</main>
+        <main className="flex-1 p-8 text-ui-muted">Loading&hellip;</main>
         <AppFooter className="pb-6" />
       </div>
     );
@@ -237,7 +238,7 @@ export function AppShell() {
         <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px,1fr,360px]">
           <section aria-label="Characters" className="flex flex-col gap-2 overflow-y-auto">
             <h2 className="font-display text-parchment-100/80">Characters</h2>
-            {charactersQ.isLoading && <p className="text-ink-500">Loading characters&hellip;</p>}
+            {charactersQ.isLoading && <p className="text-ui-muted">Loading characters&hellip;</p>}
             {charactersQ.data && (
               <CharacterGrid
                 characters={charactersQ.data.characters}
@@ -284,12 +285,12 @@ export function AppShell() {
             </div>
             {characterQ.data && <CharacterStatSummary detail={characterQ.data} />}
             {gearLoadStatus && (
-              <p className="text-ink-500" aria-live="polite">
+              <p className="text-ui-muted" aria-live="polite">
                 {gearLoadStatus}
               </p>
             )}
             {selectedCharacter && characterQ.isError && (
-              <p className="text-ink-500" role="alert">
+              <p className="text-amber-200/90" role="alert">
                 Stage 3/3: Gear request failed — check Network for GET /api/characters/
                 {encodeURIComponent(selectedCharacter)}. Try another character or Refresh.
               </p>
@@ -303,9 +304,7 @@ export function AppShell() {
                 />
                 {characterQ.data.inventory.length > 0 && (
                   <div className="mt-2">
-                    <h3 className="mb-1 text-xs font-semibold uppercase tracking-widest text-ink-500">
-                      Jewels
-                    </h3>
+                    <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Jewels</h3>
                     <div className="grid grid-cols-2 gap-1.5">
                       {characterQ.data.inventory.map((jewel) => (
                         <ItemCard
@@ -366,7 +365,7 @@ export function AppShell() {
 
 function viewBtn(active: boolean): string {
   return [
-    "rounded-md border px-2 py-1 transition",
+    "rounded-md border px-2 py-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70",
     active
       ? "border-ember-400 bg-ember-500/10 text-ember-200"
       : "border-ink-700 bg-ink-800 text-parchment-100 hover:border-ember-400",
@@ -375,7 +374,7 @@ function viewBtn(active: boolean): string {
 
 function charLayoutBtn(active: boolean): string {
   return [
-    "px-3 py-1 transition",
+    "px-3 py-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/60 focus-visible:ring-inset",
     active ? "bg-ember-500/10 text-ember-200" : "text-parchment-100",
   ].join(" ");
 }

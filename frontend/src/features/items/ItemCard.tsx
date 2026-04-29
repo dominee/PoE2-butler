@@ -1,8 +1,8 @@
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
-import { stripTags } from "@/utils/modText";
 
 import { PriceBadge } from "./PriceBadge";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
+import { ModText } from "./ItemModPresentation";
 
 const RARITY_CLASSNAME: Record<ItemRarity, string> = {
   Normal: "text-rarity-normal border-ink-600",
@@ -63,7 +63,7 @@ export function ItemCard({
       onClick={onClick ? () => onClick(item) : undefined}
       className={[
         "panel relative w-full text-left border",
-        "min-h-[72px] px-3 py-2 transition focus:outline-none",
+        "min-h-[72px] px-3 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70",
         "hover:border-ember-400/80",
         selected ? "ring-2 ring-ember-400" : "",
         rarityClass,
@@ -99,7 +99,7 @@ export function ItemCard({
           )}
           <div className="break-words text-xs text-parchment-100/80">{item.type_line}</div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] uppercase tracking-wide text-ink-500">
+        <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] uppercase tracking-wide text-ui-muted">
           {price !== undefined && (
             <PriceBadge price={price ?? null} threshold={valuableThreshold} compact />
           )}
@@ -112,7 +112,7 @@ export function ItemCard({
         <ul className="mt-1 list-none text-[11px] text-rarity-magic/90">
           {item.explicit_mods.map((mod, idx) => (
             <li key={`${item.id}-mod-${idx}`} className="break-words leading-snug">
-              {stripTags(mod)}
+              <ModText raw={mod} />
             </li>
           ))}
         </ul>

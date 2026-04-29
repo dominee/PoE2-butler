@@ -244,7 +244,7 @@ export function ItemDetailPane({
                   currencyChaos={currencyChaos}
                 />
               ) : (
-                <span className="text-[11px] text-ink-600">No quick price</span>
+                <span className="text-[11px] text-ui-muted">No quick price</span>
               )}
               <button
                 type="button"
@@ -292,7 +292,7 @@ export function ItemDetailPane({
                     </span>
                     {refinedQ.job.result.estimate_method === "trade_median" &&
                     refinedQ.job.result.sample_size != null ? (
-                      <span className="text-ink-600"> ({refinedQ.job.result.sample_size} listings)</span>
+                      <span className="text-ui-muted"> ({refinedQ.job.result.sample_size} listings)</span>
                     ) : null}
                   </div>
                 )}
