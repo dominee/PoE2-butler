@@ -12,7 +12,7 @@ import {
   formatPriceEstimateLine,
 } from "./itemMetrics";
 import { itemRollScoreState } from "./modRollMetrics";
-import { ExplicitModLine, ModDivider, ModSection, ModText } from "./ItemModPresentation";
+import { ExplicitModLine, ModDivider, ModSection, ModText, PANE_SECTION_HEADING } from "./ItemModPresentation";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
@@ -33,7 +33,7 @@ function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
   const { quickPrice, currencyChaos, valuableThresholdChaos, refinedJob } = snap;
   return (
     <div className="mt-2 rounded border border-ink-700 bg-ink-800/50 px-2 py-1.5">
-      <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Pricing</h4>
+      <h4 className={PANE_SECTION_HEADING}>Pricing</h4>
       <div className="mt-1 flex flex-wrap items-center gap-1.5">
         {quickPrice ? (
           <PriceBadge
@@ -42,10 +42,10 @@ function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
             currencyChaos={currencyChaos}
           />
         ) : (
-          <span className="text-[11px] text-ink-600">No quick price</span>
+          <span className="text-[11px] text-parchment-200/80">No quick price</span>
         )}
       </div>
-      <div className="mt-1 space-y-0.5 text-[11px] text-ink-500">
+      <div className="mt-1 space-y-0.5 text-[11px] text-parchment-100/85">
         {refinedJob?.status === "queued" || refinedJob?.status === "running" ? (
           <span>Refined estimate: working…</span>
         ) : null}
@@ -64,17 +64,17 @@ function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
                   : undefined
               }
             >
-              <span className="text-ink-500">
+              <span className="text-parchment-200/90">
                 {refinedJob.result.estimate_method === "trade_median" ? "Trade median: " : "Refined: "}
               </span>
-              <span className="font-mono text-ember-200/90">
+              <span className="font-mono tabular-nums text-white/92">
                 {currencyChaos
                   ? formatChaosAsDivExLine(refinedJob.result.chaos_equiv, currencyChaos)
                   : formatPriceEstimateLine(refinedJob.result)}
               </span>
               {refinedJob.result.estimate_method === "trade_median" &&
               refinedJob.result.sample_size != null ? (
-                <span className="text-ink-600"> ({refinedJob.result.sample_size} listings)</span>
+                <span className="text-parchment-200/75"> ({refinedJob.result.sample_size} listings)</span>
               ) : null}
             </div>
           )}
@@ -175,7 +175,7 @@ function ItemExportSnapshot({
             <div className={`break-words text-base font-display ${nameClass}`}>{item.name}</div>
           )}
           <div className="text-parchment-100/80">{item.type_line}</div>
-          <div className="mt-1 text-[10px] uppercase text-ink-500">
+          <div className="mt-1 text-[10px] uppercase text-parchment-200/85">
             <span>{item.rarity}</span>
             {item.ilvl != null && <span className="ml-1">ilvl {item.ilvl}</span>}
             {item.corrupted && <span className="ml-1 text-red-400">corrupted</span>}
@@ -187,7 +187,7 @@ function ItemExportSnapshot({
 
       {hasRollData && itemScore != null && (
         <div className="mt-2 flex items-center gap-2 text-xs">
-          <span className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500">
+          <span className={`shrink-0 ${PANE_SECTION_HEADING}`}>
             {hasTypeRefRoll ? "Item quality" : "Item score"}
           </span>
           <div className="min-w-0 flex-1">
@@ -204,12 +204,12 @@ function ItemExportSnapshot({
 
       {visibleProps.length > 0 && (
         <div className="mt-2">
-          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Stats</h4>
+          <h4 className={PANE_SECTION_HEADING}>Stats</h4>
           <ul className="mt-1 space-y-0.5 text-sm text-parchment-100/90">
             {visibleProps.map((p, idx) => (
                
               <li key={idx} className="flex justify-between gap-2">
-                <span className="text-ink-500">{p.name}</span>
+                <span className="text-parchment-200/85">{p.name}</span>
                 <span className="text-right font-semibold text-parchment-50">
                   {p.value != null ? <ModText raw={p.value} /> : null}
                 </span>
@@ -220,14 +220,14 @@ function ItemExportSnapshot({
       )}
 
       {visibleReqs.length > 0 && (
-        <div className="mt-1 text-xs text-ink-500">
+        <div className="mt-1 text-xs text-parchment-200/85">
           Requires {visibleReqs.map((r) => `${r.value} ${r.name}`).join(", ")}
         </div>
       )}
 
       {item.sockets.length > 0 && (
         <div className="mt-1 flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-ink-500">Sockets</span>
+          <span className={PANE_SECTION_HEADING}>Sockets</span>
           {item.sockets.map((s, idx) => (
             <span
                
@@ -244,7 +244,7 @@ function ItemExportSnapshot({
         <ModSection title="Enchant" mods={item.enchant_mods} tone="text-rarity-rare" />
         {item.implicit_mods.length > 0 && (
           <div>
-            <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Implicit</h4>
+            <h4 className={PANE_SECTION_HEADING}>Implicit</h4>
             <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
               {item.implicit_mods.map((mod, idx) => (
                 <ExplicitModLine
@@ -265,7 +265,7 @@ function ItemExportSnapshot({
 
       {showRunes && (
         <div className="mt-2">
-          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Runes &amp; Cores</h4>
+          <h4 className={PANE_SECTION_HEADING}>Runes &amp; Cores</h4>
           <ul className="mt-1 space-y-2">
             {item.socketed_items.map((si) => (
               <li key={si.id} className="rounded border border-ink-600 bg-ink-800/60 px-2 py-1.5">
@@ -294,7 +294,7 @@ function ItemExportSnapshot({
             <>
               {prefixes.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Prefixes</h4>
+                  <h4 className={PANE_SECTION_HEADING}>Prefixes</h4>
                   <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
                     {prefixes.map((mod, idx) => (
                       <ExplicitModLine
@@ -313,7 +313,7 @@ function ItemExportSnapshot({
               {prefixes.length > 0 && suffixes.length > 0 && <ModDivider />}
               {suffixes.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Suffixes</h4>
+                  <h4 className={PANE_SECTION_HEADING}>Suffixes</h4>
                   <ul className="mt-1 space-y-0.5 text-sm text-rarity-magic">
                     {suffixes.map((mod, idx) => (
                       <ExplicitModLine
@@ -335,7 +335,7 @@ function ItemExportSnapshot({
             </>
           ) : (
             <div>
-              <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+              <h4 className={PANE_SECTION_HEADING}>
                 {item.rarity === "Unique" ? "Unique mods" : "Mods"}
               </h4>
               <ul

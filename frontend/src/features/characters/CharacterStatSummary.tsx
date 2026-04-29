@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 
 import type { CharacterDetail, EquipmentStatSummary, StatRow, StatSection } from "@/api/types";
+import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
 function formatNumber(n: number): string {
   if (n % 1 === 0) {
@@ -194,7 +195,7 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
 
   if (sections.length === 0) {
     return (
-      <div className="panel border border-ink-700/80 bg-ink-900/40 px-3 py-2 text-xs text-ink-500">
+      <div className="panel border border-ink-700/80 bg-ink-900/40 px-3 py-2 text-xs text-parchment-200/80">
         No cumulative stats from equipment yet (all numeric mod lines are rolled up from equipped
         items, grouped by type).
       </div>
@@ -207,12 +208,10 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
       aria-label="Equipment stat summary"
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-          Stat summary
-        </h3>
+        <h3 className={PANE_SECTION_HEADING}>Stat summary</h3>
         <button
           type="button"
-          className="shrink-0 rounded border border-ink-600/80 bg-ink-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-parchment-200/90 transition hover:border-ink-500 hover:bg-ink-900/80"
+          className="shrink-0 rounded border border-ink-600/80 bg-ink-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-parchment-50/95 transition hover:border-ink-500 hover:bg-ink-900/80"
           aria-expanded={expanded}
           aria-controls={panelId}
           onClick={() => setExpanded((e) => !e)}
@@ -228,7 +227,7 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
         >
           {briefGroups.map((cat) => (
             <section key={cat.id} aria-label={cat.label}>
-              <h4 className="text-[9px] font-medium uppercase tracking-wide text-ink-500">
+              <h4 className="text-[9px] font-semibold uppercase tracking-wide text-parchment-100">
                 {cat.label}
               </h4>
               <ul className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
@@ -237,8 +236,8 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
                     key={b.id}
                     className="inline-flex min-w-0 max-w-full items-baseline gap-1.5"
                   >
-                    <span className="shrink-0 text-ink-500">{b.short}</span>
-                    <span className="font-semibold tabular-nums text-ember-200/90">
+                    <span className="shrink-0 text-parchment-200/85">{b.short}</span>
+                    <span className="font-semibold tabular-nums text-white/92">
                       {formatRowValues(b.row)}
                     </span>
                   </li>
@@ -253,9 +252,7 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
         <div id={panelId} className="mt-2 space-y-3 text-sm text-parchment-100/90" role="region">
           {sections.map((section) => (
             <div key={section.id}>
-              <h4 className="text-[10px] font-medium uppercase tracking-wide text-ink-500">
-                {section.label}
-              </h4>
+              <h4 className={PANE_SECTION_HEADING}>{section.label}</h4>
               <div className="mt-1 overflow-x-auto">
                 <table className="w-full min-w-[12rem] border-separate border-spacing-0 text-left text-xs">
                   <tbody>
@@ -264,8 +261,8 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
                         key={`${section.id}-${row.key}-${idx}`}
                         className="border-b border-ink-800/60 last:border-b-0"
                       >
-                        <td className="pr-2 py-0.5 text-ink-400">{row.label}</td>
-                        <td className="w-[1%] whitespace-nowrap py-0.5 text-right font-semibold tabular-nums text-ember-200/90">
+                        <td className="pr-2 py-0.5 text-parchment-200/85">{row.label}</td>
+                        <td className="w-[1%] whitespace-nowrap py-0.5 text-right font-semibold tabular-nums text-white/92">
                           {formatRowValues(row)}
                         </td>
                       </tr>

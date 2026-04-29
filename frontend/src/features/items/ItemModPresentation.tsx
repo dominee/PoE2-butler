@@ -9,6 +9,10 @@ import { computeModRollMetrics } from "./modRollMetrics";
 import { modTextRangeHint } from "./modTextRange";
 import { PercentBar } from "./PercentBar";
 
+/** Uppercase pane section titles (Stats, Prefixes, Public link, …). */
+export const PANE_SECTION_HEADING =
+  "text-[10px] font-semibold uppercase tracking-widest text-parchment-50/95";
+
 // ── tier badge ──────────────────────────────────────────────────────────────
 
 function tierBadgeClass(tier: number): string {
@@ -47,12 +51,10 @@ export function ModText({ raw }: { raw: string }) {
     <span>
       {parts.map((part, i) =>
         part.isNum ? (
-           
-          <strong key={i} className="font-semibold text-parchment-100">
+          <strong key={i} className="font-semibold tabular-nums text-white/92">
             {part.text}
           </strong>
         ) : (
-           
           <span key={i} className="text-parchment-200/95">
             {part.text}
           </span>
@@ -122,7 +124,7 @@ export function ExplicitModLine({
             </div>
             {referenceRangeText?.trim() ? (
               <span
-                className="shrink-0 whitespace-nowrap text-right font-mono text-[11px] text-ink-500 tabular-nums"
+                className="shrink-0 whitespace-nowrap text-right font-mono text-[11px] text-parchment-200/85 tabular-nums"
                 title="Community-sourced type roll range (not a snapshot of this one item)"
               >
                 {referenceRangeText.trim()}
@@ -130,22 +132,22 @@ export function ExplicitModLine({
             ) : null}
           </div>
           {hasGggRange && (
-            <div className="mt-0.5 text-[10px] text-ink-500">
-              <span className="text-ink-500">This affix band: </span>
+            <div className="mt-0.5 text-[10px] text-parchment-100/80">
+              <span className="text-parchment-200/90">This affix band: </span>
               <span className="font-mono text-amber-200/90">
                 {mag!.min} – {mag!.max}
                 {mag!.min === mag!.max ? " (fixed in tier)" : ""}
               </span>
               {m?.hasT1 && mag?.t1_max != null && (
-                <span className="ml-2 text-ink-500">
+                <span className="ml-2 text-parchment-200/85">
                   T1 cap: <span className="font-mono text-amber-300/70">{mag.t1_max}</span>
                 </span>
               )}
             </div>
           )}
           {!hasGggRange && fromModText && (
-            <div className="mt-0.5 text-[10px] text-ink-500">
-              <span className="text-ink-500">Rolled values: </span>
+            <div className="mt-0.5 text-[10px] text-parchment-100/80">
+              <span className="text-parchment-200/90">Rolled values: </span>
               <span className="font-mono text-amber-200/85">{fromModText}</span>
             </div>
           )}
@@ -155,7 +157,7 @@ export function ExplicitModLine({
         <div className="mt-1.5 pl-0.5">
           <div className="flex items-center gap-2 text-[10px]">
             <span
-              className="w-20 shrink-0 text-ink-500"
+              className="w-20 shrink-0 text-parchment-200/90"
               title="How close this roll is to the best end of the wiki / type range for this mod"
             >
               Type quality
@@ -176,7 +178,7 @@ export function ExplicitModLine({
         <div className="mt-1.5 space-y-1.5 pl-0.5">
           {m && m.withinTierPct != null && m.hasTierRange && (
             <div className="flex items-center gap-2 text-[10px]">
-              <span className="w-20 shrink-0 text-ink-500">Tier roll</span>
+              <span className="w-20 shrink-0 text-parchment-200/90">Tier roll</span>
               <div className="min-w-0 flex-1">
                 <PercentBar
                   variant="withinTier"
@@ -189,7 +191,7 @@ export function ExplicitModLine({
           )}
           {m && m.vsT1Pct != null && (
             <div className="flex items-center gap-2 text-[10px]">
-              <span className="w-20 shrink-0 text-ink-500">vs T1</span>
+              <span className="w-20 shrink-0 text-parchment-200/90">vs T1</span>
               <div className="min-w-0 flex-1">
                 <PercentBar
                   variant="t1"
@@ -212,10 +214,9 @@ export function ModSection({ title, mods, tone }: { title: string; mods: string[
   }
   return (
     <div>
-      <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">{title}</h4>
+      <h4 className={PANE_SECTION_HEADING}>{title}</h4>
       <ul className={`mt-1 space-y-0.5 text-sm ${tone}`}>
         {mods.map((mod, idx) => (
-           
           <li key={idx} className="break-words leading-snug">
             <ModText raw={mod} />
           </li>

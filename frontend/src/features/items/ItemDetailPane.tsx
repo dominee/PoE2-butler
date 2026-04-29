@@ -13,7 +13,13 @@ import {
 } from "@/api/hooks";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
-import { ExplicitModLine, ModDivider, ModSection, ModText } from "@/features/items/ItemModPresentation";
+import {
+  ExplicitModLine,
+  ModDivider,
+  ModSection,
+  ModText,
+  PANE_SECTION_HEADING,
+} from "@/features/items/ItemModPresentation";
 import { PANE_RARITY_BORDER, RARITY_NAME_CLASS } from "@/features/items/itemVisualStyles";
 import type { Item, ItemRarity, Prefs } from "@/api/types";
 import { copyTextToClipboard } from "@/utils/clipboard";
@@ -92,7 +98,7 @@ export function ItemDetailPane({
 
   if (!item) {
     return (
-      <aside className="panel hidden h-full p-4 text-sm text-ink-500 lg:block">
+      <aside className="panel hidden h-full p-4 text-sm text-parchment-200/80 lg:block">
         Select an item to see its details.
       </aside>
     );
@@ -224,7 +230,7 @@ export function ItemDetailPane({
             </div>
           )}
           <div className="break-words text-parchment-100/80">{item.type_line}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] uppercase tracking-wide text-ink-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] uppercase tracking-wide text-parchment-200/85">
             <span>{item.rarity}</span>
             {item.ilvl != null && <span>ilvl {item.ilvl}</span>}
             {item.corrupted && <span className="text-red-400">corrupted</span>}
@@ -255,7 +261,7 @@ export function ItemDetailPane({
             </div>
           )}
           {isApp && league && (
-            <div className="mt-1 space-y-0.5 text-[11px] text-ink-500">
+            <div className="mt-1 space-y-0.5 text-[11px] text-parchment-100/85">
               {refinedQ.job?.status === "queued" || refinedQ.job?.status === "running" ? (
                 <span>Refined estimate: working…</span>
               ) : null}
@@ -274,7 +280,7 @@ export function ItemDetailPane({
                         : undefined
                     }
                   >
-                    <span className="text-ink-500">
+                    <span className="text-parchment-200/90">
                       {refinedQ.job.result.estimate_method === "trade_median"
                         ? "Trade median: "
                         : "Refined: "}
@@ -315,7 +321,7 @@ export function ItemDetailPane({
       {hasRollData && itemScore != null && (
         <div className="flex items-center gap-2 text-xs">
           <span
-            className="shrink-0 text-[10px] uppercase tracking-widest text-ink-500"
+            className={`shrink-0 ${PANE_SECTION_HEADING}`}
             title={
               hasTypeRefRoll
                 ? "Mean of per-mod type quality (0% = min end of wiki range, 100% = best). Excludes lines without a parseable range."
@@ -333,9 +339,7 @@ export function ItemDetailPane({
       {/* ── Item stats (Physical Damage, APS, Armour …) ── */}
       {visibleProps.length > 0 && (
         <div>
-          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-            Stats
-          </h4>
+          <h4 className={PANE_SECTION_HEADING}>Stats</h4>
           <ul className="mt-1 space-y-0.5 text-sm text-parchment-100/90">
             {visibleProps.map((p, idx) => (
                
@@ -343,8 +347,8 @@ export function ItemDetailPane({
                 key={idx}
                 className="flex justify-between gap-2 border-b border-ink-800/30 pb-0.5 last:border-b-0"
               >
-                <span className="shrink-0 text-ink-500">{p.name}</span>
-                <span className="min-w-0 text-right font-mono text-[13px] font-semibold tabular-nums text-amber-100/95">
+                <span className="shrink-0 text-parchment-200/80">{p.name}</span>
+                <span className="min-w-0 text-right font-mono text-[13px] font-semibold tabular-nums">
                   <ModText raw={p.value!} />
                 </span>
               </li>
@@ -355,7 +359,7 @@ export function ItemDetailPane({
 
       {/* ── Requirements ── */}
       {visibleReqs.length > 0 && (
-        <div className="text-xs text-ink-500">
+        <div className="text-xs text-parchment-100/80">
           Requires {visibleReqs.map((r) => `${r.value} ${r.name}`).join(", ")}
         </div>
       )}
@@ -363,7 +367,7 @@ export function ItemDetailPane({
       {/* ── Sockets ── */}
       {item.sockets.length > 0 && (
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-ink-500">Sockets</span>
+          <span className={PANE_SECTION_HEADING}>Sockets</span>
           {item.sockets.map((s, idx) => (
             <span
                
@@ -381,9 +385,7 @@ export function ItemDetailPane({
       <ModSection title="Enchant" mods={item.enchant_mods} tone="text-rarity-rare" />
       {item.implicit_mods.length > 0 && (
         <div>
-          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-            Implicit
-          </h4>
+          <h4 className={PANE_SECTION_HEADING}>Implicit</h4>
           <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
             {item.implicit_mods.map((mod, idx) => (
               <ExplicitModLine
@@ -404,9 +406,7 @@ export function ItemDetailPane({
       {/* ── Socketed items (runes, soul cores) ── */}
       {item.socketed_items.length > 0 && (
         <div>
-          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-            Runes &amp; Cores
-          </h4>
+          <h4 className={PANE_SECTION_HEADING}>Runes &amp; Cores</h4>
           <ul className="mt-1 space-y-2">
             {item.socketed_items.map((si) => (
               <li key={si.id} className="rounded border border-ink-600 bg-ink-800/60 px-2 py-1.5">
@@ -436,9 +436,7 @@ export function ItemDetailPane({
             <>
               {prefixes.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-                    Prefixes
-                  </h4>
+                  <h4 className={PANE_SECTION_HEADING}>Prefixes</h4>
                   <ul className="mt-1 list-none space-y-2.5 text-rarity-magic">
                     {prefixes.map((mod, idx) => (
                       <ExplicitModLine
@@ -457,9 +455,7 @@ export function ItemDetailPane({
               {prefixes.length > 0 && suffixes.length > 0 && <ModDivider />}
               {suffixes.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-                    Suffixes
-                  </h4>
+                  <h4 className={PANE_SECTION_HEADING}>Suffixes</h4>
                   <ul className="mt-1 list-none space-y-2.5 text-sm text-rarity-magic">
                     {suffixes.map((mod, idx) => (
                       <ExplicitModLine
@@ -481,7 +477,7 @@ export function ItemDetailPane({
             </>
           ) : (
             <div>
-              <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
+              <h4 className={PANE_SECTION_HEADING}>
                 {item.rarity === "Unique" ? "Unique mods" : "Mods"}
               </h4>
               <ul
@@ -510,10 +506,8 @@ export function ItemDetailPane({
 
       {isApp && (
         <div className="shrink-0 space-y-2 border-t border-ink-700 pt-3">
-          <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">
-            Public link
-          </h4>
-          <p className="text-[11px] text-ink-500">
+          <h4 className={PANE_SECTION_HEADING}>Public link</h4>
+          <p className="text-[11px] text-parchment-100/85">
             Creates a read-only page anyone can open. No GGG account or app login is required to
             view the snapshot.
           </p>
@@ -574,7 +568,7 @@ export function ItemDetailPane({
 
           <div className="shrink-0 space-y-2 border-t border-ink-700 pt-3">
             <div className="flex items-center gap-2 text-xs">
-              <label htmlFor="tolerance" className="text-ink-500">
+              <label htmlFor="tolerance" className="text-parchment-200/90">
                 Exact tolerance
               </label>
               <input
@@ -588,7 +582,7 @@ export function ItemDetailPane({
                 }
                 className="w-16 rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-right"
               />
-              <span className="text-ink-500">%</span>
+              <span className="text-parchment-200/85">%</span>
               <button
                 type="button"
                 onClick={onPersistTolerance}
@@ -617,7 +611,7 @@ export function ItemDetailPane({
               </button>
             </div>
             {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}
-            <p className="text-[11px] text-ink-500">
+            <p className="text-[11px] text-parchment-100/85">
               Opens PoE2 Trade for this league and copies the search JSON to your clipboard.
             </p>
           </div>
