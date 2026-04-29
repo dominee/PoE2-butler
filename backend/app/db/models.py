@@ -33,6 +33,7 @@ from app.db.base import Base
 JSONType = JSON().with_variant(JSONB(), "postgresql")
 UUIDType = Uuid(as_uuid=True)
 SnapshotIdType = BigInteger().with_variant(Integer(), "sqlite")
+ItemPriceEstimateIdType = BigInteger().with_variant(Integer(), "sqlite")
 
 
 class SnapshotKind(enum.StrEnum):
@@ -67,6 +68,9 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     item_shares: Mapped[list[ItemShare]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    item_price_estimates: Mapped[list["ItemPriceEstimate"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -130,3 +134,30 @@ class ItemShare(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="item_shares")
+
+
+class ItemPriceEstimate(Base):
+    """Latest hybrid (aggregator / scout / trade) estimate for a stash item instance."""
+
+    __tablename__ = "item_price_estimates"
+    __table_args__ = (
+        UniqueConstraint("user_id", "league", "item_id", name="uq_item_price_user_league_item"),
+    )
+
+    id: Mapped[int] = mapped_column(ItemPriceEstimateIdType, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    league: Mapped[str] = mapped_column(String(200), default="")
+    item_id: Mapped[str] = mapped_column(String(128), default="")
+    tolerance_pct: Mapped[float] = mapped_column(default=10.0)
+    item_name: Mapped[str] = mapped_column(String(200), default="")
+    status: Mapped[str] = mapped_column(String(20), default="completed")
+    message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    result_json: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="item_price_estimates")

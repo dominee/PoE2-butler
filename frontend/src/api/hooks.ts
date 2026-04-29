@@ -116,6 +116,7 @@ export function useRefresh() {
       qc.invalidateQueries({ queryKey: ["activity"] });
       qc.invalidateQueries({ queryKey: ["currency-rates"] });
       qc.invalidateQueries({ queryKey: ["prices"] });
+      qc.invalidateQueries({ queryKey: ["persisted-price-estimate"] });
     },
   });
 }
@@ -243,10 +244,35 @@ export function useActivity(league: string | null) {
 }
 
 /**
- * Enqueues a hybrid (aggregator + trade median) job and polls Redis-backed status.
+ * Loads the last persisted hybrid estimate (Postgres); 204 when none / tolerance mismatch.
+ */
+export function usePersistedPriceEstimate(
+  league: string | null,
+  item: Item | null,
+  tolerancePct: number,
+  enabled: boolean,
+) {
+  return useQuery<PriceJobState | null>({
+    queryKey: ["persisted-price-estimate", league, item?.id, tolerancePct] as const,
+    queryFn: async () => {
+      const q = new URLSearchParams({
+        league: league!,
+        item_id: item!.id,
+        tolerance_pct: String(tolerancePct),
+      });
+      const d = await api.get<PriceJobState | undefined>(`/api/pricing/estimate/item?${q.toString()}`);
+      return d ?? null;
+    },
+    enabled: Boolean(enabled && league && item),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Hybrid (aggregator + trade median) job: loads persisted result first, then POST+poll on refresh.
  * See ``docs/pricing_estimates.md``.
  * @param rerunKey - Increment to enqueue a new estimate (e.g. user clicks refresh) for the same item.
- * @param autoStart - If false (default), the first job is only enqueued after rerunKey is at least 1 (user action).
+ * @param autoStart - Unused; kept for API compatibility.
  */
 export function useRefinedPriceEstimate(
   league: string | null,
@@ -256,6 +282,9 @@ export function useRefinedPriceEstimate(
   rerunKey: number = 0,
   autoStart: boolean = false,
 ) {
+  void autoStart;
+  const qc = useQueryClient();
+  const persistedQ = usePersistedPriceEstimate(league, item, tolerancePct, enabled && rerunKey < 1);
   const sessionKey = league && item ? `${league}::${item.id}` : "";
   const runKey = `${sessionKey}::${rerunKey}`;
   const [jobId, setJobId] = useState<string | null>(null);
@@ -271,7 +300,7 @@ export function useRefinedPriceEstimate(
 
   useEffect(() => {
     if (!sessionKey || !enabled || !item) return;
-    if (!autoStart && rerunKey < 1) return;
+    if (rerunKey < 1) return;
     if (started.current) return;
     started.current = true;
     (async () => {
@@ -286,7 +315,7 @@ export function useRefinedPriceEstimate(
         started.current = false;
       }
     })();
-  }, [sessionKey, runKey, enabled, item, league, tolerancePct, autoStart, rerunKey]);
+  }, [sessionKey, runKey, enabled, item, league, tolerancePct, rerunKey]);
 
   const jobQ = useQuery<PriceJobState>({
     queryKey: ["price-estimate", jobId],
@@ -300,11 +329,31 @@ export function useRefinedPriceEstimate(
     },
   });
 
+  useEffect(() => {
+    const s = jobQ.data?.status;
+    if (s === "completed" || s === "failed") {
+      void qc.invalidateQueries({
+        queryKey: ["persisted-price-estimate", league, item?.id, tolerancePct],
+      });
+    }
+  }, [jobQ.data?.status, qc, league, item?.id, tolerancePct]);
+
+  const mergedJob: PriceJobState | null =
+    rerunKey >= 1 ? (jobQ.data ?? null) : (persistedQ.data ?? null);
+
+  const waitingLiveJob =
+    rerunKey >= 1 &&
+    (!jobId ||
+      !jobQ.data ||
+      (jobQ.data.status !== "completed" && jobQ.data.status !== "failed"));
+  const waitingPersisted = rerunKey < 1 && enabled && persistedQ.isLoading;
+  const isLoading = Boolean(waitingLiveJob || waitingPersisted);
+
   return {
     jobId,
-    job: jobQ.data,
-    isLoading: jobQ.isLoading || jobQ.isFetching,
-    error: jobQ.error,
+    job: mergedJob ?? null,
+    isLoading,
+    error: jobQ.error ?? persistedQ.error,
   };
 }
 

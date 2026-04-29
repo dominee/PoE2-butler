@@ -5,14 +5,18 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
+from app.db.base import get_session
 from app.db.models import User
 from app.deps import get_current_user, get_pricing_service, get_redis, require_csrf
 from app.domain.item import Item
 from app.services.price_queue import get_arq_pool
 from app.services.pricing.currency_rates import resolve_currency_rates
+from app.services.pricing.estimate_persist import load_persisted_estimate
 from app.services.pricing.estimate_state import (
     PriceJobState,
     get_or_set_dedup,
@@ -81,6 +85,31 @@ class PriceEstimateRequest(BaseModel):
 class PriceEstimateEnqueued(BaseModel):
     job_id: str
     deduped: bool = False
+
+
+@router.get(
+    "/estimate/item",
+    summary="Latest persisted hybrid estimate for a stash item (same tolerance as when computed)",
+    response_model=None,
+)
+async def get_persisted_item_estimate(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    league: str = Query(..., min_length=1),
+    item_id: str = Query(..., min_length=1),
+    tolerance_pct: float | None = Query(default=None, ge=0, le=500),
+) -> Response:
+    tol = float(tolerance_pct if tolerance_pct is not None else user.trade_tolerance_pct)
+    st = await load_persisted_estimate(
+        session,
+        user_id=user.id,
+        league=league.strip(),
+        item_id=item_id.strip(),
+        tolerance_pct=tol,
+    )
+    if st is None:
+        return Response(status_code=204)
+    return JSONResponse(content=st.model_dump(mode="json"))
 
 
 @router.get("/estimate/{job_id}", summary="Status of a hybrid price estimate job")

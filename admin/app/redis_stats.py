@@ -14,6 +14,12 @@ from redis.asyncio import Redis
 
 from admin.app.config import get_admin_settings
 
+# arq.constants (admin does not depend on arq; keep in sync with worker's arq version)
+ARQ_QUEUE_ZSET = "arq:queue"
+ARQ_IN_PROGRESS_PREFIX = "arq:in-progress:"
+ARQ_IN_PROGRESS_GLOB = "arq:in-progress:*"
+ARQ_JOB_KEY_PREFIX = "arq:job:"
+
 
 @lru_cache
 def get_redis() -> Redis:
@@ -43,11 +49,27 @@ async def redis_summary() -> dict:
     }
 
 
+async def _count_keys_by_scan(redis: Redis, pattern: str) -> int:
+    """Count keys matching ``pattern`` (SCAN; safe for large DBs vs KEYS)."""
+    n = 0
+    cur = 0
+    while True:
+        cur, keys = await redis.scan(cursor=cur, match=pattern, count=300)
+        n += len(keys)
+        if cur == 0:
+            break
+    return n
+
+
 async def queue_summary() -> dict:
-    """Report arq queue stats (queue length + in-progress)."""
+    """Report arq queue stats (zset length + in-progress key count).
+
+    arq stores one Redis string key per running job: ``arq:in-progress:{job_id}``,
+    not a set named ``arq:in-progress`` (older docs / examples were misleading).
+    """
     redis = get_redis()
-    queued = await redis.zcard("arq:queue")
-    in_progress = await redis.scard("arq:in-progress")
+    queued = await redis.zcard(ARQ_QUEUE_ZSET)
+    in_progress = await _count_keys_by_scan(redis, ARQ_IN_PROGRESS_GLOB)
     return {"queued": queued, "in_progress": in_progress}
 
 
@@ -84,9 +106,9 @@ async def arq_job_function_breakdown(
     fail_q = 0
     fail_ip = 0
     try:
-        for jid in await r.zrange(b"arq:queue", 0, max(0, max_queued - 1)):
+        for jid in await r.zrange(ARQ_QUEUE_ZSET.encode(), 0, max(0, max_queued - 1)):
             jid_b = _as_job_id_b(jid)
-            blob = await r.get(b"arq:job:" + jid_b)
+            blob = await r.get(ARQ_JOB_KEY_PREFIX.encode() + jid_b)
             fn = _unpickle_arq_job_function(blob)
             if fn is None:
                 fail_q += 1
@@ -101,14 +123,28 @@ async def arq_job_function_breakdown(
             "unpickle_note": "Could not read arq queue (Redis error).",
         }
 
+    prefix_b = ARQ_IN_PROGRESS_PREFIX.encode()
+    inprog_ids: list[bytes] = []
     try:
-        inprog = list(await r.smembers(b"arq:in-progress"))[: max(0, max_in_progress)]
+        cur = 0
+        while len(inprog_ids) < max(0, max_in_progress):
+            cur, keys = await r.scan(cursor=cur, match=ARQ_IN_PROGRESS_GLOB.encode(), count=200)
+            for k in keys:
+                if len(inprog_ids) >= max_in_progress:
+                    break
+                kb = _as_job_id_b(k)
+                if kb.startswith(prefix_b):
+                    jid = kb[len(prefix_b) :]
+                    if jid:
+                        inprog_ids.append(jid)
+            if cur == 0:
+                break
     except (TypeError, OSError, ValueError, ConnectionError):
-        inprog = []
-    for m in inprog:
+        inprog_ids = []
+
+    for jid_b in inprog_ids:
         try:
-            jid_b = _as_job_id_b(m)
-            blob = await r.get(b"arq:job:" + jid_b)
+            blob = await r.get(ARQ_JOB_KEY_PREFIX.encode() + jid_b)
         except (TypeError, OSError, ValueError):
             fail_ip += 1
             continue

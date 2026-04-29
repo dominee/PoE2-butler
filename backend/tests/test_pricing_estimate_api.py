@@ -6,7 +6,63 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.db import base as db_base
+from app.db.models import ItemPriceEstimate
+from app.services.pricing.source import PriceEstimate, PriceUnit
+
 from tests.test_auth_flow import _full_login
+
+
+@pytest.mark.asyncio
+async def test_get_persisted_estimate_item_204(app_stack) -> None:
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    resp = await client.get(
+        "/api/pricing/estimate/item?league=Dawn+of+the+Hunt&item_id=r1&tolerance_pct=10",
+    )
+    assert resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_get_persisted_estimate_item_200(app_stack) -> None:
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = await client.get("/api/me")
+    assert me.status_code == 200
+    import uuid as uuid_mod
+
+    user_id = uuid_mod.UUID(me.json()["id"])
+    est = PriceEstimate(
+        value=12.0,
+        unit=PriceUnit.CHAOS,
+        chaos_equiv=12.0,
+        source="test",
+        estimate_method="trade_median",
+        sample_size=5,
+    )
+    factory = db_base._session_factory()
+    async with factory() as session:
+        session.add(
+            ItemPriceEstimate(
+                user_id=user_id,
+                league="Dawn of the Hunt",
+                item_id="r1",
+                tolerance_pct=10.0,
+                item_name="Test",
+                status="completed",
+                message="ok",
+                result_json=est.model_dump(mode="json"),
+            )
+        )
+        await session.commit()
+
+    resp = await client.get(
+        "/api/pricing/estimate/item?league=Dawn+of+the+Hunt&item_id=r1&tolerance_pct=10",
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "completed"
+    assert body["result"]["chaos_equiv"] == 12.0
 
 
 @pytest.mark.asyncio

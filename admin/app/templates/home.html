@@ -181,6 +181,133 @@
         if (arq.unpickle_note) { un.textContent = arq.unpickle_note; un.style.display = ""; }
         else { un.textContent = ""; un.style.display = "none"; }
       }
+      function trunc(s, n) {
+        if (s == null || s === "") return "";
+        s = String(s);
+        return s.length <= n ? s : s.slice(0, n) + "…";
+      }
+      function tdText(cls, text, title) {
+        var td = document.createElement("td");
+        if (cls) td.className = cls;
+        if (title) td.setAttribute("title", title);
+        td.textContent = text;
+        return td;
+      }
+      function rebuildPeSample(rows) {
+        var tb = document.querySelector("[data-pe-sample] tbody");
+        if (!tb) return;
+        while (tb.firstChild) tb.removeChild(tb.firstChild);
+        if (!rows || !rows.length) {
+          var tr0 = document.createElement("tr");
+          var td0 = document.createElement("td");
+          td0.colSpan = 8;
+          td0.className = "muted";
+          td0.textContent = "No job keys found.";
+          tr0.appendChild(td0);
+          tb.appendChild(tr0);
+          return;
+        }
+        var okSt = { queued: 1, running: 1, completed: 1, failed: 1 };
+        for (var ri = 0; ri < rows.length; ri++) {
+          var j = rows[ri];
+          var tr = document.createElement("tr");
+          var st = (j.status != null) ? String(j.status) : "unknown";
+          var tdSt = document.createElement("td");
+          var sp = document.createElement("span");
+          sp.className = "pe-js " + (okSt[st] ? ("pe-js-" + st) : "pe-js-unknown");
+          sp.textContent = st;
+          tdSt.appendChild(sp);
+          tr.appendChild(tdSt);
+          tr.appendChild(tdText("", (j.league && String(j.league)) || "—", ""));
+          var tdJob = document.createElement("td");
+          var cJob = document.createElement("code");
+          cJob.setAttribute("title", (j.job_id_full != null) ? String(j.job_id_full) : "");
+          cJob.textContent = (j.job_id != null) ? String(j.job_id) : "";
+          tdJob.appendChild(cJob);
+          tr.appendChild(tdJob);
+          var tdItem = document.createElement("td");
+          tdItem.className = "pe-item-name";
+          tdItem.style.maxWidth = "14rem";
+          tdItem.style.overflow = "hidden";
+          tdItem.style.textOverflow = "ellipsis";
+          tdItem.setAttribute("title", (j.item_id != null) ? String(j.item_id) : "");
+          var spItem = document.createElement("span");
+          spItem.textContent = (j.item_label || j.item_id) ? String(j.item_label || j.item_id) : "";
+          tdItem.appendChild(spItem);
+          tr.appendChild(tdItem);
+          var msg = (j.message || j.step) ? String(j.message || j.step) : "—";
+          tr.appendChild(tdText("muted", trunc(msg, 48), (j.message || j.step) ? String(j.message || j.step) : ""));
+          var cEq = (j.chaos_equiv != null && j.chaos_equiv !== "") ? (Math.round(Number(j.chaos_equiv) * 100) / 100) : "—";
+          tr.appendChild(tdText("", String(cEq), ""));
+          var upd = (j.updated_at != null) ? String(j.updated_at) : "—";
+          var tdUp = document.createElement("td");
+          tdUp.className = "muted";
+          tdUp.style.maxWidth = "12rem";
+          tdUp.style.overflow = "hidden";
+          tdUp.style.textOverflow = "ellipsis";
+          tdUp.setAttribute("title", upd);
+          var codeUp = document.createElement("code");
+          codeUp.style.fontSize = "0.85em";
+          codeUp.textContent = upd;
+          tdUp.appendChild(codeUp);
+          tr.appendChild(tdUp);
+          var err = (j.error != null) ? String(j.error) : "—";
+          tr.appendChild(tdText("muted", trunc(err, 32), (j.error != null) ? String(j.error) : ""));
+          tb.appendChild(tr);
+        }
+      }
+      function rebuildThrottle(slots) {
+        var tbody = document.querySelector("[data-pe-throttle-table] tbody");
+        if (!tbody) return;
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+        slots = slots || [];
+        if (!slots.length) {
+          var trE = document.createElement("tr");
+          var tdE = document.createElement("td");
+          tdE.colSpan = 5;
+          tdE.className = "muted";
+          tdE.textContent = "No throttle rows (empty config).";
+          trE.appendChild(tdE);
+          tbody.appendChild(trE);
+          return;
+        }
+        for (var ti = 0; ti < slots.length; ti++) {
+          var row = slots[ti];
+          var tr = document.createElement("tr");
+          if (row.name) tr.setAttribute("data-tname", String(row.name));
+          var tdN = document.createElement("td");
+          var codeN = document.createElement("code");
+          codeN.textContent = String(row.name || "");
+          tdN.appendChild(codeN);
+          tr.appendChild(tdN);
+          var tdAct = document.createElement("td");
+          if (row.active) {
+            var w = document.createElement("span");
+            w.className = "badge badge-warn";
+            w.textContent = "wait";
+            tdAct.appendChild(w);
+          } else {
+            var rdy = document.createElement("span");
+            rdy.className = "badge badge-ok";
+            rdy.textContent = "ready";
+            tdAct.appendChild(rdy);
+          }
+          tr.appendChild(tdAct);
+          var tdKey = document.createElement("td");
+          var codeK = document.createElement("code");
+          codeK.className = "muted pe-key";
+          codeK.textContent = String(row.key || "");
+          tdKey.appendChild(codeK);
+          tr.appendChild(tdKey);
+          var pttl = (row.pttl_ms != null) ? Number(row.pttl_ms) : 0;
+          tr.appendChild(tdText("", String(pttl), ""));
+          var sec = (row.active && pttl > 0) ? ((Math.round(pttl / 100) / 10) + "s") : "—";
+          tr.appendChild(tdText("", sec, ""));
+          tbody.appendChild(tr);
+        }
+      }
+      rebuildPeSample(pe.sample || []);
+      rebuildThrottle(tslots);
     } catch (e) {}
   }
   var bNow = document.getElementById("admin-dashboard-refresh-now");

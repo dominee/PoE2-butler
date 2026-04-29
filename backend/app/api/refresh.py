@@ -19,6 +19,7 @@ from app.deps import (
 )
 from app.security.crypto import TokenCipher
 from app.security.sessions import RefreshCooldown
+from app.services.price_queue import get_arq_pool
 from app.services.snapshot import delete_character_snapshots, refresh_user_snapshot
 
 router = APIRouter(prefix="/api/refresh", tags=["refresh"])
@@ -65,6 +66,14 @@ async def refresh(
     )
     await delete_character_snapshots(db, user.id)
     await db.commit()
+    league = (user.preferred_league or "").strip()
+    if league:
+        try:
+            pool = await get_arq_pool()
+            await pool.enqueue_job("backfill_item_price_estimates", str(user.id), league)
+        except Exception:
+            # Refresh already succeeded; queue failures should not block the user.
+            pass
     return RefreshResponse(
         profile=outcome.profile,
         leagues=outcome.leagues,

@@ -73,6 +73,14 @@ class Settings(BaseSettings):
     pricing_trade_estimate_enabled: bool = True
     pricing_scout_base_url: str = ""
     pricing_min_trade_listings: int = 5
+    # After manual /api/refresh, backfill at most this many hybrid estimates (stash + gear),
+    # prioritising items with no stored estimate, then oldest ``computed_at``.
+    pricing_backfill_max_items: int = 40
+    # Arq default job timeout is 300s; most jobs should finish well under this cap.
+    arq_job_timeout_seconds: int = 7200
+    # ``backfill_item_price_estimates`` runs many hybrid estimates; GGG 429 backoff (minutes) per
+    # item makes wall time unbounded in the worst case — use a separate arq per-function timeout.
+    arq_backfill_job_timeout_seconds: int = 172800
     # Minimum spacing between *successful* GGG trade2 API calls (search POST, list GET, fetch).
     # Honour GGG rate limits: keep this conservative (10s+ in prod).
     ggg_trade_min_interval_sec: float = Field(

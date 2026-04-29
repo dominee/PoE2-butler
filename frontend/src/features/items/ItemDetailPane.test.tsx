@@ -81,6 +81,9 @@ function installFetchMock(itemText: string) {
         ),
       );
     }
+    if (u.includes("/api/pricing/estimate/item")) {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
     if (u.includes("/api/pricing/estimate/")) {
       return Promise.resolve(
         new Response(JSON.stringify(failedPriceJob), {

@@ -34,12 +34,14 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 - The displayed estimate uses a **robust median** of instant-buyout listing chaos equivalents (upper-tail outlier resistance) over a batched sample; see `trade_listings.median_chaos_robust` and `docs/trade_deeplinks.md`.
 - The API may also expose `divine` or `exalted` **denominations** in `PriceEstimate` when convenient for the UI, with `chaos_equiv` the canonical value for highlights.
 
-## Asynchronous jobs and Redis state
+## Asynchronous jobs, Redis, and Postgres persistence
 
-- A **refined** estimate (especially tier C) is scheduled on the **arq** worker. State is stored in **Redis** at `poe2b:price_job:{uuid}` as JSON (`PriceJobState`).
+- A **refined** estimate (especially tier C) is scheduled on the **arq** worker. **In-flight** state is stored in **Redis** at `poe2b:price_job:{uuid}` as JSON (`PriceJobState`).
 - Every `save_job_state` write sets **`updated_at`** to the current time (UTC ISO-8601) for observability.
-- The client **polls** `GET /api/pricing/estimate/{job_id}`. Duplicate requests for the same user + item + league de-duplicate to one job id via `poe2b:price_dedup:*`.
-- **UI:** the SPA only **POSTs** `/api/pricing/estimate` after an explicit user action (e.g. “Refresh pricing”), not automatically when opening the detail pane or on session load—see `useRefinedPriceEstimate(..., autoStart: false)` in `frontend/src/api/hooks.ts`.
+- When a job reaches a **terminal** state (`completed` or `failed`), the worker **upserts** a row in **`item_price_estimates`** (unique on `user_id` + `league` + `item_id`) so the result survives Redis TTL and app restarts. The stored **`tolerance_pct`** must match the client query for `GET /api/pricing/estimate/item` to return that row (**204** if missing or tolerance changed).
+- The client **polls** `GET /api/pricing/estimate/{job_id}` after `POST /api/pricing/estimate`. Duplicate POSTs for the same user + item + league de-duplicate to one job id via `poe2b:price_dedup:*`.
+- **UI:** on opening the detail pane, the SPA **GETs** `/api/pricing/estimate/item` first (TanStack `persisted-price-estimate`); **POST** runs only after **Refresh pricing** (increments `rerunKey` in `useRefinedPriceEstimate`).
+- After **Refresh** (`POST /api/refresh`), the API enqueues **`backfill_item_price_estimates`**: up to **`PRICING_BACKFILL_MAX_ITEMS`** (default 40) hybrid runs for stash + equipped items, **items with no DB row first**, then **oldest `computed_at`** (so existing estimates are refreshed only after gaps are filled).
 
 ## GGG trade2 rate limiting (critical)
 
@@ -63,6 +65,7 @@ The admin **Overview** → **Price jobs (background)** section lists throttle ke
 | `PRICING_TRADE_ESTIMATE_ENABLED` | `0` disables tier C; aggregators / lookup still work |
 | `PRICING_SCOUT_BASE_URL` | Optional future tier B; empty disables |
 | `PRICING_MIN_TRADE_LISTINGS` | Stop relaxing when search `total` ≥ this |
+| `PRICING_BACKFILL_MAX_ITEMS` | Cap for hybrid estimates queued after `POST /api/refresh` (missing rows first, then oldest) |
 | `GGG_TRADE_MIN_INTERVAL_SEC` | Base part of the post-success lock TTL (alias: `GGG_TRADE_FETCH_MIN_INTERVAL_SEC`) |
 | `GGG_TRADE_EXTRA_SPACING_SEC` | **Added** to the min interval for the post-success lock (default 5) |
 | `GGG_TRADE_429_BUFFER_SEC` | Added to GGG’s parsed “wait N seconds” on 429 |

@@ -3,7 +3,7 @@
   <h2>Price jobs (background)</h2>
   <p class="muted pe-sub">
     <code>poe2b:price_job:*</code> JSON state, <code>poe2b:price_dedup:*</code> dedupe keys, arq
-    <code>arq:queue</code> / <code>arq:in-progress</code> (by function when unpickle works), and
+    <code>arq:queue</code> (zset) and per-job keys <code>arq:in-progress:*</code> (by function when unpickle works), and
     <code>tp3:ggg_trade:lock</code> (GGG 429 / spacing) and <code>tp3:*:next</code> throttle slots.
   </p>
 
