@@ -204,15 +204,16 @@ export function AppShell() {
           </select>
           <button
             type="button"
-            className="btn-ghost text-sm"
+            className="btn-ghost inline-flex items-center gap-1.5 text-sm"
             onClick={() => refresh.mutate()}
             disabled={refresh.isPending}
           >
+            <HeaderSyncIcon className="h-4 w-4 shrink-0 opacity-90" />
             {refresh.isPending ? "Refreshing\u2026" : "Refresh"}
           </button>
           <button
             type="button"
-            className="btn-ghost text-sm"
+            className="btn-ghost inline-flex items-center gap-1.5 text-sm"
             title="Queue hybrid price checks for stash items (no estimate first; capped)"
             aria-label="Apprise: queue stash price checks"
             onClick={() => {
@@ -221,6 +222,7 @@ export function AppShell() {
             }}
             disabled={!selectedLeague || apprise.isPending}
           >
+            <HeaderAppriseIcon className="h-4 w-4 shrink-0 opacity-90" />
             {apprise.isPending ? "Apprising\u2026" : "Apprise"}
           </button>
           <button type="button" className="btn-ghost text-sm" onClick={() => logout.mutate()}>
@@ -376,4 +378,47 @@ function charLayoutBtn(active: boolean): string {
     "px-3 py-1 transition",
     active ? "bg-ember-500/10 text-ember-200" : "text-parchment-100",
   ].join(" ");
+}
+
+/** Same glyph as detail-pane “Refresh pricing” — inventory sync from GGG / mock. */
+function HeaderSyncIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M23 4v6h-6" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  );
+}
+
+/** Bars — queue stash price estimates. */
+function HeaderAppriseIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M7 20V10M12 20V4M17 20v-6" />
+    </svg>
+  );
 }
