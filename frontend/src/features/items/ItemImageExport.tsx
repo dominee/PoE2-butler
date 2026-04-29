@@ -1,17 +1,87 @@
 import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import type { Item, ItemRarity } from "@/api/types";
+import type { Item, ItemRarity, PriceEstimate, PriceJobState } from "@/api/types";
 
 import { splitExplicitMods, usefulProperties } from "./itemPaneModel";
 import { itemIconForExportPng } from "./itemRarityFavicon";
 import { RARITY_NAME_CLASS } from "./itemVisualStyles";
-import { computeItemScore } from "./itemMetrics";
+import {
+  type CurrencyChaosPair,
+  computeItemScore,
+  formatChaosAsDivExLine,
+  formatPriceEstimateLine,
+} from "./itemMetrics";
 import { itemRollScoreState } from "./modRollMetrics";
 import { ExplicitModLine, ModDivider, ModSection, ModText } from "./ItemModPresentation";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
+import { PriceBadge } from "./PriceBadge";
 
 const LOG_PREFIX = "[HideoutButler] PNG export";
+
+/**
+ * Optional pricing lines for PNG export (detail); mirrors the item detail pane.
+ */
+export interface ItemExportPriceSnapshot {
+  quickPrice: PriceEstimate | null;
+  currencyChaos: CurrencyChaosPair | null;
+  valuableThresholdChaos?: number;
+  refinedJob: PriceJobState | null;
+}
+
+function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
+  const { quickPrice, currencyChaos, valuableThresholdChaos, refinedJob } = snap;
+  return (
+    <div className="mt-2 rounded border border-ink-700 bg-ink-800/50 px-2 py-1.5">
+      <h4 className="text-[10px] font-semibold uppercase tracking-widest text-ink-500">Pricing</h4>
+      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        {quickPrice ? (
+          <PriceBadge
+            price={quickPrice}
+            threshold={valuableThresholdChaos}
+            currencyChaos={currencyChaos}
+          />
+        ) : (
+          <span className="text-[11px] text-ink-600">No quick price</span>
+        )}
+      </div>
+      <div className="mt-1 space-y-0.5 text-[11px] text-ink-500">
+        {refinedJob?.status === "queued" || refinedJob?.status === "running" ? (
+          <span>Refined estimate: working…</span>
+        ) : null}
+        {refinedJob?.status === "failed" && (
+          <span className="text-amber-300/90">Refined estimate unavailable (try again later)</span>
+        )}
+        {refinedJob?.status === "completed" &&
+          refinedJob.result &&
+          (refinedJob.result.estimate_method === "trade_median" ||
+            refinedJob.result.estimate_method === "poe2scout") && (
+            <div
+              className="text-parchment-200/90"
+              title={
+                refinedJob.result.estimate_method === "trade_median"
+                  ? `Median from ${refinedJob.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
+                  : undefined
+              }
+            >
+              <span className="text-ink-500">
+                {refinedJob.result.estimate_method === "trade_median" ? "Trade median: " : "Refined: "}
+              </span>
+              <span className="font-mono text-ember-200/90">
+                {currencyChaos
+                  ? formatChaosAsDivExLine(refinedJob.result.chaos_equiv, currencyChaos)
+                  : formatPriceEstimateLine(refinedJob.result)}
+              </span>
+              {refinedJob.result.estimate_method === "trade_median" &&
+              refinedJob.result.sample_size != null ? (
+                <span className="text-ink-600"> ({refinedJob.result.sample_size} listings)</span>
+              ) : null}
+            </div>
+          )}
+      </div>
+    </div>
+  );
+}
 
 function errDetail(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -52,9 +122,17 @@ const RARITY_CARD_BORDER: Record<ItemRarity, string> = {
 /**
  * Snapshot aligned with the item detail pane: same prefix/suffix split, tier
  * lines, and roll bars. `compact` omits “Runes & Cores” only. `detail` includes
- * socketed items; room for more summary blocks later.
+ * socketed items and optional ``priceSnapshot`` (quick + refined estimates).
  */
-function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" | "detail" }) {
+function ItemExportSnapshot({
+  item,
+  variant,
+  priceSnapshot,
+}: {
+  item: Item;
+  variant: "compact" | "detail";
+  priceSnapshot?: ItemExportPriceSnapshot | null;
+}) {
   const b = RARITY_CARD_BORDER[item.rarity] ?? "border-ink-600";
   const resolvedIcon = itemIconForExportPng(item);
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
@@ -104,6 +182,8 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
           </div>
         </div>
       </div>
+
+      {variant === "detail" && priceSnapshot ? <ItemExportPriceSection snap={priceSnapshot} /> : null}
 
       {hasRollData && itemScore != null && (
         <div className="mt-2 flex items-center gap-2 text-xs">
@@ -283,7 +363,6 @@ function ItemExportSnapshot({ item, variant }: { item: Item; variant: "compact" 
       <div className="mt-1">
         <ModSection title="Crafted" mods={item.crafted_mods} tone="text-rarity-unique" />
       </div>
-      {/* detail variant: reserve space for price, roll tables, etc. in future — Runes & Cores above */}
     </div>
   );
 }
@@ -305,7 +384,14 @@ function downloadIconSvg() {
   );
 }
 
-export function ItemImageExportActions({ item }: { item: Item }) {
+export function ItemImageExportActions({
+  item,
+  priceSnapshot,
+}: {
+  item: Item;
+  /** When set, detail PNG includes quick + refined pricing (same as the detail pane). */
+  priceSnapshot?: ItemExportPriceSnapshot | null;
+}) {
   const compactRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -444,7 +530,7 @@ export function ItemImageExportActions({ item }: { item: Item }) {
           <ItemExportSnapshot item={item} variant="compact" />
         </div>
         <div ref={detailRef} className="pt-1">
-          <ItemExportSnapshot item={item} variant="detail" />
+          <ItemExportSnapshot item={item} variant="detail" priceSnapshot={priceSnapshot} />
         </div>
       </div>
     </div>

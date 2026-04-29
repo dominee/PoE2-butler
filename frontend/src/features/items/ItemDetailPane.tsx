@@ -543,7 +543,19 @@ export function ItemDetailPane({
 
       {isApp && (
         <div className="shrink-0">
-          <ItemImageExportActions item={item} />
+          <ItemImageExportActions
+            item={item}
+            priceSnapshot={
+              league
+                ? {
+                    quickPrice: price,
+                    currencyChaos,
+                    valuableThresholdChaos: prefs?.valuable_threshold_chaos,
+                    refinedJob: refinedQ.job,
+                  }
+                : undefined
+            }
+          />
         </div>
       )}
 
