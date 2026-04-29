@@ -65,7 +65,9 @@ class Settings(BaseSettings):
     default_trade_tolerance_pct: int = 10
 
     pricing_source: Literal["static", "poe_ninja"] = "static"
-    pricing_base_url: str = "https://poe.ninja/api/data"
+    # PoE1 mirrors use ``…/api/data`` + ``currencyoverview``; PoE2 live economy uses
+    # ``https://poe.ninja`` + ``/poe2/api/economy/exchange/current/overview`` (see PoeNinjaSource).
+    pricing_base_url: str = "https://poe.ninja"
     default_valuable_threshold_chaos: int = 100
     # Hybrid trade-based estimates (see docs/pricing_estimates.md)
     pricing_trade_estimate_enabled: bool = True

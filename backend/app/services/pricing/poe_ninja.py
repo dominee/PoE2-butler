@@ -1,10 +1,11 @@
 """poe.ninja-style price source.
 
-The public poe.ninja API exposes separate endpoints per item type; we fetch
-each bucket once per league and index them in-memory.  The overall shape is
-close enough between PoE1 and PoE2 community mirrors that swapping the base
-URL is enough to target whichever community economy tracker exists for the
-current PoE2 league (poe2scout, poe2.ninja, …).  Configure the base URL via
+PoE1 public data lives under ``/api/data/{currencyoverview,itemoverview}``.  Path of Exile 2
+economy on poe.ninja uses separate JSON under ``/poe2/api/economy/exchange/current/overview``,
+with ``league`` set to the GGG league display name (e.g. ``Fate of the Vaal``).  When
+``pricing_base_url`` ends with ``/api/data``, we try legacy PoE1 first for currency/fragments,
+then fall back to the PoE2 exchange API on failure or empty ``lines`` (so old env files still
+work for PoE2 leagues).  Without that suffix we call the PoE2 API directly.  Configure via
 ``settings.pricing_base_url``.
 """
 
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -33,16 +35,90 @@ UNIQUE_BUCKETS = [
 ]
 CURRENCY_BUCKETS = ["Currency", "Fragment"]
 
+# PoE2 ``type`` query value for the exchange overview (differs from bucket name for fragments).
+POE2_OVERVIEW_TYPE = {"Currency": "Currency", "Fragment": "Fragments"}
+
+
+def _uses_poe1_data_api(base_url: str) -> bool:
+    return base_url.rstrip("/").endswith("/api/data")
+
+
+def _poe2_site_origin(base_url: str) -> str:
+    """HTTPS origin for PoE2 JSON (strip trailing ``/api/data`` if present)."""
+    b = base_url.rstrip("/")
+    if b.endswith("/api/data"):
+        b = b[: -len("/api/data")].rstrip("/")
+    parsed = urlparse(b if "://" in b else f"https://{b}")
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+    return "https://poe.ninja"
+
+
+def normalize_poe2_exchange_overview(data: dict[str, Any]) -> dict[str, Any]:
+    """Turn PoE2 ``/overview`` JSON into PoE1-style ``{"lines": [...]}`` with chaos equivalents.
+
+    PoE2 prices are anchored in Divine; ``core.rates["chaos"]`` is chaos orbs per 1 divine.
+    Each line's ``primaryValue`` is divine per one unit of that item/currency.
+    """
+    core = data.get("core") if isinstance(data.get("core"), dict) else {}
+    rates = core.get("rates") if isinstance(core.get("rates"), dict) else {}
+    chaos_per_divine = float(rates.get("chaos") or 0.0)
+    if chaos_per_divine <= 0:
+        for line in data.get("lines") or []:
+            if not isinstance(line, dict):
+                continue
+            if str(line.get("id") or "") != "chaos":
+                continue
+            d_per_chaos = float(line.get("primaryValue") or 0.0)
+            if d_per_chaos > 0:
+                chaos_per_divine = 1.0 / d_per_chaos
+            break
+    if chaos_per_divine <= 0:
+        return {"lines": []}
+
+    id_to_name: dict[str, str] = {}
+    for it in data.get("items") or []:
+        if not isinstance(it, dict):
+            continue
+        iid = str(it.get("id") or "").strip()
+        if not iid:
+            continue
+        name = str(it.get("name") or iid).strip()
+        id_to_name[iid] = name or iid
+
+    out_lines: list[dict[str, Any]] = []
+    for line in data.get("lines") or []:
+        if not isinstance(line, dict):
+            continue
+        lid = str(line.get("id") or "").strip()
+        if not lid:
+            continue
+        name = id_to_name.get(lid, lid)
+        d_per_unit = float(line.get("primaryValue") or 0.0)
+        chaos_eq = d_per_unit * chaos_per_divine
+        out_lines.append(
+            {
+                "currencyTypeName": name,
+                "name": name,
+                "chaosEquivalent": chaos_eq,
+                "chaosValue": chaos_eq,
+            }
+        )
+    return {"lines": out_lines}
+
 
 class PoeNinjaSource:
     name = "poe.ninja"
 
     def __init__(self, base_url: str, *, client: httpx.AsyncClient | None = None) -> None:
         self._base = base_url.rstrip("/")
+        self._poe1 = _uses_poe1_data_api(self._base)
+        self._poe2_origin = _poe2_site_origin(self._base)
         self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(10.0))
         self._cache: dict[str, dict[str, Any]] = {}
         self._cache_ts: dict[str, float] = {}
         self._ttl = 60 * 15
+        self._poe2_league_resolve: dict[str, str] = {}
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -82,22 +158,83 @@ class PoeNinjaSource:
                 )
         return None
 
+    async def _fetch_poe2_index_state(self) -> dict[str, Any]:
+        url = f"{self._poe2_origin}/poe2/api/data/index-state"
+        try:
+            resp = await self._client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            return data if isinstance(data, dict) else {}
+        except httpx.HTTPError as exc:
+            log.warning("pricing.poe2_index_state_failed", error=str(exc))
+            return {}
+
+    async def _resolve_poe2_league_name(self, league: str) -> str:
+        key = league.strip()
+        if key in self._poe2_league_resolve:
+            return self._poe2_league_resolve[key]
+        data = await self._fetch_poe2_index_state()
+        wanted_l = key.lower()
+        for ek in ("economyLeagues", "oldEconomyLeagues"):
+            rows = data.get(ek) or []
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                name = str(row.get("name") or "").strip()
+                url = str(row.get("url") or "").strip()
+                if name.lower() == wanted_l or url.lower() == wanted_l:
+                    self._poe2_league_resolve[key] = name
+                    return name
+        self._poe2_league_resolve[key] = key
+        return key
+
+    async def _fetch_poe2_overview(self, league: str, bucket: str) -> dict[str, Any]:
+        type_param = POE2_OVERVIEW_TYPE.get(bucket, bucket)
+        url = f"{self._poe2_origin}/poe2/api/economy/exchange/current/overview"
+        league_eff = await self._resolve_poe2_league_name(league)
+        params = {"league": league_eff, "type": type_param}
+        try:
+            resp = await self._client.get(url, params=params)
+            resp.raise_for_status()
+            raw = resp.json()
+        except httpx.HTTPError as exc:
+            log.warning("pricing.fetch_failed", bucket=bucket, error=str(exc))
+            return {}
+
+        if not isinstance(raw, dict) or not raw.get("lines"):
+            return {}
+        return normalize_poe2_exchange_overview(raw)
+
     async def _fetch_bucket(self, league: str, bucket: str) -> dict[str, Any]:
         cache_key = f"{league}:{bucket}"
         now = time.monotonic()
         if cache_key in self._cache and now - self._cache_ts.get(cache_key, 0.0) < self._ttl:
             return self._cache[cache_key]
 
-        path = "currencyoverview" if bucket in CURRENCY_BUCKETS else "itemoverview"
-        url = f"{self._base}/{path}"
-        params = {"league": league, "type": bucket}
-        try:
-            resp = await self._client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-        except httpx.HTTPError as exc:
-            log.warning("pricing.fetch_failed", bucket=bucket, error=str(exc))
-            return {}
+        if self._poe1:
+            path = "currencyoverview" if bucket in CURRENCY_BUCKETS else "itemoverview"
+            url = f"{self._base}/{path}"
+            params = {"league": league, "type": bucket}
+            data: dict[str, Any] = {}
+            try:
+                resp = await self._client.get(url, params=params)
+                resp.raise_for_status()
+                raw = resp.json()
+                if isinstance(raw, dict):
+                    data = raw
+            except httpx.HTTPError as exc:
+                log.warning("pricing.fetch_failed", bucket=bucket, error=str(exc))
+                data = {}
+            lines = data.get("lines") if isinstance(data.get("lines"), list) else []
+            if bucket in CURRENCY_BUCKETS and not lines:
+                poe2 = await self._fetch_poe2_overview(league, bucket)
+                if poe2.get("lines"):
+                    log.info("pricing.poe2_fallback_after_poe1", bucket=bucket)
+                    data = poe2
+        else:
+            data = await self._fetch_poe2_overview(league, bucket)
 
         self._cache[cache_key] = data
         self._cache_ts[cache_key] = now

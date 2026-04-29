@@ -4,6 +4,12 @@ Notable **user-facing behavior** and **visual/UI** updates for PoE2 Butler. Inte
 
 ---
 
+## 2026-04-29
+
+### App · live currency rates (poe.ninja PoE2)
+
+- **Header / trade conversion** now uses poe.ninja’s **PoE2** economy JSON when the PoE1-style URL fails or returns no data, and dev compose defaults to **`PRICING_BASE_URL=https://poe.ninja`**. If your env still has `…/api/data`, you get an automatic PoE2 fallback for currency so Fate of the Vaal (and similar) no longer stick on placeholder div/ex/chaos numbers.
+
 ## 2026-04-28
 
 ### GGG trade2 rate limiting (server)

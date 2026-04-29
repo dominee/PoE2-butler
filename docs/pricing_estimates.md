@@ -13,7 +13,7 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 
 | Tier | Source | Typical use |
 |------|--------|-------------|
-| A | poe.ninja (or `StaticPriceSource` in test) | Currency, uniques, bulk overview endpoints |
+| A | poe.ninja (or `StaticPriceSource` in test) | PoE2: ``/poe2/api/economy/exchange/current/overview`` (``PRICING_BASE_URL=https://poe.ninja``); PoE1 mirrors: ``…/api/data`` + ``currencyoverview`` / ``itemoverview`` |
 | B | Optional `Poe2ScoutSource` (disabled until a stable public URL is configured) | Placeholder for future community API integration |
 | C | GGG trade2 **POST** search + **GET** fetch (see [trade_deeplinks.md](trade_deeplinks.md)) | Rares, magic, or when tier A does not return a value |
 
@@ -30,7 +30,7 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 
 ## Median and display units
 
-- Listing ask prices are normalised to **chaos** using live league rates (Divine, Exalted, etc.) from **poe.ninja currency** when that source is active and returns data; otherwise **`trade_currency_chaos_fallback`** supplies approximate chaos values for GGG’s compact `listing.price.currency` ids (see `TRADE_LISTING_*` in [`deploy/env/.env.example`](../deploy/env/.env.example))).
+- Listing ask prices are normalised to **chaos** using live league rates (Divine, Exalted, etc.) from **poe.ninja** when that source is active and returns data (PoE2 exchange overview, league name or economy slug from [`/poe2/api/data/index-state`](https://poe.ninja/poe2/api/data/index-state)); otherwise **`trade_currency_chaos_fallback`** supplies approximate chaos values for GGG’s compact `listing.price.currency` ids (see `TRADE_LISTING_*` in [`deploy/env/.env.example`](../deploy/env/.env.example))).
 - The displayed estimate uses the **median** of available listing chaos equivalents in the sample to reduce the effect of outliers.
 - The API may also expose `divine` or `exalted` **denominations** in `PriceEstimate` when convenient for the UI, with `chaos_equiv` the canonical value for highlights.
 

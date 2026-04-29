@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 from fakeredis.aioredis import FakeRedis
 
@@ -10,9 +11,120 @@ from app.domain.item import Item
 from app.services.pricing.cache import PriceCache
 from app.services.pricing.currency_rates import resolve_currency_rates
 from app.services.pricing.matcher import match_item
+from app.services.pricing.poe_ninja import PoeNinjaSource, normalize_poe2_exchange_overview
 from app.services.pricing.service import PricingService
 from app.services.pricing.source import PriceEstimate, PriceUnit
 from app.services.pricing.static import StaticPriceSource
+
+
+def test_normalize_poe2_exchange_overview_chaos_equivalents() -> None:
+    raw = {
+        "core": {"rates": {"chaos": 26.0, "exalted": 185.0}},
+        "items": [
+            {"id": "divine", "name": "Divine Orb"},
+            {"id": "exalted", "name": "Exalted Orb"},
+            {"id": "chaos", "name": "Chaos Orb"},
+        ],
+        "lines": [
+            {"id": "divine", "primaryValue": 1.0},
+            {"id": "exalted", "primaryValue": 1.0 / 185.0},
+            {"id": "chaos", "primaryValue": 1.0 / 26.0},
+        ],
+    }
+    out = normalize_poe2_exchange_overview(raw)
+    lines = {
+        str(x.get("currencyTypeName")): float(x.get("chaosEquivalent", 0))
+        for x in out["lines"]
+    }
+    assert abs(lines["Chaos Orb"] - 1.0) < 1e-9
+    assert abs(lines["Divine Orb"] - 26.0) < 1e-9
+    assert abs(lines["Exalted Orb"] - (26.0 / 185.0)) < 1e-9
+
+
+@pytest.mark.asyncio
+async def test_poe_ninja_poe2_currency_chaos_map_via_mock_transport() -> None:
+    index_state = {
+        "economyLeagues": [
+            {"name": "Fate of the Vaal", "url": "vaal", "displayName": "Fate of the Vaal"},
+        ],
+        "oldEconomyLeagues": [],
+    }
+    overview = {
+        "core": {"rates": {"chaos": 26.0, "exalted": 185.0}},
+        "items": [
+            {"id": "divine", "name": "Divine Orb"},
+            {"id": "exalted", "name": "Exalted Orb"},
+            {"id": "chaos", "name": "Chaos Orb"},
+        ],
+        "lines": [
+            {"id": "divine", "primaryValue": 1.0},
+            {"id": "exalted", "primaryValue": 1.0 / 185.0},
+            {"id": "chaos", "primaryValue": 1.0 / 26.0},
+        ],
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/poe2/api/data/index-state"):
+            return httpx.Response(200, json=index_state)
+        if path.endswith("/poe2/api/economy/exchange/current/overview"):
+            return httpx.Response(200, json=overview)
+        return httpx.Response(404, json={})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        src = PoeNinjaSource("https://poe.ninja", client=client)
+        try:
+            m = await src.currency_chaos_map("vaal")
+        finally:
+            await src.aclose()
+    assert abs(m["chaos orb"] - 1.0) < 1e-9
+    assert abs(m["divine orb"] - 26.0) < 1e-9
+    assert abs(m["exalted orb"] - (26.0 / 185.0)) < 1e-9
+
+
+@pytest.mark.asyncio
+async def test_poe_ninja_poe1_base_url_falls_back_to_poe2_on_currencyoverview_404() -> None:
+    """Legacy PRICING_BASE_URL=…/api/data must still load PoE2 leagues (PoE1 endpoint 404s)."""
+    index_state = {
+        "economyLeagues": [
+            {"name": "Fate of the Vaal", "url": "vaal", "displayName": "Fate of the Vaal"},
+        ],
+        "oldEconomyLeagues": [],
+    }
+    overview = {
+        "core": {"rates": {"chaos": 26.0, "exalted": 185.0}},
+        "items": [
+            {"id": "divine", "name": "Divine Orb"},
+            {"id": "exalted", "name": "Exalted Orb"},
+            {"id": "chaos", "name": "Chaos Orb"},
+        ],
+        "lines": [
+            {"id": "divine", "primaryValue": 1.0},
+            {"id": "exalted", "primaryValue": 1.0 / 185.0},
+            {"id": "chaos", "primaryValue": 1.0 / 26.0},
+        ],
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/currencyoverview"):
+            return httpx.Response(404, json={})
+        if path.endswith("/poe2/api/data/index-state"):
+            return httpx.Response(200, json=index_state)
+        if path.endswith("/poe2/api/economy/exchange/current/overview"):
+            return httpx.Response(200, json=overview)
+        return httpx.Response(404, json={})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        src = PoeNinjaSource("https://poe.ninja/api/data", client=client)
+        try:
+            m = await src.currency_chaos_map("Fate of the Vaal")
+        finally:
+            await src.aclose()
+    assert abs(m["divine orb"] - 26.0) < 1e-9
+    assert abs(m["exalted orb"] - (26.0 / 185.0)) < 1e-9
 
 
 @pytest.mark.asyncio
