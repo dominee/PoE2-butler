@@ -51,7 +51,7 @@ export function PublicItemPage() {
           This page shows a read-only item snapshot. Anyone with the link can see it. Open the
           app to browse your private stash and create new share links.{" "}
           <a className="text-ember-400 hover:underline" href="/app">
-            Go to PoE2 Butler
+            Go to Hideout Butler
           </a>
         </p>
       </header>

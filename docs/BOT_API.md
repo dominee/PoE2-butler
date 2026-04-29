@@ -15,7 +15,7 @@ repository.
 The user-facing web UI uses session cookies + CSRF. Bots will use a different
 path:
 
-1. The user links their PoE2 Butler account with the Discord bot via a
+1. The user links their Hideout Butler account with the Discord bot via a
    Discord-side slash command; the bot redirects them to
    `https://app.hideoutbutler.com/link-bot?state=<opaque>` (frontend flow — not part of
    this contract).

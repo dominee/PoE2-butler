@@ -167,7 +167,7 @@ export function AppShell() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-ink-800 bg-ink-900/60 px-4 py-2 backdrop-blur">
-        <h1 className="font-display text-lg text-ember-400">PoE2 Butler</h1>
+        <h1 className="font-display text-lg text-ember-400">Hideout Butler</h1>
         <span className="text-sm text-parchment-100/80">{me.account_name}</span>
         <nav aria-label="Primary view" className="ml-3 flex gap-1 text-sm">
           <button

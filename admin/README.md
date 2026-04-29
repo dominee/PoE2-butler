@@ -1,4 +1,4 @@
-# PoE2 Butler · Admin console
+# Hideout Butler · Admin console
 
 Read-only FastAPI service for operators: **dashboard** (headline metrics, backend
 health strip, snapshot mix bars), user list, snapshot audit, Redis / queue

@@ -56,7 +56,7 @@ async def _require_session(
 
 def create_app() -> FastAPI:
     settings = get_admin_settings()
-    app = FastAPI(title="PoE2 Butler Admin", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Hideout Butler Admin", docs_url=None, redoc_url=None)
     app.add_middleware(AdminSecurityHeaders)
     app.add_middleware(IPAllowlistMiddleware, allowlist=settings.ip_allowlist)
 

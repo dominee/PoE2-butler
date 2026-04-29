@@ -1,6 +1,6 @@
 # Changelog
 
-Notable **user-facing behavior** and **visual/UI** updates for PoE2 Butler. Internal refactors, CI, and tooling are omitted unless they directly affect what players see or do in the app.
+Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. Internal refactors, CI, and tooling are omitted unless they directly affect what players see or do in the app.
 
 ---
 
