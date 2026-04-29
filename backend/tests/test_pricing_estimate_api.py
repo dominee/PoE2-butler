@@ -67,6 +67,45 @@ async def test_get_persisted_estimate_item_200(app_stack) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_persisted_estimate_item_inflight_from_redis(app_stack) -> None:
+    """When Postgres has no row yet, expose queued/running job from Redis dedup slot."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = await client.get("/api/me")
+    assert me.status_code == 200
+    user_id = me.json()["id"]
+    league = "Dawn of the Hunt"
+    item_id = "r1"
+
+    from app import deps as app_deps
+    from app.services.pricing.estimate_state import PriceJobState, dedup_key, save_job_state
+
+    job_id = "11111111-1111-1111-1111-111111111111"
+    redis = app_deps._redis_singleton()
+    await redis.set(dedup_key(user_id, item_id, league), job_id)
+    await save_job_state(
+        redis,
+        job_id,
+        PriceJobState(
+            user_id=user_id,
+            item_id=item_id,
+            item_name="Ring",
+            league=league,
+            status="running",
+            message="fetch",
+        ),
+    )
+
+    resp = await client.get(
+        f"/api/pricing/estimate/item?league={quote(league)}&item_id={item_id}&tolerance_pct=10",
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "running"
+    assert body["item_id"] == item_id
+
+
+@pytest.mark.asyncio
 async def test_start_estimate_enqueues_job(app_stack) -> None:
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)

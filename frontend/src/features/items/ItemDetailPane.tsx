@@ -78,8 +78,17 @@ export function ItemDetailPane({
     setPricingRerun(0);
   }, [item?.id]);
 
+  const refinedPricingInProgress =
+    refinedQ.job?.status === "queued" || refinedQ.job?.status === "running";
+
   const pricingBusy =
-    priceQ.isFetching || currencyRatesQ.isFetching || refinedQ.isLoading;
+    priceQ.isFetching || currencyRatesQ.isFetching || refinedQ.isLoading || refinedPricingInProgress;
+
+  const refreshPricingTitle = refinedPricingInProgress
+    ? "Pricing is already running or queued for this item"
+    : pricingBusy
+      ? "Refreshing…"
+      : "Refresh pricing (quick lookup, rates, and refined estimate)";
 
   if (!item) {
     return (
@@ -236,7 +245,7 @@ export function ItemDetailPane({
                 onClick={onRefreshPricing}
                 disabled={pricingBusy}
                 className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-ink-600 bg-ink-900/80 text-parchment-200/90 transition hover:border-ember-500/50 hover:text-ember-200 disabled:cursor-not-allowed disabled:opacity-40"
-                title="Refresh pricing (quick lookup, rates, and refined estimate)"
+                title={refreshPricingTitle}
                 aria-label="Refresh pricing for this item"
               >
                 <RefreshPricingIcon

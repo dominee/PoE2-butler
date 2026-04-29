@@ -286,6 +286,14 @@ export function usePersistedPriceEstimate(
     },
     enabled: Boolean(enabled && league && item),
     staleTime: 5 * 60_000,
+    refetchOnMount: "always",
+    refetchInterval: (q) => {
+      const d = q.state.data;
+      if (d && (d.status === "queued" || d.status === "running")) {
+        return 1000;
+      }
+      return false;
+    },
   });
 }
 
@@ -332,6 +340,9 @@ export function useRefinedPriceEstimate(
           tolerance_pct: tolerancePct,
         });
         setJobId(r.job_id);
+        void qc.invalidateQueries({
+          queryKey: ["persisted-price-estimate", league, item?.id, tolerancePct],
+        });
       } catch {
         started.current = false;
       }

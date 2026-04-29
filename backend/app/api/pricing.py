@@ -21,6 +21,7 @@ from app.services.pricing.estimate_state import (
     PriceJobState,
     get_or_set_dedup,
     load_job_state,
+    load_redis_inflight_estimate_for_item,
     save_job_state,
 )
 from app.services.pricing.service import PricingService
@@ -95,6 +96,7 @@ class PriceEstimateEnqueued(BaseModel):
 async def get_persisted_item_estimate(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
+    redis=Depends(get_redis),
     league: str = Query(..., min_length=1),
     item_id: str = Query(..., min_length=1),
     tolerance_pct: float | None = Query(default=None, ge=0, le=500),
@@ -107,9 +109,17 @@ async def get_persisted_item_estimate(
         item_id=item_id.strip(),
         tolerance_pct=tol,
     )
-    if st is None:
-        return Response(status_code=204)
-    return JSONResponse(content=st.model_dump(mode="json"))
+    if st is not None:
+        return JSONResponse(content=st.model_dump(mode="json"))
+    inflight = await load_redis_inflight_estimate_for_item(
+        redis,
+        user_id=str(user.id),
+        item_id=item_id.strip(),
+        league=league.strip(),
+    )
+    if inflight is not None:
+        return JSONResponse(content=inflight.model_dump(mode="json"))
+    return Response(status_code=204)
 
 
 @router.get("/estimate/{job_id}", summary="Status of a hybrid price estimate job")
