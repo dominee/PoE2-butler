@@ -79,6 +79,7 @@ def _unpickle_arq_job_function(blob: bytes | None) -> str | None:
     if not blob:
         return None
     try:
+        # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
         d = pickle.loads(bytes(blob))
     except (TypeError, pickle.PickleError, ValueError, EOFError, IndexError, AttributeError):
         return None

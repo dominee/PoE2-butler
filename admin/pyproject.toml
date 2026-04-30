@@ -29,6 +29,7 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.5",
     "pip-audit>=2.7",
+    "pip>=26.1",
 ]
 
 [tool.ruff]

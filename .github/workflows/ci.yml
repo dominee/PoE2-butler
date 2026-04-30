@@ -90,20 +90,27 @@ jobs:
         working-directory: backend
         run: |
           uv sync --frozen || uv sync
-          uv run pip-audit --strict || true
+          uv run pip-audit --strict
       - name: pip-audit (admin)
         working-directory: admin
         run: |
           uv sync --frozen || uv sync
-          uv run pip-audit --strict || true
+          uv run pip-audit --strict
+      - name: pip-audit (mock-ggg)
+        working-directory: mock-ggg
+        run: |
+          uv sync --frozen || uv sync
+          uv run pip-audit --strict
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: npm audit (frontend)
         working-directory: frontend
+        env:
+          NPM_CONFIG_UPDATE_NOTIFIER: "false"
         run: |
           npm install --package-lock-only
-          npm audit --omit=dev --audit-level=high || true
+          npm audit --omit=dev --audit-level=high
 
   e2e:
     name: Playwright (docker dev stack)

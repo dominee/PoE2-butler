@@ -40,7 +40,9 @@ describe("ItemCard", () => {
     render(<ItemCard item={baseItem} />);
     expect(screen.getByText(/doom horn/i)).toBeInTheDocument();
     expect(screen.getByText(/spine bow/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+45 to maximum life/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /item doom horn/i })).toHaveTextContent(
+      /\+45.*to maximum life/i,
+    );
     expect(screen.getByText(/ilvl 82/i)).toBeInTheDocument();
   });
 

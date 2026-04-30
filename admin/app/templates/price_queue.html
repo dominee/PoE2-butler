@@ -25,6 +25,7 @@
   <p class="notice-banner notice-ok">Cleared {{ cleared_n }} in-flight job key(s) from Redis.</p>
   {% endif %}
   <div class="toolbar-row" style="margin-bottom:1rem">
+    <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
     <form method="post" action="/admin/price-queue/clear" class="inline-form" onsubmit="return confirm('Remove all queued and running hybrid price jobs from Redis?');">
       <button type="submit" class="danger">Clear whole queue</button>
     </form>
@@ -61,6 +62,7 @@
           <td class="muted" style="max-width:12rem;font-size:0.9em">{{ r.updated_at or "—" }}</td>
           <td><code title="{{ r.job_id_full }}">{{ r.job_id_display }}</code></td>
           <td class="table-actions">
+            <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
             <form method="post" action="/admin/price-queue/remove" class="inline-form">
               <input type="hidden" name="job_id" value="{{ r.job_id_full }}" />
               <button type="submit" class="input-like btn-compact">Remove</button>

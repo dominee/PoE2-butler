@@ -27,6 +27,9 @@ admin/*/dist/
 *.tsbuildinfo
 .eslintcache
 
+# Local security scan outputs (make test-all-docker)
+artifacts/
+
 # IDE / OS
 .DS_Store
 .idea/

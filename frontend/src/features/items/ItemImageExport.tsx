@@ -17,8 +17,6 @@ import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent
 import { PriceBadge } from "./PriceBadge";
 import { IconImageExport } from "./itemPaneIcons";
 
-const LOG_PREFIX = "[HideoutButler] PNG export";
-
 /**
  * Optional pricing lines for PNG export (detail); mirrors the item detail pane.
  */
@@ -406,23 +404,23 @@ export function ItemImageExportActions({
         } catch (clipErr) {
           if (!secure) {
             console.error(
-              `${LOG_PREFIX}: Pasting a PNG to the system clipboard is blocked on plain HTTP in most browsers. ` +
+              "[HideoutButler] PNG export: Pasting a PNG to the system clipboard is blocked on plain HTTP in most browsers. " +
                 "Only https://, http://localhost, and http://127.0.0.1 are treated as “secure” for this API. " +
                 "A PNG download is offered instead. Browser error —",
               errDetail(clipErr),
             );
-            console.error(`${LOG_PREFIX}: original error object`, clipErr);
+            console.error("[HideoutButler] PNG export: original error object", clipErr);
           } else {
             console.error(
-              `${LOG_PREFIX}: Clipboard write failed; saving a PNG file instead. Reason —`,
+              "[HideoutButler] PNG export: Clipboard write failed; saving a PNG file instead. Reason —",
               errDetail(clipErr),
             );
-            console.error(`${LOG_PREFIX}: original error object`, clipErr);
+            console.error("[HideoutButler] PNG export: original error object", clipErr);
           }
         }
       } else if (!secure) {
         console.error(
-          `${LOG_PREFIX}: navigator.clipboard is unavailable (typical on plain HTTP). A PNG will be downloaded instead of copied.`,
+          "[HideoutButler] PNG export: navigator.clipboard is unavailable (typical on plain HTTP). A PNG will be downloaded instead of copied.",
         );
       }
       const a = document.createElement("a");
@@ -433,11 +431,11 @@ export function ItemImageExportActions({
     } catch (e) {
       setMsg("could not export image");
       console.error(
-        `${LOG_PREFIX}: Could not build or read the image (CORS, canvas taint, or other).`,
+        "[HideoutButler] PNG export: Could not build or read the image (CORS, canvas taint, or other).",
         e instanceof Error ? e.message : e,
       );
       if (e instanceof Error && e.stack) {
-        console.error(`${LOG_PREFIX}: stack`, e.stack);
+        console.error("[HideoutButler] PNG export: stack", e.stack);
       }
     }
   };
@@ -462,11 +460,11 @@ export function ItemImageExportActions({
     } catch (e) {
       setMsg("could not export image");
       console.error(
-        `${LOG_PREFIX}: Could not build or read the image (CORS, canvas taint, or other).`,
+        "[HideoutButler] PNG export: Could not build or read the image (CORS, canvas taint, or other).",
         e instanceof Error ? e.message : e,
       );
       if (e instanceof Error && e.stack) {
-        console.error(`${LOG_PREFIX}: stack`, e.stack);
+        console.error("[HideoutButler] PNG export: stack", e.stack);
       }
     }
   };

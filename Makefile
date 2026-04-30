@@ -166,8 +166,7 @@ check: ensure-node-modules
 # Full host-tool-independent gate:
 # - Runs backend/admin/mock/frontend checks in Docker containers (UV_LINK_MODE=copy
 #   avoids hardlink warnings when the repo is bind-mounted).
-# - Runs security scans used by security-review.yml in Docker as visibility-only
-#   (scan findings do not fail this target yet, matching current CI policy).
+# - Runs security scans (Semgrep, gitleaks, OSV, pip-audit, npm audit); failures fail the target.
 test-all-docker:
 	@echo "==> [docker] backend lint + tests"
 	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
@@ -175,27 +174,28 @@ test-all-docker:
 	@echo "==> [docker] admin lint + tests"
 	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
 		sh -lc "(uv sync --frozen || uv sync) && uv run ruff check . && uv run pytest -ra"
-	@echo "==> [docker] mock-ggg lint"
+	@echo "==> [docker] mock-ggg lint + tests"
 	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "(uv sync --frozen || uv sync) && uv run ruff check ."
+		sh -lc "(uv sync --frozen || uv sync) && uv run ruff check . && uv run pytest -ra"
 	@echo "==> [docker] frontend lint + typecheck + unit tests"
-	docker run --rm -v "$(PWD):/work" -w /work/frontend node:22 \
+	docker run --rm -e NPM_CONFIG_UPDATE_NOTIFIER=false -v "$(PWD):/work" -w /work/frontend node:22 \
 		sh -lc "npm install && npm run lint && npx tsc -b && npm test"
-	@echo "==> [docker] security scans (visibility-only)"
+	@mkdir -p "$(PWD)/artifacts"
+	@echo "==> [docker] security scans"
 	docker run --rm -v "$(PWD):/src" -w /src semgrep/semgrep:latest \
-		semgrep scan --config auto --error --json --output /tmp/semgrep.json || true
+		semgrep scan --config auto --error --json --output /src/artifacts/semgrep.json
 	docker run --rm -v "$(PWD):/repo" zricethezav/gitleaks:latest \
-		detect --source /repo --report-format json --report-path /tmp/gitleaks.json || true
+		detect --source /repo --config /repo/.gitleaks.toml --report-format json --report-path /repo/artifacts/gitleaks.json
 	docker run --rm -v "$(PWD):/src" -w /src ghcr.io/google/osv-scanner:latest \
-		scan source -r . --format json --output-file /tmp/osv.json || true
-	docker run --rm -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.backend.txt; uv run --with pip-audit pip-audit -r /tmp/requirements.backend.txt || true"
-	docker run --rm -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.admin.txt; uv run --with pip-audit pip-audit -r /tmp/requirements.admin.txt || true"
-	docker run --rm -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.mock-ggg.txt; uv run --with pip-audit pip-audit -r /tmp/requirements.mock-ggg.txt || true"
-	docker run --rm -v "$(PWD):/work" -w /work/frontend node:22 \
-		sh -lc "npm audit --omit=dev --audit-level=high || true"
+		scan source -r . --format json --output-file /src/artifacts/osv.json
+	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "(uv sync --frozen || uv sync) && uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.backend.txt && uv run pip-audit --strict -r /tmp/requirements.backend.txt"
+	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "(uv sync --frozen || uv sync) && uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.admin.txt && uv run pip-audit --strict -r /tmp/requirements.admin.txt"
+	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \
+		sh -lc "(uv sync --frozen || uv sync) && uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.mock-ggg.txt && uv run pip-audit --strict -r /tmp/requirements.mock-ggg.txt"
+	docker run --rm -v "$(PWD):/work" -w /work/frontend -e NPM_CONFIG_UPDATE_NOTIFIER=false node:22 \
+		sh -lc "npm audit --omit=dev --audit-level=high"
 	@echo "==> [docker] done"
 
 # ---------------------------------------------------------------------------

@@ -347,7 +347,7 @@ export function useRefinedPriceEstimate(
         started.current = false;
       }
     })();
-  }, [sessionKey, runKey, enabled, item, league, tolerancePct, rerunKey]);
+  }, [sessionKey, runKey, enabled, item, league, tolerancePct, rerunKey, qc]);
 
   const jobQ = useQuery<PriceJobState>({
     queryKey: ["price-estimate", jobId],

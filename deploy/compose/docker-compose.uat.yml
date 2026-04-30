@@ -123,6 +123,8 @@ services:
       - uat_edge
       - uat_internal
 
+  # arq worker: must share uat_edge with the API so outbound HTTPS/DNS works (trade2 is public GGG).
+  # uat_internal alone blocks egress (Errno -3 name resolution on pathofexile.com) — same as dev ``edge`` + ``internal``.
   worker:
     build:
       context: ../../backend
@@ -144,7 +146,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mock-ggg:
+        condition: service_started
     networks:
+      - uat_edge
       - uat_internal
 
   frontend:

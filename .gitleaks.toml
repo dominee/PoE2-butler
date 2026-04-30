@@ -1,0 +1,10 @@
+title = "PoE2 Hideout Butler"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "uv.lock holds PyPI artifact hashes, not repository secrets."
+paths = [
+  '''(?:^|/)uv\.lock$''',
+]

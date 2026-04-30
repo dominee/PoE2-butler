@@ -139,6 +139,8 @@ services:
         limits:
           memory: 256M
 
+  # arq worker: must share ``edge`` with the API so outbound HTTPS/DNS works (e.g. trade2 on pathofexile.com).
+  # ``internal`` alone blocks egress.
   worker:
     build:
       context: ../../backend
@@ -160,6 +162,7 @@ services:
       redis:
         condition: service_healthy
     networks:
+      - edge
       - internal
     deploy:
       resources:

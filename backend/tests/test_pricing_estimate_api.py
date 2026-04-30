@@ -10,7 +10,6 @@ import pytest
 from app.db import base as db_base
 from app.db.models import ItemPriceEstimate
 from app.services.pricing.source import PriceEstimate, PriceUnit
-
 from tests.test_auth_flow import _full_login
 
 

@@ -16,6 +16,8 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "ruff>=0.8",
+    "pip-audit>=2.7",
+    "pip>=26.1",
 ]
 
 [build-system]

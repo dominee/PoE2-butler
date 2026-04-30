@@ -70,7 +70,7 @@ class User(Base):
     item_shares: Mapped[list[ItemShare]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    item_price_estimates: Mapped[list["ItemPriceEstimate"]] = relationship(
+    item_price_estimates: Mapped[list[ItemPriceEstimate]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
