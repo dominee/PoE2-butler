@@ -93,7 +93,8 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: |
           uv sync --frozen || uv sync
-          uv run pip-audit --strict
+          uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements-audit.txt
+          uv run pip-audit --strict -r /tmp/requirements-audit.txt
 
   npm-audit:
     name: npm audit (frontend)
