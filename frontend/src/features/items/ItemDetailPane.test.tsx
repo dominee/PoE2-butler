@@ -171,7 +171,7 @@ describe("ItemDetailPane", () => {
 
     const user = userEvent.setup();
     renderPane(testItem);
-    await user.click(screen.getByRole("button", { name: /same item on trade/i }));
+    await user.click(screen.getByRole("button", { name: /trade search/i }));
 
     await waitFor(() => {
       const hasTrade = fetchMock.mock.calls.some((c) => String(requestUrl(c[0]!)).includes("/api/trade"));

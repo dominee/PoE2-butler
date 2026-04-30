@@ -15,6 +15,7 @@ import { ExplicitModLine, ModDivider, ModSection, ModText, PANE_SECTION_HEADING 
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
+import { IconImageExport } from "./itemPaneIcons";
 
 const LOG_PREFIX = "[HideoutButler] PNG export";
 
@@ -470,21 +471,28 @@ export function ItemImageExportActions({
     }
   };
 
+  const exportRowH = "h-9";
+  const downloadIconPairedClass =
+    `inline-flex ${exportRowH} w-9 shrink-0 items-center justify-center rounded-md rounded-l-none border border-ink-600 border-l-0 bg-ink-800 text-ember-300 hover:border-ember-400/40 hover:text-ember-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400/60`;
+
   return (
     <div className="shrink-0 space-y-1">
       <p className={PANE_SECTION_HEADING}>Image export (Discord)</p>
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <div className="inline-flex items-stretch gap-0.5">
+      <div className="flex w-full min-w-0 items-stretch gap-2">
+        <div className="flex min-h-0 min-w-0 flex-1 items-stretch">
           <button
             type="button"
-            className="btn-ghost rounded-r-none pr-2 text-xs sm:pr-2.5"
+            className={`btn-ghost inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-r-none px-2 text-xs sm:gap-1.5 ${exportRowH}`}
             onClick={() => void runCopy(compactRef, "Compact")}
+            title="Copy PNG to clipboard (compact layout)"
+            aria-label="Copy PNG to clipboard (compact layout)"
           >
-            Copy PNG (compact)
+            <IconImageExport />
+            <span className="truncate">Image</span>
           </button>
           <button
             type="button"
-            className="inline-flex w-7 shrink-0 items-center justify-center rounded-md rounded-l-none border border-ink-600 border-l-0 bg-ink-800 text-ember-300 hover:border-ember-400/40 hover:text-ember-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400/60"
+            className={downloadIconPairedClass}
             onClick={() => void runDownload(compactRef, "compact")}
             title="Download PNG (compact)"
             aria-label="Download PNG (compact)"
@@ -492,17 +500,20 @@ export function ItemImageExportActions({
             {downloadIconSvg()}
           </button>
         </div>
-        <div className="inline-flex items-stretch gap-0.5">
+        <div className="flex min-h-0 min-w-0 flex-1 items-stretch">
           <button
             type="button"
-            className="btn-ghost rounded-r-none pr-2 text-xs sm:pr-2.5"
+            className={`btn-ghost inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-r-none px-2 text-xs sm:gap-1.5 ${exportRowH}`}
             onClick={() => void runCopy(detailRef, "Detail")}
+            title="Copy PNG to clipboard (detail layout)"
+            aria-label="Copy PNG to clipboard (detail layout)"
           >
-            Copy PNG (detail)
+            <IconImageExport />
+            <span className="truncate">Image (detail)</span>
           </button>
           <button
             type="button"
-            className="inline-flex w-7 shrink-0 items-center justify-center rounded-md rounded-l-none border border-ink-600 border-l-0 bg-ink-800 text-ember-300 hover:border-ember-400/40 hover:text-ember-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-400/60"
+            className={downloadIconPairedClass}
             onClick={() => void runDownload(detailRef, "detail")}
             title="Download PNG (detail)"
             aria-label="Download PNG (detail)"

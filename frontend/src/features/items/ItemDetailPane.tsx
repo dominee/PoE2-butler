@@ -35,6 +35,15 @@ import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
+import {
+  IconChevronsUp,
+  IconClipboard,
+  IconClose,
+  IconLinkOff,
+  IconLinkShare,
+  IconSave,
+  IconSearchExact,
+} from "./itemPaneIcons";
 
 export interface ItemDetailPaneProps {
   item: Item | null;
@@ -290,8 +299,13 @@ export function ItemDetailPane({
           )}
         </div>
         {isApp && onClose && (
-          <button type="button" onClick={onClose} className="shrink-0 text-ember-400 text-sm">
-            ✕
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex shrink-0 items-center justify-center rounded-md p-1 text-ember-400 transition hover:bg-ink-800/80 hover:text-ember-300"
+            aria-label="Close item details"
+          >
+            <IconClose />
           </button>
         )}
       </header>
@@ -501,23 +515,25 @@ export function ItemDetailPane({
             Creates a read-only page anyone can open. No GGG account or app login is required to
             view the snapshot.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             <button
               type="button"
-              className="btn-ghost text-xs"
+              className="btn-ghost inline-flex w-full items-center justify-center gap-2 text-center text-xs"
               onClick={() => void onCreateShare()}
               disabled={createShare.isPending}
             >
-              Create &amp; copy link
+              <IconLinkShare />
+              <span>Create &amp; copy link</span>
             </button>
             {lastShareId && (
               <button
                 type="button"
-                className="btn-ghost text-xs"
+                className="btn-ghost inline-flex w-full items-center justify-center gap-2 text-center text-xs"
                 onClick={() => void onRevokeShare()}
                 disabled={revokeShare.isPending}
               >
-                Revoke link
+                <IconLinkOff />
+                <span>Revoke link</span>
               </button>
             )}
           </div>
@@ -548,11 +564,12 @@ export function ItemDetailPane({
           <div className="shrink-0 border-t border-ink-700 pt-3">
             <button
               type="button"
-              className="btn-ghost w-full text-left text-sm"
+              className="btn-ghost inline-flex w-full items-center justify-center gap-2 text-center text-sm"
               onClick={() => void onCopyItemText()}
               disabled={itemText.isPending}
             >
-              Copy PoE2 item text
+              <IconClipboard />
+              <span>Copy PoE2 item text</span>
             </button>
           </div>
 
@@ -576,28 +593,31 @@ export function ItemDetailPane({
               <button
                 type="button"
                 onClick={onPersistTolerance}
-                className="ml-auto btn-ghost text-xs"
+                className="ml-auto inline-flex min-w-[4.25rem] items-center justify-center gap-1.5 btn-ghost text-xs"
                 disabled={localTolerance == null || updatePrefs.isPending}
               >
-                save
+                <IconSave />
+                <span>save</span>
               </button>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
-                className="btn-primary flex-1"
+                className="btn-primary inline-flex flex-1 items-center justify-center gap-2 text-center"
                 onClick={() => onSearch("exact")}
                 disabled={tradeSearch.isPending}
               >
-                Same item on trade
+                <IconSearchExact />
+                <span>Trade Search</span>
               </button>
               <button
                 type="button"
-                className="btn-ghost flex-1"
+                className="btn-ghost inline-flex flex-1 items-center justify-center gap-2 text-center"
                 onClick={() => onSearch("upgrade")}
                 disabled={tradeSearch.isPending}
               >
-                Upgrade search
+                <IconChevronsUp />
+                <span>Upgrade search</span>
               </button>
             </div>
             {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}

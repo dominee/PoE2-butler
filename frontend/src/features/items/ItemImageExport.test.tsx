@@ -40,8 +40,8 @@ const minimalItem: Item = {
 describe("ItemImageExportActions", () => {
   it("renders copy and download controls for each layout", () => {
     render(<ItemImageExportActions item={minimalItem} />);
-    expect(screen.getByRole("button", { name: "Copy PNG (compact)" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy PNG (detail)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy png to clipboard \(compact layout\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy png to clipboard \(detail layout\)/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download PNG (compact)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download PNG (detail)" })).toBeInTheDocument();
   });
