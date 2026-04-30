@@ -46,10 +46,9 @@ describe("CharacterStatSummary", () => {
 
     const brief = screen.getByTestId("stat-summary-brief");
     expect(brief).toBeInTheDocument();
-    const resHeading = within(brief).getByText("Resistances");
-    expect(resHeading).toBeInTheDocument();
-    expect(within(brief).getByText("All res")).toBeInTheDocument();
     expect(within(brief).getByText("20%")).toBeInTheDocument();
+    expect(within(brief).queryByText("Resistances")).not.toBeInTheDocument();
+    expect(within(brief).queryByText("All res")).not.toBeInTheDocument();
     expect(
       within(brief).queryByText("+20% to all Elemental Resistances")
     ).not.toBeInTheDocument();

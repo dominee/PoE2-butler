@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 
 import type { CharacterDetail, EquipmentStatSummary, StatRow, StatSection } from "@/api/types";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
@@ -26,156 +26,236 @@ function formatRowValues(row: StatRow): string {
   return vals.map(formatNumber).join(" / ") + (pct ? "%" : "");
 }
 
-type BasicLine = { id: string; short: string; row: StatRow };
-
-type BasicCategory = {
-  id: string;
-  label: string;
-  lines: BasicLine[];
-};
-
-/** Order of “basic” groupings in the collapsed view. */
-const BRIEF_CORE_ORDER = [
-  "resources",
-  "resistances",
-  "attributes",
-  "defences",
-] as const;
-
-const OTHER_BRIEF_MAX = 8;
-
-function trimLabel(text: string, max = 34): string {
-  if (text.length <= max) {
-    return text;
-  }
-  return `${text.slice(0, max - 1)}…`;
+function sectionById(sections: StatSection[], id: string): StatSection | undefined {
+  return sections.find((s) => s.id === id);
 }
 
-function shortLabelForResourceRow(row: StatRow): string {
-  const t = row.label;
-  if (/maximum life/i.test(t)) {
-    return "Life";
+function findResourceRow(rows: StatRow[], kind: "life" | "mana" | "spirit"): StatRow | null {
+  for (const r of rows) {
+    const t = r.label;
+    if (kind === "life" && /maximum life/i.test(t)) {
+      return r;
+    }
+    if (kind === "mana" && /maximum mana/i.test(t)) {
+      return r;
+    }
+    if (kind === "spirit" && (/\bto spirit\b/i.test(t) || /maximum spirit/i.test(t))) {
+      return r;
+    }
   }
-  if (/maximum mana/i.test(t)) {
-    return "Mana";
-  }
-  if (/\bto spirit\b|maximum spirit/i.test(t)) {
-    return "Spirit";
-  }
-  return trimLabel(t, 32);
+  return null;
 }
 
-function shortLabelForResistRow(row: StatRow): string {
-  const t = row.label;
-  if (/\ball elemental\b/i.test(t) || /\bto all element/i.test(t)) {
-    return "All res";
+function findAttributeRow(rows: StatRow[], kind: "str" | "int" | "dex"): StatRow | null {
+  for (const r of rows) {
+    const t = r.label;
+    if (kind === "str" && (/\bstrength\b| to str\b/i.test(t))) {
+      return r;
+    }
+    if (kind === "dex" && (/\bdexterity\b| to dex\b/i.test(t))) {
+      return r;
+    }
+    if (kind === "int" && (/\bintelligence\b| to int\b/i.test(t))) {
+      return r;
+    }
   }
-  if (/\bchaos\b/i.test(t) && /resist/i.test(t)) {
-    return "Chaos res";
-  }
-  if (/\bfire\b/i.test(t) && /resist/i.test(t)) {
-    return "Fire res";
-  }
-  if (/\bcold\b/i.test(t) && /resist/i.test(t)) {
-    return "Cold res";
-  }
-  if (/\blightning\b/i.test(t) && /resist/i.test(t)) {
-    return "Lightn. res";
-  }
-  return trimLabel(t, 32);
+  return null;
 }
 
-function shortLabelForAttributeRow(row: StatRow): string {
-  const t = row.label;
-  if (/\bstrength\b| to str\b/i.test(t)) {
-    return "Str";
-  }
-  if (/\bdexterity\b| to dex\b/i.test(t)) {
-    return "Dex";
-  }
-  if (/\bintelligence\b| to int\b/i.test(t)) {
-    return "Int";
-  }
-  return trimLabel(t, 32);
-}
-
-function shortLabelForDefenceRow(row: StatRow): string {
-  return trimLabel(row.label, 32);
-}
-
-function linesForSection(
-  kind: (typeof BRIEF_CORE_ORDER)[number],
-  sec: StatSection
-): BasicLine[] {
-  return sec.rows.map((row, i) => {
-    const short =
-      kind === "resources"
-        ? shortLabelForResourceRow(row)
-        : kind === "resistances"
-          ? shortLabelForResistRow(row)
-          : kind === "attributes"
-            ? shortLabelForAttributeRow(row)
-            : shortLabelForDefenceRow(row);
-    return { id: `${sec.id}-${row.key}-${i}`, short, row };
-  });
-}
-
-/**
- * Grouped brief summary: every row in **resistances** and other core sections, with section labels
- * (same as API), plus a capped “other” group for the rest.
- */
-function basicGroupedFromSections(sections: StatSection[]): BasicCategory[] {
-  const byId = new Map(sections.map((s) => [s.id, s]));
-  const out: BasicCategory[] = [];
-
-  for (const sid of BRIEF_CORE_ORDER) {
-    const sec = byId.get(sid);
-    if (!sec?.rows.length) {
+function findResistRow(
+  rows: StatRow[],
+  kind: "lightning" | "cold" | "fire" | "chaos" | "all",
+): StatRow | null {
+  for (const r of rows) {
+    const t = r.label;
+    if (kind === "all" && (/\ball elemental\b/i.test(t) || /\bto all element/i.test(t))) {
+      return r;
+    }
+    if (!/resist/i.test(t)) {
       continue;
     }
-    out.push({ id: sid, label: sec.label, lines: linesForSection(sid, sec) });
+    if (kind === "lightning" && /\blightning\b/i.test(t)) {
+      return r;
+    }
+    if (kind === "cold" && /\bcold\b/i.test(t)) {
+      return r;
+    }
+    if (kind === "fire" && /\bfire\b/i.test(t)) {
+      return r;
+    }
+    if (kind === "chaos" && /\bchaos\b/i.test(t)) {
+      return r;
+    }
   }
+  return null;
+}
 
-  const coreSet = new Set(BRIEF_CORE_ORDER as readonly string[]);
-  const otherLines: BasicLine[] = [];
-  for (const sec of sections) {
-    if (coreSet.has(sec.id)) {
+/** Flat pool stats only (skip “increased %”, suppression, block, etc.). */
+function findDefenceRow(rows: StatRow[], kind: "es" | "armour" | "evasion"): StatRow | null {
+  const skip = (low: string) =>
+    /increased|more |less |suppression|block|ward|deflect|per accuracy|conversion|spell suppress|from evasion|from armour/i.test(
+      low,
+    );
+  for (const r of rows) {
+    const low = r.label.toLowerCase();
+    if (skip(low)) {
       continue;
     }
-    sec.rows.forEach((row, i) => {
-      if (otherLines.length >= OTHER_BRIEF_MAX) {
-        return;
-      }
-      otherLines.push({
-        id: `other-${sec.id}-${i}`,
-        short: trimLabel(row.label, 32),
-        row,
-      });
-    });
-  }
-  if (otherLines.length > 0) {
-    out.push({ id: "other", label: "Other", lines: otherLines });
-  }
-
-  if (out.length > 0) {
-    return out;
-  }
-
-  // Fallback: first few rows of any section, as a single block
-  const any: BasicLine[] = [];
-  for (const sec of sections) {
-    for (const row of sec.rows) {
-      if (any.length >= OTHER_BRIEF_MAX) {
-        return [{ id: "fallback", label: "Summary", lines: any }];
-      }
-      any.push({
-        id: `fb-${any.length}`,
-        short: trimLabel(row.label, 32),
-        row,
-      });
+    if (kind === "evasion" && /evasion rating/.test(low)) {
+      return r;
+    }
+    if (kind === "armour" && /\barmou?r\b/.test(low) && !/%/.test(r.label)) {
+      return r;
+    }
+    if (kind === "es" && /energy shield/.test(low)) {
+      return r;
     }
   }
-  return [{ id: "fallback", label: "Summary", lines: any }];
+  if (kind === "es") {
+    return (
+      rows.find((r) => /energy shield/i.test(r.label.toLowerCase()) && !skip(r.label.toLowerCase())) ??
+      null
+    );
+  }
+  if (kind === "armour") {
+    return (
+      rows.find((r) => /\barmou?r\b/i.test(r.label) && !skip(r.label.toLowerCase())) ?? null
+    );
+  }
+  return rows.find((r) => /evasion rating/i.test(r.label.toLowerCase())) ?? null;
+}
+
+function StatTextChip({ label, row }: { label: string; row: StatRow | null }) {
+  return (
+    <span className="inline-flex shrink-0 items-baseline gap-0.5" title={row?.label}>
+      <span className="text-parchment-200/85">{label}</span>
+      <span className="font-semibold tabular-nums text-white/92">
+        {row ? formatRowValues(row) : "—"}
+      </span>
+    </span>
+  );
+}
+
+function ResistChip({ row, icon, name }: { row: StatRow | null; icon: ReactNode; name: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5" title={row?.label ?? name}>
+      <span className="sr-only">{name}</span>
+      {icon}
+      <span className="font-semibold tabular-nums text-white/92">
+        {row ? formatRowValues(row) : "—"}
+      </span>
+    </span>
+  );
+}
+
+function IconLightning() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0 text-amber-300"
+      viewBox="0 0 24 24"
+      aria-hidden
+    >
+      <path
+        d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function IconCold() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0 text-sky-300"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path d="M12 2v20M8 6l4-4 4 4M8 18l4 4 4-4M4 12h16M6 8l-4 4 4 4M18 8l4 4-4 4" />
+    </svg>
+  );
+}
+
+function IconFire() {
+  return (
+    <svg className="h-3.5 w-3.5 shrink-0 text-orange-400" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M12 22c4-2 6-5 6-9 0-3-2-6-4-7 0 3-2 5-2 5s-2-2-2-5c-2 1-4 4-4 7 0 4 2 7 6 9z"
+      />
+    </svg>
+  );
+}
+
+function IconChaos() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 shrink-0 text-violet-400"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+      <path d="M12 5v3M12 16v3M5 12h3M16 12h3M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2" />
+    </svg>
+  );
+}
+
+function IconAllRes({ gradId }: { gradId: string }) {
+  const href = `url(#${gradId})`;
+  return (
+    <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden>
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="35%" stopColor="#fb923c" />
+          <stop offset="65%" stopColor="#7dd3fc" />
+          <stop offset="100%" stopColor="#c4b5fd" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 3 20 8 20 16 12 21 4 16 4 8 12 3z"
+        fill="none"
+        stroke={href}
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function useMandatoryBrief(sections: StatSection[]) {
+  return useMemo(() => {
+    const resSec = sectionById(sections, "resources");
+    const attrSec = sectionById(sections, "attributes");
+    const resistSec = sectionById(sections, "resistances");
+    const defSec = sectionById(sections, "defences");
+
+    const resRows = resSec?.rows ?? [];
+    const attrRows = attrSec?.rows ?? [];
+    const resistRows = resistSec?.rows ?? [];
+    const defRows = defSec?.rows ?? [];
+
+    return {
+      life: findResourceRow(resRows, "life"),
+      mana: findResourceRow(resRows, "mana"),
+      spirit: findResourceRow(resRows, "spirit"),
+      str: findAttributeRow(attrRows, "str"),
+      int: findAttributeRow(attrRows, "int"),
+      dex: findAttributeRow(attrRows, "dex"),
+      resLightning: findResistRow(resistRows, "lightning"),
+      resCold: findResistRow(resistRows, "cold"),
+      resFire: findResistRow(resistRows, "fire"),
+      resChaos: findResistRow(resistRows, "chaos"),
+      resAll: findResistRow(resistRows, "all"),
+      es: findDefenceRow(defRows, "es"),
+      armour: findDefenceRow(defRows, "armour"),
+      evasion: findDefenceRow(defRows, "evasion"),
+    };
+  }, [sections]);
 }
 
 export interface CharacterStatSummaryProps {
@@ -183,15 +263,17 @@ export interface CharacterStatSummaryProps {
 }
 
 /**
- * Cumulative equipment stats from the API. Collapsed: basic categories. Expanded: full table.
+ * Cumulative equipment stats from the API. Collapsed: one compact strip of core stats.
+ * Expanded: full per-section table.
  */
 export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
   const panelId = useId();
+  const allResGradId = useId().replace(/:/g, "");
   const [expanded, setExpanded] = useState(false);
   const summary: EquipmentStatSummary = detail.stat_summary ?? { sections: [] };
   const sections = (summary.sections ?? []).filter((s) => s.rows.length > 0);
 
-  const briefGroups = useMemo(() => basicGroupedFromSections(sections), [sections]);
+  const brief = useMandatoryBrief(sections);
 
   if (sections.length === 0) {
     return (
@@ -222,27 +304,35 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
 
       {!expanded && (
         <div
-          className="mt-2 space-y-2.5 text-sm text-parchment-100/90"
+          className="mt-1.5 flex min-w-0 flex-nowrap items-center gap-x-2 overflow-x-auto pb-0.5 text-xs [-webkit-overflow-scrolling:touch]"
           data-testid="stat-summary-brief"
         >
-          {briefGroups.map((cat) => (
-            <section key={cat.id} aria-label={cat.label}>
-              <h4 className={PANE_SECTION_HEADING}>{cat.label}</h4>
-              <ul className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                {cat.lines.map((b) => (
-                  <li
-                    key={b.id}
-                    className="inline-flex min-w-0 max-w-full items-baseline gap-1.5"
-                  >
-                    <span className="shrink-0 text-parchment-200/85">{b.short}</span>
-                    <span className="font-semibold tabular-nums text-white/92">
-                      {formatRowValues(b.row)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          <div className="flex shrink-0 flex-nowrap items-center gap-x-2">
+            <StatTextChip label="Life" row={brief.life} />
+            <StatTextChip label="Mana" row={brief.mana} />
+            <StatTextChip label="Spirit" row={brief.spirit} />
+          </div>
+          <div className="flex shrink-0 flex-nowrap items-center gap-x-2 border-l border-ink-600/50 pl-2">
+            <StatTextChip label="Str" row={brief.str} />
+            <StatTextChip label="Int" row={brief.int} />
+            <StatTextChip label="Dex" row={brief.dex} />
+          </div>
+          <div className="flex shrink-0 flex-nowrap items-center gap-x-1.5 border-l border-ink-600/50 pl-2">
+            <ResistChip row={brief.resLightning} name="Lightning resistance" icon={<IconLightning />} />
+            <ResistChip row={brief.resCold} name="Cold resistance" icon={<IconCold />} />
+            <ResistChip row={brief.resFire} name="Fire resistance" icon={<IconFire />} />
+            <ResistChip row={brief.resChaos} name="Chaos resistance" icon={<IconChaos />} />
+            <ResistChip
+              row={brief.resAll}
+              name="All elemental resistances"
+              icon={<IconAllRes gradId={allResGradId} />}
+            />
+          </div>
+          <div className="flex shrink-0 flex-nowrap items-center gap-x-2 border-l border-ink-600/50 pl-2">
+            <StatTextChip label="ES" row={brief.es} />
+            <StatTextChip label="Arm" row={brief.armour} />
+            <StatTextChip label="Eva" row={brief.evasion} />
+          </div>
         </div>
       )}
 
