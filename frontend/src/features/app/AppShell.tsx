@@ -12,7 +12,6 @@ import {
 } from "@/api/hooks";
 import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
-import { CurrencyExchangeHint } from "@/features/app/CurrencyExchangeHint";
 import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
@@ -263,9 +262,17 @@ export function AppShell() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-parchment-100/80">
-                  {selectedCharacter ? `${selectedCharacter} — equipped` : "Select a character"}
+                  {selectedCharacter ? (
+                    <>
+                      <span className="font-semibold tracking-wide text-amber-100/95 [text-shadow:0_0_14px_rgba(251,191,36,0.22)]">
+                        {selectedCharacter}
+                      </span>
+                      <span className="font-normal text-parchment-200/70"> — equipped</span>
+                    </>
+                  ) : (
+                    "Select a character"
+                  )}
                 </h2>
-                <CurrencyExchangeHint league={selectedLeague} className="mt-0.5" />
               </div>
               {characterQ.data && (
                 <div
