@@ -16,9 +16,9 @@ export function DivExPriceText({
   className?: string;
 }) {
   const p = getChaosEquivDisplayParts(chaosEquiv, rates);
-  const n = valuable ? "font-mono tabular-nums text-emerald-100" : "font-mono tabular-nums text-white/92";
-  const u = valuable ? "text-emerald-200/95" : "text-white/88";
-  const paren = valuable ? "text-emerald-200/75" : "text-white/72";
+  const n = valuable ? "font-mono tabular-nums text-parchment-50" : "font-mono tabular-nums text-white/92";
+  const u = valuable ? "text-ember-400/95" : "text-white/88";
+  const paren = valuable ? "text-ember-400/65" : "text-white/72";
   if (p.kind === "chaos") {
     return (
       <span className={`${n} ${className}`.trim()}>{p.text}</span>
@@ -43,8 +43,8 @@ export function PriceEstimateBrightText({
   estimate: PriceEstimate;
   valuable?: boolean;
 }) {
-  const n = valuable ? "font-mono tabular-nums text-emerald-100" : "font-mono tabular-nums text-white/92";
-  const u = valuable ? "text-emerald-200/95" : "text-white/88";
+  const n = valuable ? "font-mono tabular-nums text-parchment-50" : "font-mono tabular-nums text-white/92";
+  const u = valuable ? "text-ember-400/95" : "text-white/88";
   if (estimate.unit === "chaos") {
     return <span className={n}>{formatChaos(estimate.chaos_equiv)}c</span>;
   }
