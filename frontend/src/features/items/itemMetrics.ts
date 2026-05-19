@@ -1,15 +1,13 @@
 import type { CurrencyRatesResponse, PriceEstimate } from "@/api/types";
 
 export function formatChaos(value: number): string {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
-  if (value >= 100) return value.toFixed(0);
-  if (value >= 10) return value.toFixed(1);
-  return value.toFixed(2);
+  if (value >= 1000) return `${Math.ceil(value / 1000)}k`;
+  return `${Math.ceil(value)}`;
 }
 
 export function formatPriceEstimateLine(p: PriceEstimate): string {
-  if (p.unit === "divine") return `${p.value.toFixed(2)} div`;
-  if (p.unit === "exalted") return `${p.value.toFixed(2)} ex`;
+  if (p.unit === "divine") return `${Math.ceil(p.value)} div`;
+  if (p.unit === "exalted") return `${Math.ceil(p.value)} ex`;
   return `${formatChaos(p.chaos_equiv)}c`;
 }
 
@@ -47,7 +45,7 @@ export function getChaosEquivDisplayParts(
   }
   const div = chaosEquiv / rates.chaosPerDivine;
   const ex = chaosEquiv / rates.chaosPerExalted;
-  return { kind: "divEx", divAmount: div.toFixed(2), exAmount: ex.toFixed(1) };
+  return { kind: "divEx", divAmount: String(Math.ceil(div)), exAmount: String(Math.ceil(ex)) };
 }
 
 /** Mean of mod lines that have a roll percentage (implicit + explicit). */

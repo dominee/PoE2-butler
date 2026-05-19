@@ -66,13 +66,13 @@ export function HeaderCurrencyRates({ league }: HeaderCurrencyRatesProps) {
       <span className="text-white/86">1 div</span>
       <span className="text-white/86"> ≈ </span>
       <span className="font-mono tabular-nums text-white/95">
-        {exPerDiv != null ? exPerDiv.toFixed(1) : "—"}
+        {exPerDiv != null ? Math.ceil(exPerDiv) : "—"}
       </span>
       <span className="text-white/86"> ex</span>
       <span className="text-white/55"> · </span>
       <span className="text-white/86">1 ex</span>
       <span className="text-white/86"> ≈ </span>
-      <span className="font-mono tabular-nums text-white/95">{chaosPerEx.toFixed(1)}</span>
+      <span className="font-mono tabular-nums text-white/95">{Math.ceil(chaosPerEx)}</span>
       <span className="text-white/86"> chaos</span>
     </>
   );

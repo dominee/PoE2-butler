@@ -27,7 +27,7 @@ export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBa
           : "border-ink-700 bg-ink-800 text-parchment-100/90",
         compact ? "uppercase" : "",
       ].join(" ")}
-      title={`${price.chaos_equiv.toFixed(2)} chaos equivalent · source: ${price.source}`}
+      title={`${Math.ceil(price.chaos_equiv)} chaos equivalent · source: ${price.source}`}
       data-testid="price-badge"
     >
       <span aria-hidden="true">◈</span>

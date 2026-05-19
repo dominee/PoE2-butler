@@ -48,7 +48,7 @@ export function PriceEstimateBrightText({
   if (estimate.unit === "chaos") {
     return <span className={n}>{formatChaos(estimate.chaos_equiv)}c</span>;
   }
-  const v = estimate.value.toFixed(2);
+  const v = String(Math.ceil(estimate.value));
   const word = estimate.unit === "divine" ? "div" : "ex";
   return (
     <span>

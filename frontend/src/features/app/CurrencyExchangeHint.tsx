@@ -16,7 +16,7 @@ export function CurrencyExchangeHint({ league, className = "" }: CurrencyExchang
       title="From community economy data (poe.ninja or configured fallbacks) for this league"
     >
       <span className="text-white/86">1 Divine ≈ </span>
-      <span className="font-mono tabular-nums text-white/95">{r.exalted_per_divine.toFixed(1)}</span>
+      <span className="font-mono tabular-nums text-white/95">{Math.ceil(r.exalted_per_divine)}</span>
       <span className="text-white/86"> Exalted</span>
     </p>
   );
