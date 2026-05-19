@@ -29,7 +29,6 @@ import {
   computeItemScore,
   currencyRatesToChaosPair,
 } from "./itemMetrics";
-import { RefinedEstimateValueRow } from "./DivExPriceText";
 import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
@@ -256,8 +255,17 @@ export function ItemDetailPane({
                   threshold={prefs?.valuable_threshold_chaos}
                   currencyChaos={currencyChaos}
                 />
+              ) : refinedQ.job?.status === "completed" &&
+                refinedQ.job.result &&
+                (refinedQ.job.result.estimate_method === "trade_median" ||
+                  refinedQ.job.result.estimate_method === "poe2scout") ? (
+                <PriceBadge
+                  price={refinedQ.job.result}
+                  threshold={prefs?.valuable_threshold_chaos}
+                  currencyChaos={currencyChaos}
+                />
               ) : (
-                <span className="text-[11px] text-ui-muted">No quick price</span>
+                <span className="text-[11px] text-ui-muted">No price available</span>
               )}
               <button
                 type="button"
@@ -281,23 +289,6 @@ export function ItemDetailPane({
               {refinedQ.job?.status === "failed" && (
                 <span className="text-amber-300/90">Refined estimate unavailable (try again later)</span>
               )}
-              {refinedQ.job?.status === "completed" &&
-                refinedQ.job.result &&
-                (refinedQ.job.result.estimate_method === "trade_median" ||
-                  refinedQ.job.result.estimate_method === "poe2scout") && (
-                  <div
-                    title={
-                      refinedQ.job.result.estimate_method === "trade_median"
-                        ? `Median from ${refinedQ.job.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
-                        : undefined
-                    }
-                  >
-                    <RefinedEstimateValueRow
-                      result={refinedQ.job.result}
-                      currencyChaos={currencyChaos}
-                    />
-                  </div>
-                )}
             </div>
           )}
         </div>
