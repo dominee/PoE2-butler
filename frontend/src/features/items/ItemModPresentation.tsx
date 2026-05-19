@@ -56,11 +56,11 @@ export function ModText({ raw }: { raw: string }) {
     <span>
       {parts.map((part, i) =>
         part.isNum ? (
-          <strong key={i} className="font-semibold tabular-nums text-white/92">
+          <strong key={i} className="font-semibold tabular-nums text-white">
             {part.text}
           </strong>
         ) : (
-          <span key={i} className="text-parchment-200/95">
+          <span key={i} className="text-parchment-100">
             {part.text}
           </span>
         ),
@@ -115,10 +115,17 @@ export function ExplicitModLine({
     tier != null || showMetaRow || showBars || showRefCol || showTypeQuality;
 
   return (
-    <li className="break-words leading-snug">
+    <li
+      className={`break-words leading-snug ${
+        showUnderline
+          ? "rounded border border-ink-700/40 bg-ink-800/20 px-2 py-1.5"
+          : ""
+      }`}
+    >
+      {/* header: tier badge + mod text + optional reference range */}
       <div
-        className={`flex items-start gap-1.5 pb-1.5 pl-0.5 ${
-          showUnderline ? "border-b border-ink-800/40" : ""
+        className={`flex items-baseline gap-1.5 ${
+          showUnderline ? "pb-1.5" : ""
         }`}
       >
         {tier != null && <TierBadge tier={tier} totalTiers={totalTiers} />}
@@ -128,7 +135,7 @@ export function ExplicitModLine({
               referenceRangeText?.trim() ? "justify-between" : ""
             }`}
           >
-            <div className="min-w-0 flex-1 text-[13px] leading-relaxed tracking-[0.01em] text-parchment-100/95">
+            <div className="min-w-0 flex-1 text-[13px] leading-relaxed tracking-[0.01em]">
               <ModText raw={mod} />
             </div>
             {referenceRangeText?.trim() ? (
@@ -140,77 +147,86 @@ export function ExplicitModLine({
               </span>
             ) : null}
           </div>
-          {hasGggRange && (
-            <div className="mt-0.5 text-[10px] text-parchment-100/80">
-              <span className="text-parchment-200/90">This affix band: </span>
-              <span className="font-mono text-amber-200/90">
-                {mag!.min} – {mag!.max}
-                {mag!.min === mag!.max ? " (fixed in tier)" : ""}
-              </span>
-              {m?.hasT1 && mag?.t1_max != null && (
-                <span className="ml-2 text-parchment-200/85">
-                  T1 cap: <span className="font-mono text-amber-300/70">{mag.t1_max}</span>
-                </span>
-              )}
-              {tier != null && detail?.all_tiers != null && (() => {
-                const currentTier = detail.all_tiers.find((t) => t.tier_ggg === tier);
-                return currentTier ? (
-                  <span className="ml-2 text-parchment-200/70">
-                    ilvl {currentTier.required_level}+
-                  </span>
-                ) : null;
-              })()}
-            </div>
-          )}
-          {!hasGggRange && fromModText && (
-            <div className="mt-0.5 text-[10px] text-parchment-100/80">
-              <span className="text-parchment-200/90">Rolled values: </span>
-              <span className="font-mono text-amber-200/85">{fromModText}</span>
-            </div>
-          )}
         </div>
       </div>
-      {showTypeQuality && typeRollPercent != null && (
-        <div className="mt-1.5 pl-0.5">
-          <div className="flex items-center gap-2 text-[10px]">
-            <span
-              className="w-20 shrink-0 text-parchment-200/90"
-              title="How close this roll is to the best end of the wiki / type range for this mod"
-            >
-              Type quality
-            </span>
-            <div className="min-w-0 flex-1">
-              <PercentBar
-                size="md"
-                pct={typeRollPercent}
-                showValue
-                variant="default"
-                tierLabel="0% = type min, 100% = best in wiki range; reduced = lower is better"
-              />
+
+      {/* sub-rows: type quality, range, roll bar */}
+      {(showTypeQuality || showMetaRow || showBars) && (
+        <div className="space-y-1">
+          {showTypeQuality && typeRollPercent != null && (
+            <div className="flex items-center gap-2 text-[10px]">
+              <span
+                className="w-20 shrink-0 text-parchment-300/80"
+                title="How close this roll is to the best end of the wiki / type range for this mod"
+              >
+                Type quality
+              </span>
+              <div className="min-w-0 flex-1">
+                <PercentBar
+                  size="md"
+                  pct={typeRollPercent}
+                  showValue
+                  variant="default"
+                  tierLabel="0% = type min, 100% = best in wiki range; reduced = lower is better"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-      {showBars && m && (
-        <div className="mt-1.5 pl-0.5">
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="w-20 shrink-0 text-parchment-200/90">Roll</span>
-            <div className="min-w-0 flex-1">
-              <PercentBar
-                variant="t1"
-                size="md"
-                pct={m.vsT1Pct ?? m.withinTierPct}
-                tierLabel={
-                  m.vsT1Pct != null
-                    ? "Band = tier range · tick = your roll · scale = T1 max"
-                    : "Roll position within this tier's range"
-                }
-                bandMin={m.bandMinPct}
-                bandMax={m.bandMaxPct}
-                tierMarkers={tierMarkers}
-              />
+          )}
+          {showMetaRow && (
+            <div className="flex items-baseline gap-2 text-[10px]">
+              <span className="w-20 shrink-0 text-parchment-300/80">Range</span>
+              <span>
+                {hasGggRange ? (
+                  <>
+                    <span className="font-mono text-amber-200/90">
+                      {mag!.min} – {mag!.max}
+                      {mag!.min === mag!.max ? " (fixed)" : ""}
+                    </span>
+                    {m?.hasT1 && mag?.t1_max != null && (
+                      <span className="ml-2 text-parchment-200/70">
+                        T1 cap:{" "}
+                        <span className="font-mono text-amber-300/70">{mag.t1_max}</span>
+                      </span>
+                    )}
+                    {tier != null &&
+                      detail?.all_tiers != null &&
+                      (() => {
+                        const currentTier = detail.all_tiers.find(
+                          (t) => t.tier_ggg === tier,
+                        );
+                        return currentTier ? (
+                          <span className="ml-2 text-parchment-200/60">
+                            ilvl {currentTier.required_level}+
+                          </span>
+                        ) : null;
+                      })()}
+                  </>
+                ) : (
+                  <span className="font-mono text-amber-200/85">{fromModText}</span>
+                )}
+              </span>
             </div>
-          </div>
+          )}
+          {showBars && m && (
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="w-20 shrink-0 text-parchment-300/80">Roll</span>
+              <div className="min-w-0 flex-1">
+                <PercentBar
+                  variant="t1"
+                  size="md"
+                  pct={m.vsT1Pct ?? m.withinTierPct}
+                  tierLabel={
+                    m.vsT1Pct != null
+                      ? "Band = tier range · tick = your roll · scale = T1 max"
+                      : "Roll position within this tier's range"
+                  }
+                  bandMin={m.bandMinPct}
+                  bandMax={m.bandMaxPct}
+                  tierMarkers={tierMarkers}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </li>

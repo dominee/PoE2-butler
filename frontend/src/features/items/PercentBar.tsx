@@ -96,7 +96,7 @@ export function PercentBar({
         <div className={`relative ${h} min-w-0 flex-1 overflow-visible rounded-full bg-ink-800/90`}>
           {/* Tier range band (candle body) */}
           <div
-            className="absolute inset-y-0 rounded-sm bg-ink-500/50"
+            className="absolute inset-y-0 rounded-sm bg-ember-500/55"
             style={{ left: `${bandLeftPct}%`, width: `${bandWidthPct}%` }}
             title={`Tier range: ${Math.round(bandMin!)}%–${Math.round(bandMax!)}% of T1`}
           />
@@ -104,20 +104,20 @@ export function PercentBar({
           {tierMarkers?.map((p, i) => (
             <div
               key={i}
-              className="absolute inset-y-0 w-px bg-ink-400/45"
+              className="absolute inset-y-0 w-px bg-ink-300/55"
               style={{ left: `${toBarPct(p)}%` }}
               title={`T${i + 2} max: ${p}%`}
             />
           ))}
           {/* T1 cap tick */}
           <div
-            className="absolute inset-y-[-2px] w-px bg-ember-400/35"
+            className="absolute inset-y-[-2px] w-px bg-ember-400/55"
             style={{ left: `${toBarPct(100)}%` }}
             title="T1 max (100%)"
           />
-          {/* Actual roll tick — slightly wider and brighter */}
+          {/* Actual roll tick — wider and brighter than tier markers */}
           <div
-            className="absolute inset-y-[-2px] w-0.5 rounded-sm bg-ember-400"
+            className="absolute inset-y-[-2px] w-0.5 rounded-sm bg-amber-300"
             style={{ left: `${tickPct}%` }}
             title={`Roll: ${pct}% of T1 max`}
           />
