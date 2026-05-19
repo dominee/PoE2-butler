@@ -73,7 +73,11 @@ export function ItemDetailPane({
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
-  const [pricingRerun, setPricingRerun] = useState(0);
+  const [pricingRerunState, setPricingRerunState] = useState<{ itemId: string | null; n: number }>({ itemId: null, n: 0 });
+  // Derived synchronously: if the stored itemId doesn't match the current item, rerun is 0 this render.
+  // This prevents the POST effect in useRefinedPriceEstimate from firing for a new item before
+  // the previous useEffect-based reset could take effect (they shared the same React flush).
+  const pricingRerun = pricingRerunState.itemId === (item?.id ?? null) ? pricingRerunState.n : 0;
 
   const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
   const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
@@ -88,10 +92,6 @@ export function ItemDetailPane({
     pricingRerun,
     false,
   );
-
-  useEffect(() => {
-    setPricingRerun(0);
-  }, [item?.id]);
 
   const refinedPricingInProgress =
     refinedQ.job?.status === "queued" || refinedQ.job?.status === "running";
@@ -200,7 +200,10 @@ export function ItemDetailPane({
   const onRefreshPricing = () => {
     void priceQ.refetch();
     void currencyRatesQ.refetch();
-    setPricingRerun((n) => n + 1);
+    setPricingRerunState((prev) => ({
+      itemId: item?.id ?? null,
+      n: prev.itemId === (item?.id ?? null) ? prev.n + 1 : 1,
+    }));
   };
 
   const borderCol = PANE_RARITY_BORDER[item.rarity as ItemRarity] ?? "rgba(80,80,90,0.45)";
