@@ -191,35 +191,26 @@ export function ExplicitModLine({
           </div>
         </div>
       )}
-      {showBars && (
-        <div className="mt-1.5 space-y-1.5 pl-0.5">
-          {m && m.withinTierPct != null && m.hasTierRange && (
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="w-20 shrink-0 text-parchment-200/90">Tier roll</span>
-              <div className="min-w-0 flex-1">
-                <PercentBar
-                  variant="withinTier"
-                  size="md"
-                  pct={m.withinTierPct}
-                  tierLabel="Within this affix band"
-                />
-              </div>
+      {showBars && m && (
+        <div className="mt-1.5 pl-0.5">
+          <div className="flex items-center gap-2 text-[10px]">
+            <span className="w-20 shrink-0 text-parchment-200/90">Roll</span>
+            <div className="min-w-0 flex-1">
+              <PercentBar
+                variant="t1"
+                size="md"
+                pct={m.vsT1Pct ?? m.withinTierPct}
+                tierLabel={
+                  m.vsT1Pct != null
+                    ? "Band = tier range · tick = your roll · scale = T1 max"
+                    : "Roll position within this tier's range"
+                }
+                bandMin={m.bandMinPct}
+                bandMax={m.bandMaxPct}
+                tierMarkers={tierMarkers}
+              />
             </div>
-          )}
-          {m && m.vsT1Pct != null && (
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="w-20 shrink-0 text-parchment-200/90">vs T1</span>
-              <div className="min-w-0 flex-1">
-                <PercentBar
-                  variant="t1"
-                  size="md"
-                  pct={m.vsT1Pct}
-                  tierLabel="Compared to best tier value"
-                  tierMarkers={tierMarkers}
-                />
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </li>

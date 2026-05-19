@@ -1,8 +1,13 @@
 /**
- * Roll-quality / T1-percentage bar.
+ * Roll-quality / T1-percentage bar — two rendering modes:
  *
- * Fills from 0 to `pct` (capped visually at 110 %). A tick at 100 % marks the T1 cap.
- * Fill uses a two-stop theme gradient (ink → ember); value text uses the same pair.
+ * **Fill mode** (default): fills from 0 to `pct` (capped visually at 110 %).
+ * A cap tick at 100 % marks T1 max.
+ *
+ * **Candle mode** (when `bandMin` and `bandMax` are supplied): the track is the
+ * full 0–110 % scale; a semi-transparent band overlays the current tier's
+ * [bandMin, bandMax] range; a bright tick marks the actual roll position.
+ * Tier boundary markers (T2, T3 …) are shown in both modes.
  */
 
 const VISUAL_MAX = 110;
@@ -13,6 +18,11 @@ const FILL_GRADIENT = "bg-gradient-to-r from-ink-600 to-ember-400";
 function valueTextClass(pct: number, variant: PercentBarProps["variant"]): string {
   const strong = variant === "t1" && pct >= 100 ? true : pct >= 92;
   return strong ? "text-ember-400" : "text-ui-caption";
+}
+
+/** Convert a raw percentage to a CSS `left` offset on the bar. */
+function toBarPct(p: number): number {
+  return (Math.min(p, VISUAL_MAX) / VISUAL_MAX) * 100;
 }
 
 export interface PercentBarProps {
@@ -27,10 +37,20 @@ export interface PercentBarProps {
   size?: "sm" | "md";
   /**
    * Tier boundary positions as % of T1 max (T2 max, T3 max, …).
-   * Drawn as subtle vertical ticks on the track so the viewer can see at a glance
-   * which tier a roll falls in. Computed by `tierBoundaryPcts()` in modRollMetrics.
+   * Drawn as subtle vertical ticks on the track.
+   * Computed by `tierBoundaryPcts()` in modRollMetrics.
    */
   tierMarkers?: number[];
+  /**
+   * Left edge of the current tier's range, as % of T1 max.
+   * When supplied together with `bandMax`, switches to **candle mode**.
+   */
+  bandMin?: number | null;
+  /**
+   * Right edge of the current tier's range, as % of T1 max.
+   * When supplied together with `bandMin`, switches to **candle mode**.
+   */
+  bandMax?: number | null;
 }
 
 export function PercentBar({
@@ -40,8 +60,11 @@ export function PercentBar({
   variant = "default",
   size = "sm",
   tierMarkers,
+  bandMin,
+  bandMax,
 }: PercentBarProps) {
   const h = size === "md" ? "h-2" : "h-1.5";
+
   if (pct == null) {
     return (
       <div className="flex min-w-0 items-center gap-1.5">
@@ -56,10 +79,61 @@ export function PercentBar({
     );
   }
 
-  const clampedPct = Math.min(pct, VISUAL_MAX);
-  const widthPct = (clampedPct / VISUAL_MAX) * 100;
   const label = tierLabel ? `${tierLabel}: ${pct}%` : `${pct}%`;
   const valueClass = valueTextClass(pct, variant);
+
+  const isCandle = bandMin != null && bandMax != null;
+
+  // ── Candle mode ────────────────────────────────────────────────────────────
+  if (isCandle) {
+    const bandLeftPct = toBarPct(bandMin!);
+    const bandRightPct = toBarPct(bandMax!);
+    const bandWidthPct = Math.max(0, bandRightPct - bandLeftPct);
+    const tickPct = toBarPct(pct);
+
+    return (
+      <div className="flex min-w-0 items-center gap-1.5" title={label}>
+        <div className={`relative ${h} min-w-0 flex-1 overflow-visible rounded-full bg-ink-800/90`}>
+          {/* Tier range band (candle body) */}
+          <div
+            className="absolute inset-y-0 rounded-sm bg-ink-500/50"
+            style={{ left: `${bandLeftPct}%`, width: `${bandWidthPct}%` }}
+            title={`Tier range: ${Math.round(bandMin!)}%–${Math.round(bandMax!)}% of T1`}
+          />
+          {/* Tier boundary markers (T2 max, T3 max, …) */}
+          {tierMarkers?.map((p, i) => (
+            <div
+              key={i}
+              className="absolute inset-y-0 w-px bg-ink-400/45"
+              style={{ left: `${toBarPct(p)}%` }}
+              title={`T${i + 2} max: ${p}%`}
+            />
+          ))}
+          {/* T1 cap tick */}
+          <div
+            className="absolute inset-y-[-2px] w-px bg-ember-400/35"
+            style={{ left: `${toBarPct(100)}%` }}
+            title="T1 max (100%)"
+          />
+          {/* Actual roll tick — slightly wider and brighter */}
+          <div
+            className="absolute inset-y-[-2px] w-0.5 rounded-sm bg-ember-400"
+            style={{ left: `${tickPct}%` }}
+            title={`Roll: ${pct}% of T1 max`}
+          />
+        </div>
+        {showValue && (
+          <span className={`w-9 shrink-0 text-right text-[10px] font-semibold tabular-nums ${valueClass}`}>
+            {pct}%
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // ── Fill mode (no band data) ───────────────────────────────────────────────
+  const clampedPct = Math.min(pct, VISUAL_MAX);
+  const widthPct = (clampedPct / VISUAL_MAX) * 100;
 
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={label}>
@@ -77,7 +151,7 @@ export function PercentBar({
           <div
             key={i}
             className="absolute inset-y-0 w-px bg-ink-400/55"
-            style={{ left: `${(Math.min(p, VISUAL_MAX) / VISUAL_MAX) * 100}%` }}
+            style={{ left: `${toBarPct(p)}%` }}
             title={`T${i + 2} max: ${p}%`}
           />
         ))}
