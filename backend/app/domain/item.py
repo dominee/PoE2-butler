@@ -114,6 +114,11 @@ class ModDetail(BaseModel):
     tier: int | None = None  # 1 = T1 (best), None when unknown
     level: int | None = None
     magnitudes: list[ModMagnitude] = Field(default_factory=list)
+    # All tiers for this mod family, T1-first, from the bundled RePoE DB.
+    # Each entry: {tier_ggg, required_level, name, stats: [{id, min, max}]}.
+    # None when the mod name is not in the DB; empty list when the DB has no
+    # entry for this name.
+    all_tiers: list[dict[str, Any]] | None = None
 
 
 class Item(BaseModel):
@@ -175,25 +180,34 @@ def _parse_mod_group(mods: dict[str, Any], key: str) -> list[ModDetail]:  # noqa
                 m = _TIER_RE.search(str(tier_raw))
                 if m:
                     tier = int(m.group())
+        mod_name = str(raw_mod.get("name", ""))
         magnitudes = []
         for mag in raw_mod.get("magnitudes") or []:
             if not isinstance(mag, dict):
                 continue
             stat_hash = str(mag.get("hash", ""))
+            # Primary lookup: by stat hash (populated by extract_mod_ranges.py).
+            t1_max = _mod_db.get_t1_max(stat_hash) if stat_hash else None
+            # Fallback: by mod display name (populated by ingest_repoe_mods.py).
+            if t1_max is None and mod_name:
+                t1_max = _mod_db.get_t1_max_by_name(mod_name)
             magnitudes.append(
                 ModMagnitude(
                     hash=stat_hash,
                     min=mag.get("min"),
                     max=mag.get("max"),
-                    t1_max=_mod_db.get_t1_max(stat_hash) if stat_hash else None,
+                    t1_max=t1_max,
                 )
             )
+        # Full tier list from the RePoE DB (empty list = DB missing this mod).
+        all_tiers = _mod_db.get_tiers_for_mod_name(mod_name) if mod_name else None
         details.append(
             ModDetail(
-                name=str(raw_mod.get("name", "")),
+                name=mod_name,
                 tier=tier,
                 level=raw_mod.get("level"),
                 magnitudes=magnitudes,
+                all_tiers=all_tiers if all_tiers else None,
             )
         )
     return details
@@ -210,6 +224,108 @@ def _parse_mod_details_from_extended(
     return (
         _parse_mod_group(mods, "implicit"),
         _parse_mod_group(mods, "explicit"),
+    )
+
+
+# ── text-based mod inference (for items without extended.mods) ───────────────
+
+# Words that carry no discriminative value when matching mod text to mod tags.
+_STOP_WORDS: frozenset[str] = frozenset(
+    [
+        "increased", "decreased", "more", "less", "to", "of", "the", "a",
+        "an", "in", "on", "with", "for", "and", "or", "from", "all", "your",
+        "you", "while", "when", "if", "this", "have", "has", "be", "are",
+        "is", "at", "by", "gain", "gains", "chance", "recently", "per",
+        "each", "every", "global", "local", "base", "maximum", "minimum",
+        "additional", "during", "effect", "item", "found", "taken", "dealt",
+        "nearby", "enemies", "enemy", "ally", "allies", "hit", "hits",
+        "also", "not", "been", "over", "through", "has", "as",
+    ]
+)
+
+
+def _mod_text_keywords(text: str) -> tuple[list[str], bool]:
+    """Extract distinctive lowercase keywords and percent flag from mod text.
+
+    Returns ``(keywords, is_percent)`` where ``is_percent`` is ``True`` when
+    a number is immediately followed by ``%`` in the original text.
+    """
+    is_percent = bool(re.search(r"\d\s*%", text))
+    # Strip numbers and punctuation, lowercase.
+    clean = re.sub(r"[-+]?\d+\.?\d*", "", text).lower()
+    words = re.findall(r"[a-z]+", clean)
+    keywords = [w for w in words if w not in _STOP_WORDS and len(w) > 2]
+    return keywords, is_percent
+
+
+def _infer_mod_detail(mod_text: str, ilvl: int) -> ModDetail | None:
+    """Best-effort: synthesise a :class:`ModDetail` from plain mod text.
+
+    Used when ``extended.mods`` is absent (GGG character API items / poe.ninja
+    exports).  Matches the primary numeric value against ``mod_groups`` entries
+    whose ``implicit_tags`` include the keywords extracted from *mod_text*.
+
+    Returns ``None`` when no sufficiently confident match is found; the caller
+    should keep an empty ``ModDetail`` in that case so parallel arrays stay
+    aligned.
+    """
+    # Parse primary numeric value (average for "5 to 12" ranges).
+    nums = re.findall(r"[-+]?(\d+\.?\d*)", mod_text)
+    if not nums:
+        return None
+    try:
+        value = float(nums[0]) if len(nums) == 1 else (float(nums[0]) + float(nums[1])) / 2
+    except ValueError:
+        return None
+
+    keywords, is_percent = _mod_text_keywords(_strip_tags(mod_text))
+    if not keywords:
+        return None
+
+    result = _mod_db.find_group_for_mod(
+        value, keywords, is_percent=is_percent, ilvl=ilvl
+    )
+    if result is None:
+        return None
+
+    group_name, all_tiers = result  # noqa: F841
+
+    # Find the specific tier containing the value.
+    matched_tier: dict[str, Any] | None = None
+    for tier in all_tiers:
+        stats = tier.get("stats") or []
+        if not stats:
+            continue
+        primary = stats[0]
+        mn: float | None = primary.get("min")
+        mx: float | None = primary.get("max")
+        if mn is not None and mx is not None and mn <= value <= mx:
+            matched_tier = tier
+            break
+
+    if matched_tier is None:
+        return None
+
+    # T1 is the first entry in all_tiers (T1-first ordering).
+    t1_stats = (all_tiers[0].get("stats") or []) if all_tiers else []
+    t1_max: float | None = t1_stats[0].get("max") if t1_stats else None
+
+    tier_stats = matched_tier.get("stats") or []
+    primary_stat = tier_stats[0] if tier_stats else {}
+
+    return ModDetail(
+        name=str(matched_tier.get("name") or ""),
+        tier=matched_tier.get("tier_ggg"),
+        level=matched_tier.get("required_level"),
+        magnitudes=[
+            ModMagnitude(
+                hash="",
+                min=primary_stat.get("min"),
+                max=primary_stat.get("max"),
+                t1_max=t1_max,
+            )
+        ],
+        all_tiers=all_tiers if all_tiers else None,
     )
 
 
@@ -256,6 +372,21 @@ def parse_item(raw: dict[str, Any]) -> Item:
     implicit_mod_details, explicit_mod_details = _parse_mod_details_from_extended(ext)
     implicit_mods_list = [strip_item_mod_text(str(m)) for m in raw.get("implicitMods") or []]
     explicit_mods_list = [strip_item_mod_text(str(m)) for m in raw.get("explicitMods") or []]
+
+    # For non-Unique items where GGG extended.mods is absent, infer ModDetail
+    # entries from plain mod text using the tag_index in mod_ranges.json.
+    item_ilvl: int = int(raw.get("ilvl") or 0)
+    if rarity != "Unique":
+        if not implicit_mod_details and implicit_mods_list:
+            implicit_mod_details = [
+                _infer_mod_detail(m, item_ilvl) or ModDetail(name="")
+                for m in implicit_mods_list
+            ]
+        if not explicit_mod_details and explicit_mods_list:
+            explicit_mod_details = [
+                _infer_mod_detail(m, item_ilvl) or ModDetail(name="")
+                for m in explicit_mods_list
+            ]
     implicit_mod_range_hints = (
         _reference_range_columns([str(m) for m in implicit_mods_list], mod_range_hints)
         if mod_range_hints

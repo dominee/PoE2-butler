@@ -25,6 +25,12 @@ export interface PercentBarProps {
   variant?: "default" | "withinTier" | "t1";
   /** Slightly taller for the item detail pane. */
   size?: "sm" | "md";
+  /**
+   * Tier boundary positions as % of T1 max (T2 max, T3 max, …).
+   * Drawn as subtle vertical ticks on the track so the viewer can see at a glance
+   * which tier a roll falls in. Computed by `tierBoundaryPcts()` in modRollMetrics.
+   */
+  tierMarkers?: number[];
 }
 
 export function PercentBar({
@@ -33,6 +39,7 @@ export function PercentBar({
   showValue = true,
   variant = "default",
   size = "sm",
+  tierMarkers,
 }: PercentBarProps) {
   const h = size === "md" ? "h-2" : "h-1.5";
   if (pct == null) {
@@ -66,6 +73,14 @@ export function PercentBar({
           style={{ left: `${(100 / VISUAL_MAX) * 100}%` }}
           title="100% on this scale = T1 max"
         />
+        {tierMarkers?.map((p, i) => (
+          <div
+            key={i}
+            className="absolute inset-y-0 w-px bg-ink-400/55"
+            style={{ left: `${(Math.min(p, VISUAL_MAX) / VISUAL_MAX) * 100}%` }}
+            title={`T${i + 2} max: ${p}%`}
+          />
+        ))}
       </div>
       {showValue && (
         <span className={`w-9 shrink-0 text-right text-[10px] font-semibold tabular-nums ${valueClass}`}>

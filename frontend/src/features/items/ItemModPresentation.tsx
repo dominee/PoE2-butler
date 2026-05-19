@@ -5,7 +5,7 @@
 import type { ModDetail } from "@/api/types";
 import { parseModParts } from "@/utils/modText";
 
-import { computeModRollMetrics } from "./modRollMetrics";
+import { computeModRollMetrics, tierBoundaryPcts } from "./modRollMetrics";
 import { modTextRangeHint } from "./modTextRange";
 import { PercentBar } from "./PercentBar";
 
@@ -31,13 +31,18 @@ function tierBadgeClass(tier: number): string {
   return "bg-ink-700/60 text-ink-500 border-ink-600";
 }
 
-function TierBadge({ tier }: { tier: number }) {
+function TierBadge({ tier, totalTiers }: { tier: number; totalTiers?: number | null }) {
+  const label = totalTiers != null ? `T${tier}/${totalTiers}` : `T${tier}`;
+  const title =
+    totalTiers != null
+      ? `Affix tier ${tier} of ${totalTiers} (T1 = best, T${totalTiers} = lowest)`
+      : `Affix tier ${tier} (1 = best)`;
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded border px-1 py-px text-[9px] font-bold leading-none ${tierBadgeClass(tier)}`}
-      title={`Affix tier ${tier} (1 = best)`}
+      title={title}
     >
-      T{tier}
+      {label}
     </span>
   );
 }
@@ -92,8 +97,12 @@ export function ExplicitModLine({
   typeRollPercent?: number | null;
 }) {
   const tier = detail?.tier ?? null;
+  const totalTiers = detail?.all_tiers?.length ?? null;
   const mag = detail?.magnitudes?.[0];
   const m = showRollHints ? computeModRollMetrics(mod, detail) : null;
+  const t1Max = mag?.t1_max ?? null;
+  const tierMarkers =
+    showRollHints && t1Max != null ? tierBoundaryPcts(detail, t1Max) : [];
   const hasGggRange = showRollHints && mag?.min != null && mag?.max != null;
   const fromModText =
     showRollHints && !hasGggRange ? modTextRangeHint(mod) : null;
@@ -112,7 +121,7 @@ export function ExplicitModLine({
           showUnderline ? "border-b border-ink-800/40" : ""
         }`}
       >
-        {tier != null && <TierBadge tier={tier} />}
+        {tier != null && <TierBadge tier={tier} totalTiers={totalTiers} />}
         <div className="min-w-0 flex-1">
           <div
             className={`flex w-full min-w-0 items-baseline gap-3 ${
@@ -143,6 +152,14 @@ export function ExplicitModLine({
                   T1 cap: <span className="font-mono text-amber-300/70">{mag.t1_max}</span>
                 </span>
               )}
+              {tier != null && detail?.all_tiers != null && (() => {
+                const currentTier = detail.all_tiers.find((t) => t.tier_ggg === tier);
+                return currentTier ? (
+                  <span className="ml-2 text-parchment-200/70">
+                    ilvl {currentTier.required_level}+
+                  </span>
+                ) : null;
+              })()}
             </div>
           )}
           {!hasGggRange && fromModText && (
@@ -198,6 +215,7 @@ export function ExplicitModLine({
                   size="md"
                   pct={m.vsT1Pct}
                   tierLabel="Compared to best tier value"
+                  tierMarkers={tierMarkers}
                 />
               </div>
             </div>

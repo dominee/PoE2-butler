@@ -88,6 +88,25 @@ export function computeModRollMetrics(mod: string, detail: ModDetail | undefined
   };
 }
 
+/**
+ * Returns tier boundary positions as percentages of T1 max for the "vs T1" bar.
+ * `all_tiers` is T1-first; T1 itself is skipped (it maps to 100%, already drawn
+ * as the cap tick on the bar).  Returns [] when data is absent or t1Max is 0.
+ */
+export function tierBoundaryPcts(
+  detail: ModDetail | undefined,
+  t1Max: number,
+): number[] {
+  if (!detail?.all_tiers || t1Max <= 0) return [];
+  return detail.all_tiers
+    .slice(1) // skip T1
+    .map((t) => {
+      const max = t.stats?.[0]?.max;
+      return max != null ? Math.round((max / t1Max) * 100) : null;
+    })
+    .filter((p): p is number => p != null);
+}
+
 /** One number for aggregate item score: prefer T1 comparison, else within-tier. */
 export function modQuality(mod: string, detail: ModDetail | undefined): number | null {
   const m = computeModRollMetrics(mod, detail);
