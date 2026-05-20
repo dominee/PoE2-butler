@@ -23,11 +23,11 @@ export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBa
       className={[
         "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium",
         valuable
-          ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-200"
+          ? "border-ember-400/70 bg-ember-600/15 text-parchment-50"
           : "border-ink-700 bg-ink-800 text-parchment-100/90",
         compact ? "uppercase" : "",
       ].join(" ")}
-      title={`${price.chaos_equiv.toFixed(2)} chaos equivalent · source: ${price.source}`}
+      title={`${Math.ceil(price.chaos_equiv)} chaos equivalent · source: ${price.source}`}
       data-testid="price-badge"
     >
       <span aria-hidden="true">◈</span>

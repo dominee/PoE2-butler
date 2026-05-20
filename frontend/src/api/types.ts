@@ -26,6 +26,18 @@ export interface ModMagnitude {
   t1_max: number | null;
 }
 
+/** One tier entry from the RePoE mod DB (populated by ingest_repoe_mods.py). */
+export interface TierEntry {
+  /** GGG-style tier number: 1 = best (T1), highest number = worst. */
+  tier_ggg: number;
+  /** Minimum item level required to roll this tier. */
+  required_level: number;
+  /** Display name of this tier (e.g. "of the Volcano"). */
+  name: string;
+  /** Stat ranges; index 0 is the primary stat. */
+  stats: Array<{ id: string; min: number | null; max: number | null }>;
+}
+
 /** Per-modifier metadata from GGG ``extended.mods``.  Present only when the
  *  GGG API returns the extended object; otherwise the array is empty. */
 export interface ModDetail {
@@ -33,6 +45,8 @@ export interface ModDetail {
   tier: number | null; // 1 = T1 (best)
   level: number | null;
   magnitudes: ModMagnitude[];
+  /** All tiers for this mod family, T1-first. Null when not in DB. */
+  all_tiers?: TierEntry[] | null;
 }
 
 export interface Item {

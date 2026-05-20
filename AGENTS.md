@@ -170,6 +170,38 @@ Browser
 | Tests | `pytest` + `pytest-asyncio`; fixtures in `tests/conftest.py` |
 | Lint | `ruff` (format + lint); run via `uv run ruff check .` |
 
+**Mod tier database** (`backend/app/data/mod_ranges.json`):
+
+The file is committed to the repository and baked into the Docker image at build time. It has three top-level sections:
+
+| Section | Contents |
+|---|---|
+| `stat_hashes` | GGG magnitude `hash` → `{ name, tier, min, max }` (populated by `extract_mod_ranges.py` from sample data) |
+| `mod_names` | GGG display mod `name` → `{ group, tiers: [{tier, required_level, min, max}] }` (populated by `ingest_repoe_mods.py`) |
+| `mod_groups` | RePoE mod family `group` → sorted list of all tier dicts, T1-first (populated by `ingest_repoe_mods.py`) |
+
+**Re-import trigger:** run `ingest_repoe_mods.py` after each PoE2 game patch (~quarterly) or whenever new mod tiers appear. Commit the result and redeploy — the build picks it up automatically. See `DEPLOY.md` §2.4 for the full procedure.
+
+```bash
+# Full re-import from RePoE — all player-relevant domains (item, crafted, flask, …)
+uv run python backend/scripts/ingest_repoe_mods.py
+
+# Restrict to domain=item only (faster, for testing)
+uv run python backend/scripts/ingest_repoe_mods.py --limited
+
+# Explicit domain list
+uv run python backend/scripts/ingest_repoe_mods.py --domains item crafted
+
+# Optional: update stat_hashes from poe.ninja samples (default samples dir)
+uv run python backend/scripts/extract_mod_ranges.py
+
+# Extra sample directories for broader hash coverage
+uv run python backend/scripts/extract_mod_ranges.py --samples mock-ggg/samples /path/to/more
+
+# Quick smoke-test with only the first 3 sample files
+uv run python backend/scripts/extract_mod_ranges.py --limited 3
+```
+
 **Snapshot model** (`backend/app/db/models.py`):
 
 ```python
@@ -327,20 +359,19 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 
 ---
 
-## 10. Pending work (as of 2026-04-19)
+## 10. Pending work (as of 2026-05-19)
 
 | # | Task | Notes |
 |---|---|---|
 | 1 | Image-first icon grid view for stash | Display `item.icon` from PoE CDN with stat overlay |
-| 2 | T1 mod database (bundled JSON) | Needed to complete roll % bar — compare vs T1 range |
-| 3 | Cross-tab stash search | Query all loaded tab snapshots, not just current |
-| 4 | Character items table view | Mirror stash table view for equipped gear |
-| 5 | Currency stash tab renderer | Fixed-grid layout matching in-game currency tab |
-| 6 | Real GGG API approval | Apply to developer@grindinggear.com |
-| 7 | DigitalOcean VM provisioning | See `DEPLOY.md` |
-| 8 | Backend tests: update Item fixtures | Add `explicit_mod_details`, `socketed_items` fields |
-| 9 | Frontend tests: ActivityLog, PercentBar | Unit tests missing |
-| 10 | `AGENTS.md` subagent skills | Create skills for domain-specific contexts if needed |
+| 2 | Cross-tab stash search | Query all loaded tab snapshots, not just current |
+| 3 | Character items table view | Mirror stash table view for equipped gear |
+| 4 | Currency stash tab renderer | Fixed-grid layout matching in-game currency tab |
+| 5 | Real GGG API approval | Apply to developer@grindinggear.com |
+| 6 | DigitalOcean VM provisioning | See `DEPLOY.md` |
+| 7 | Backend tests: update Item fixtures | Add `explicit_mod_details`, `socketed_items` fields |
+| 8 | Frontend tests: ActivityLog, PercentBar | Unit tests missing |
+| 9 | `AGENTS.md` subagent skills | Create skills for domain-specific contexts if needed |
 
 ---
 
@@ -364,9 +395,12 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 | File | Use |
 |------|-----|
 | `README.md` | Human quick start, feature list, links |
-| `DEPLOY.md` | VM setup, Cloudflare, origin PEM/key paths, compose commands |
+| `DEPLOY.md` | VM setup, Cloudflare, origin PEM/key paths, compose commands, mod tier DB re-import (§2.4) |
 | `GGG_API.md` | GGG OAuth registration, redirect URIs, flows |
 | `docs/pricing_estimates.md` | Hybrid tier A/B/C, POST `result` ids + fetch, GGG lock + 429, async jobs, `GGG_TRADE_*` / `TRADE_LISTING_*` |
 | `docs/trade_deeplinks.md` | Trade2 POST (ids in body), optional GET paging, fetch URL, User-Agent, server-side throttling pointer |
+| `docs/unique_reference.md` | Unique-item extra data (flavour text, per-mod type hints); maintainer ingest from poe2db |
 | `admin/README.md` | Admin routes, dashboard refresh controls, throttle / job tables |
 | `SECURITY.md` | Checklist; disclosure via `SECURITY_CONTACT_EMAIL` (optional in `.env`) |
+| `backend/scripts/ingest_repoe_mods.py` | Re-imports mod tier data from RePoE into `mod_ranges.json`; run after game patches |
+| `backend/scripts/extract_mod_ranges.py` | Populates `stat_hashes` section from poe.ninja character samples; run after adding new samples |

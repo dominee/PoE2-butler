@@ -29,7 +29,6 @@ import {
   computeItemScore,
   currencyRatesToChaosPair,
 } from "./itemMetrics";
-import { RefinedEstimateValueRow } from "./DivExPriceText";
 import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
@@ -73,7 +72,11 @@ export function ItemDetailPane({
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
-  const [pricingRerun, setPricingRerun] = useState(0);
+  const [pricingRerunState, setPricingRerunState] = useState<{ itemId: string | null; n: number }>({ itemId: null, n: 0 });
+  // Derived synchronously: if the stored itemId doesn't match the current item, rerun is 0 this render.
+  // This prevents the POST effect in useRefinedPriceEstimate from firing for a new item before
+  // the previous useEffect-based reset could take effect (they shared the same React flush).
+  const pricingRerun = pricingRerunState.itemId === (item?.id ?? null) ? pricingRerunState.n : 0;
 
   const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
   const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
@@ -88,10 +91,6 @@ export function ItemDetailPane({
     pricingRerun,
     false,
   );
-
-  useEffect(() => {
-    setPricingRerun(0);
-  }, [item?.id]);
 
   const refinedPricingInProgress =
     refinedQ.job?.status === "queued" || refinedQ.job?.status === "running";
@@ -200,7 +199,10 @@ export function ItemDetailPane({
   const onRefreshPricing = () => {
     void priceQ.refetch();
     void currencyRatesQ.refetch();
-    setPricingRerun((n) => n + 1);
+    setPricingRerunState((prev) => ({
+      itemId: item?.id ?? null,
+      n: prev.itemId === (item?.id ?? null) ? prev.n + 1 : 1,
+    }));
   };
 
   const borderCol = PANE_RARITY_BORDER[item.rarity as ItemRarity] ?? "rgba(80,80,90,0.45)";
@@ -253,8 +255,17 @@ export function ItemDetailPane({
                   threshold={prefs?.valuable_threshold_chaos}
                   currencyChaos={currencyChaos}
                 />
+              ) : refinedQ.job?.status === "completed" &&
+                refinedQ.job.result &&
+                (refinedQ.job.result.estimate_method === "trade_median" ||
+                  refinedQ.job.result.estimate_method === "poe2scout") ? (
+                <PriceBadge
+                  price={refinedQ.job.result}
+                  threshold={prefs?.valuable_threshold_chaos}
+                  currencyChaos={currencyChaos}
+                />
               ) : (
-                <span className="text-[11px] text-ui-muted">No quick price</span>
+                <span className="text-[11px] text-ui-muted">No price available</span>
               )}
               <button
                 type="button"
@@ -278,23 +289,6 @@ export function ItemDetailPane({
               {refinedQ.job?.status === "failed" && (
                 <span className="text-amber-300/90">Refined estimate unavailable (try again later)</span>
               )}
-              {refinedQ.job?.status === "completed" &&
-                refinedQ.job.result &&
-                (refinedQ.job.result.estimate_method === "trade_median" ||
-                  refinedQ.job.result.estimate_method === "poe2scout") && (
-                  <div
-                    title={
-                      refinedQ.job.result.estimate_method === "trade_median"
-                        ? `Median from ${refinedQ.job.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
-                        : undefined
-                    }
-                  >
-                    <RefinedEstimateValueRow
-                      result={refinedQ.job.result}
-                      currencyChaos={currencyChaos}
-                    />
-                  </div>
-                )}
             </div>
           )}
         </div>

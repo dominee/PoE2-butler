@@ -64,7 +64,47 @@ docker compose \
   exec backend alembic upgrade head
 ```
 
-### 2.4 Regenerating mock fixtures
+### 2.4 Updating the mod tier database
+
+`backend/app/data/mod_ranges.json` ships committed in the repository and is baked into the backend Docker image at build time. No extra step is required when cloning for the first time or standing up a new environment — the committed file is ready to use.
+
+**After a game patch (~quarterly):** PoE2 adds or rebalances modifiers between leagues. Update the database from the [RePoE poe2 export](https://repoe-fork.github.io/poe2/mods.min.json) by running:
+
+```bash
+# Full re-import — all player-relevant domains (item, crafted, flask, sanctum, …)
+# Requires internet access (downloads ~1 MB from repoe-fork.github.io)
+uv run python backend/scripts/ingest_repoe_mods.py
+
+# Optional: restrict to domain=item only for a quicker local smoke-test
+uv run python backend/scripts/ingest_repoe_mods.py --limited
+
+# Optional: enrich stat_hashes with authoritative ranges
+# Default reads mock-ggg/samples/; pass --samples to add extra directories
+uv run python backend/scripts/extract_mod_ranges.py
+# Example with additional samples for broader hash coverage:
+# uv run python backend/scripts/extract_mod_ranges.py --samples mock-ggg/samples /path/to/extra
+
+# Commit the updated file and redeploy
+git add backend/app/data/mod_ranges.json
+git commit -m "chore: update mod tier DB for patch X.X"
+git push
+```
+
+The next `docker compose up --build` picks up the updated file automatically — no container-level command is needed.
+
+If you want to update the mod DB on a running server without a full image rebuild (e.g. for urgent patch coverage), copy the file into the running container and restart the backend process:
+
+```bash
+# On the host where Docker runs
+docker cp backend/app/data/mod_ranges.json \
+  $(docker ps -qf name=backend):/app/app/data/mod_ranges.json
+docker compose \
+  -f deploy/compose/docker-compose.prod.yml \
+  --env-file deploy/env/.env.prod \
+  restart backend worker
+```
+
+### 2.5 Regenerating mock fixtures
 
 After adding new poe.ninja character exports to `mock-ggg/samples/`:
 
@@ -80,7 +120,7 @@ docker compose \
   up --build mock-ggg -d
 ```
 
-### 2.5 Rebuilding a single service
+### 2.6 Rebuilding a single service
 
 ```bash
 docker compose \
@@ -89,7 +129,7 @@ docker compose \
   up --build backend -d
 ```
 
-### 2.6 Running backend tests locally
+### 2.7 Running backend tests locally
 
 ```bash
 cd backend
@@ -97,7 +137,7 @@ uv sync
 uv run pytest
 ```
 
-### 2.7 Linting
+### 2.8 Linting
 
 ```bash
 # Backend
@@ -274,6 +314,8 @@ docker compose \
   --env-file deploy/env/.env.prod \
   exec backend alembic upgrade head
 ```
+
+**After a PoE2 game patch (~quarterly):** if the patch added or changed modifiers, update the mod tier DB before redeploying (see §2.4). The updated `mod_ranges.json` is committed to the repo and baked into the image during `up --build`. No extra command is needed on the server beyond `git pull` + rebuild.
 
 ### 4.6 UAT environment (mock GGG + public HTTPS)
 

@@ -10,6 +10,10 @@ export interface ModRollMetrics {
   withinTierPct: number | null;
   /** Rolled value as % of the best possible (T1) value for this stat hash. */
   vsT1Pct: number | null;
+  /** Tier min as % of T1 max — left edge of the candle band. */
+  bandMinPct: number | null;
+  /** Tier max as % of T1 max — right edge of the candle band. */
+  bandMaxPct: number | null;
   hasTierRange: boolean;
   hasT1: boolean;
 }
@@ -65,6 +69,8 @@ export function computeModRollMetrics(mod: string, detail: ModDetail | undefined
     return {
       withinTierPct: null,
       vsT1Pct: null,
+      bandMinPct: null,
+      bandMaxPct: null,
       hasTierRange: false,
       hasT1: false,
     };
@@ -80,12 +86,42 @@ export function computeModRollMetrics(mod: string, detail: ModDetail | undefined
   const vsT1Pct =
     t1 != null && t1 > 0 ? Math.round((value / t1) * 100) : null;
 
+  const bandMinPct =
+    t1 != null && t1 > 0 && mag.min != null
+      ? Math.round((mag.min / t1) * 100)
+      : null;
+  const bandMaxPct =
+    t1 != null && t1 > 0 && mag.max != null
+      ? Math.round((mag.max / t1) * 100)
+      : null;
+
   return {
     withinTierPct,
     vsT1Pct,
+    bandMinPct,
+    bandMaxPct,
     hasTierRange: Boolean(hasRange),
     hasT1: t1 != null && t1 > 0,
   };
+}
+
+/**
+ * Returns tier boundary positions as percentages of T1 max for the "vs T1" bar.
+ * `all_tiers` is T1-first; T1 itself is skipped (it maps to 100%, already drawn
+ * as the cap tick on the bar).  Returns [] when data is absent or t1Max is 0.
+ */
+export function tierBoundaryPcts(
+  detail: ModDetail | undefined,
+  t1Max: number,
+): number[] {
+  if (!detail?.all_tiers || t1Max <= 0) return [];
+  return detail.all_tiers
+    .slice(1) // skip T1
+    .map((t) => {
+      const max = t.stats?.[0]?.max;
+      return max != null ? Math.round((max / t1Max) * 100) : null;
+    })
+    .filter((p): p is number => p != null);
 }
 
 /** One number for aggregate item score: prefer T1 comparison, else within-tier. */
