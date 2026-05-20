@@ -101,6 +101,10 @@ def _ceil_int(value: float) -> int:
 
 _TIER_WEIGHTS: dict[int, int] = {1: 30, 2: 20, 3: 15}
 _DEFAULT_WEIGHT = 10
+# GGG anonymous trade API limits weight-group complexity more aggressively than "and" groups.
+# Empirically: "and"/6 filters → complexity 14 (ok); "weight"/4 → 400 too-complex.
+# 3 weight filters keeps the estimated complexity safely below the anonymous cap.
+_WEIGHT_FILTER_CAP = 3
 
 
 def _tier_weight(tier: int | None) -> int:
@@ -300,36 +304,69 @@ def _bucketize_with_tiers(item: Item) -> list[tuple[str, str, int | None]]:
 def _weighted_stat_filters(
     triples: list[tuple[str, str, int | None]],
 ) -> tuple[list[dict[str, Any]], int]:
-    """Build weighted-sum filter entries and compute the group value floor.
+    """Build weighted-sum filter entries and compute an initial group value floor.
 
-    Only mods with a resolvable stat id are included (others are silently
-    skipped — they cannot participate in a GGG weight group).
+    All numeric mods are included regardless of whether a bundled stat id exists.
+    Entries that have no bundled id yet carry ``template`` + ``bucket`` so that
+    :func:`app.services.trade_stat_index.enrich_trade_payload_stat_ids` can fill
+    them in from the live GGG stat index.  A ``_bxw`` (baseline × weight) key is
+    stored on each entry so the caller can recompute the floor after enrichment
+    (dropping entries that still have no ``id``).
 
-    Returns ``(filters, floor)`` where ``floor = floor(Σ(baseline × weight) × 0.85)``.
+    GGG's anonymous trade API counts weight-group complexity higher than ``"and"``
+    groups; to stay within its limit the result is capped at
+    :data:`_WEIGHT_FILTER_CAP` entries sorted by ``_bxw`` descending (keeping the
+    highest-impact stats).
+
+    Returns ``(filters, initial_floor)`` where ``initial_floor`` is computed over
+    the selected mods — the caller should call :func:`fix_weight_group_floor` on the
+    assembled payload after enrichment to produce the final accurate floor.
     """
-    filters: list[dict[str, Any]] = []
-    weighted_sum = 0.0
+    candidates: list[dict[str, Any]] = []
     for bucket, text, tier in triples:
         parsed = parse_mod_line(text)
         if not parsed.values:
             continue
-        sid = bundled_trade_stat_id(bucket, parsed.template)
-        if not sid:
-            continue
         baseline = sum(parsed.values) / len(parsed.values)
         weight = _tier_weight(tier)
-        weighted_sum += baseline * weight
-        filters.append(
-            {
-                "id": sid,
-                "value": {"weight": weight},
-                "text": parsed.text,
-                "template": parsed.template,
-                "bucket": bucket,
-            }
-        )
+        entry: dict[str, Any] = {
+            "value": {"weight": weight},
+            "text": parsed.text,
+            "template": parsed.template,
+            "bucket": bucket,
+            "_bxw": baseline * weight,  # stripped by ggg_search_body_from_result_payload
+        }
+        sid = bundled_trade_stat_id(bucket, parsed.template)
+        if sid:
+            entry["id"] = sid
+        candidates.append(entry)
+
+    # Sort by descending contribution and cap to stay within GGG's anonymous limit.
+    candidates.sort(key=lambda e: e["_bxw"], reverse=True)
+    filters = candidates[:_WEIGHT_FILTER_CAP]
+
+    weighted_sum = sum(e["_bxw"] for e in filters)
     floor_val = _floor_int(weighted_sum * 0.85)
     return filters, floor_val
+
+
+def fix_weight_group_floor(payload: dict[str, Any]) -> None:
+    """Recompute the weight group floor after stat-id enrichment.
+
+    Call this after :func:`enrich_trade_payload_stat_ids` so the floor only
+    counts mods that actually received an ``id`` (others will be dropped by
+    :func:`ggg_search_body_from_result_payload`).  Silently skips payloads
+    without a ``weight`` stat group.
+    """
+    stats = (payload.get("query") or {}).get("stats") or []
+    for block in stats:
+        if not isinstance(block, dict) or block.get("type") != "weight":
+            continue
+        filters = block.get("filters") or []
+        weighted_sum = sum(
+            float(f.get("_bxw") or 0.0) for f in filters if isinstance(f, dict) and "id" in f
+        )
+        block["value"] = {"min": _floor_int(weighted_sum * 0.85)}
 
 
 def build_weighted_upgrade_search(item: Item, *, league: str | None = None) -> dict[str, Any]:

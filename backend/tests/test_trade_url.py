@@ -14,6 +14,7 @@ from app.services.trade_url import (
     build_trade_url_with_search_id,
     build_upgrade_search,
     build_weighted_upgrade_search,
+    fix_weight_group_floor,
     parse_mod_line,
 )
 
@@ -393,9 +394,8 @@ def test_weighted_upgrade_floor_is_85pct_of_weighted_sum() -> None:
 
 
 def test_weighted_upgrade_multiple_mods_sum_correctly() -> None:
-    """Two mods both with bundled stat ids: T1 explicit life (+100) and T2 implicit life (+20).
+    """T1 explicit life (+100) and T2 implicit life (+20) — both have bundled stat ids.
 
-    Only mods with a resolvable stat id contribute to the weighted sum.
     ``+20 to maximum Life`` (implicit, T2) → weight 20, contribution 20*20 = 400.
     ``+100 to maximum Life`` (explicit, T1) → weight 30, contribution 100*30 = 3000.
     Weighted sum = 3400. Floor = floor(3400 * 0.85) = 2890.
@@ -407,6 +407,7 @@ def test_weighted_upgrade_multiple_mods_sum_correctly() -> None:
         explicit_mod_details=[_make_detail(tier=1)],
     )
     result = build_weighted_upgrade_search(item)
+    # Initial floor includes both mods (both have bundled ids → _bxw set)
     floor_val = result["payload"]["query"]["stats"][0]["value"]["min"]
     assert floor_val == 2890
 
@@ -423,13 +424,57 @@ def test_weighted_upgrade_drops_non_numeric_mods() -> None:
         assert not any("Trigger" in t for t in filter_texts)
 
 
-def test_weighted_upgrade_no_stat_ids_yields_empty_stats() -> None:
-    """A mod with no bundled stat id is skipped; if all are skipped stats is absent."""
+def test_weighted_upgrade_unknown_mod_included_without_id() -> None:
+    """A mod with no bundled stat id is included in the filter (for enrichment) but has no id.
+
+    The stats group IS present — enrichment fills ids from the live index; only
+    after enrichment does ggg_search_body_from_result_payload drop id-less entries.
+    """
     item = make_item(explicit_mods=["+999 to Fictional Attribute That Is Not In Catalog"])
     result = build_weighted_upgrade_search(item)
-    # No stats group, or empty stats list
     stats = result["payload"]["query"].get("stats", [])
-    assert stats == []
+    # Stats group exists with one filter entry (no id yet, pending enrichment)
+    assert len(stats) == 1
+    assert stats[0]["type"] == "weight"
+    assert len(stats[0]["filters"]) == 1
+    assert "id" not in stats[0]["filters"][0]
+
+
+def test_fix_weight_group_floor_recomputes_from_id_bearing_filters() -> None:
+    """floor is recalculated after enrichment using only id-bearing entries."""
+    item = make_item(
+        explicit_mods=["+100 to maximum Life"],
+        explicit_mod_details=[_make_detail(tier=1)],
+    )
+    result = build_weighted_upgrade_search(item)
+    # Simulate enrichment filling the id on the filter
+    filters = result["payload"]["query"]["stats"][0]["filters"]
+    assert len(filters) == 1
+    filters[0]["id"] = "explicit.stat_3299347043"  # already set, but make explicit
+    fix_weight_group_floor(result["payload"])
+    floor_val = result["payload"]["query"]["stats"][0]["value"]["min"]
+    # 100 * 30 * 0.85 = 2550
+    assert floor_val == 2550
+
+
+def test_fix_weight_group_floor_ignores_filters_without_id() -> None:
+    """Filters without id after enrichment are excluded from the floor sum."""
+    item = make_item(
+        explicit_mods=["+100 to maximum Life", "+50 to Fictional Stat"],
+        explicit_mod_details=[_make_detail(tier=1), _make_detail(tier=2)],
+    )
+    result = build_weighted_upgrade_search(item)
+    stats = result["payload"]["query"]["stats"][0]
+    # Only give id to the life filter
+    for f in stats["filters"]:
+        if "maximum Life" in f.get("text", ""):
+            f["id"] = "explicit.stat_3299347043"
+        else:
+            f.pop("id", None)  # ensure no id on the fictional stat
+    fix_weight_group_floor(result["payload"])
+    floor_val = stats["value"]["min"]
+    # Only life contributes: 100 * 30 * 0.85 = 2550
+    assert floor_val == 2550
 
 
 def test_weighted_upgrade_keeps_base_type_and_rarity() -> None:

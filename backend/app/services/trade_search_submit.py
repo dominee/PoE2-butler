@@ -34,8 +34,8 @@ async def submit_trade_search(
     result_payload: dict[str, Any],
     *,
     redis: Redis | None = None,
-) -> tuple[str | None, dict[str, Any] | None, bool]:
-    """POST a sanitized body to GGG; return ``(search_id, post_json, rate_limited)``.
+) -> tuple[str | None, dict[str, Any] | None, bool, int]:
+    """POST a sanitized body to GGG; return ``(search_id, post_json, rate_limited, status_code)``.
 
     On HTTP 200, *post_json* is the parsed response body (includes ``id``, ``result``,
     ``total``). As of 2026, PoE2 trade2 returns the first page of listing id strings in
@@ -44,6 +44,9 @@ async def submit_trade_search(
 
     When *redis* is set, enforces :func:`await_ggg_trade_slot` and records 429 / success
     for the global GGG trade2 lock.
+
+    *status_code* is the raw HTTP status code from GGG (200, 400, 429, …), or ``0``
+    when a transport-level error prevented the request from completing.
     """
     league = (league or "").strip()
     if not league:
@@ -65,7 +68,7 @@ async def submit_trade_search(
             )
     except (httpx.HTTPError, OSError) as exc:
         log.warning("trade_search.submit_transport_error", url=url, error=str(exc))
-        return None, None, False
+        return None, None, False, 0
 
     if r.status_code == 429:
         if redis is not None:
@@ -87,7 +90,7 @@ async def submit_trade_search(
                 status_code=429,
                 body_preview=r.text[:500] if r.text else "",
             )
-        return None, None, True
+        return None, None, True, 429
 
     if r.status_code != 200:
         log.warning(
@@ -96,7 +99,7 @@ async def submit_trade_search(
             status_code=r.status_code,
             body_preview=r.text[:500] if r.text else "",
         )
-        return None, None, False
+        return None, None, False, r.status_code
 
     try:
         data: dict[str, Any] = r.json()
@@ -110,4 +113,4 @@ async def submit_trade_search(
         return None, None, False
     if redis is not None:
         await ggg_trade_mark_success(redis, settings)
-    return sid.strip(), data, False
+    return sid.strip(), data, False, 200
