@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from app.domain.item import Item
+import pytest
+
+from app.domain.item import Item, ModDetail, ModMagnitude
 from app.domain.stat_summary import summarize_equipment
 
 
@@ -69,3 +71,84 @@ def test_range_adds_template_sums_mins_and_maxes() -> None:
     dmg = m["damage"]
     row = next(r for r in dmg.rows if "Physical Damage" in r.label)
     assert row.values == [10.0, 24.0]
+
+
+# ── quality_pct ───────────────────────────────────────────────────────────────
+
+_T1_TIER = [{"tier_ggg": 1, "required_level": 1, "name": "of the Titan", "stats": [{"id": "life", "min": 70, "max": 80}]}]
+
+
+def _detail_with_all_tiers(t1_max: float) -> ModDetail:
+    """Build a ModDetail with all_tiers that puts T1 max at *t1_max*."""
+    return ModDetail(
+        name="of the Titan",
+        tier=1,
+        magnitudes=[ModMagnitude(hash="h", min=None, max=None, t1_max=t1_max)],
+        all_tiers=[
+            {"tier_ggg": 1, "required_level": 1, "name": "of the Titan",
+             "stats": [{"id": "life", "min": 60, "max": t1_max}]}
+        ],
+    )
+
+
+def test_quality_pct_none_when_no_tier_data() -> None:
+    """No all_tiers → quality_pct should be None for every section."""
+    it = Item(id="q1", explicit_mods=["+50 to maximum Life"])
+    out = summarize_equipment([it])
+    m = _by_section(out)
+    assert m["resources"].quality_pct is None
+
+
+def test_quality_pct_at_t1_max() -> None:
+    """When value == T1 max, quality_pct should be 100%."""
+    it = Item(
+        id="q2",
+        explicit_mods=["+80 to maximum Life"],
+        explicit_mod_details=[_detail_with_all_tiers(80.0)],
+    )
+    out = summarize_equipment([it])
+    m = _by_section(out)
+    assert m["resources"].quality_pct == pytest.approx(100.0, rel=0.01)
+
+
+def test_quality_pct_below_t1() -> None:
+    """When value < T1 max, quality_pct < 100."""
+    it = Item(
+        id="q3",
+        explicit_mods=["+40 to maximum Life"],
+        explicit_mod_details=[_detail_with_all_tiers(80.0)],
+    )
+    out = summarize_equipment([it])
+    m = _by_section(out)
+    # 40/80 = 50%
+    assert m["resources"].quality_pct == pytest.approx(50.0, rel=0.01)
+
+
+def test_quality_pct_overroll_above_100() -> None:
+    """When value > T1 max (divine overroll), quality_pct > 100."""
+    it = Item(
+        id="q4",
+        explicit_mods=["+88 to maximum Life"],
+        explicit_mod_details=[_detail_with_all_tiers(80.0)],
+    )
+    out = summarize_equipment([it])
+    m = _by_section(out)
+    # 88/80 = 110%
+    assert m["resources"].quality_pct == pytest.approx(110.0, rel=0.01)
+
+
+def test_quality_pct_only_in_sections_with_tier_data() -> None:
+    """A section with a mod that has tier data gets quality_pct; others stay None."""
+    items = [
+        Item(
+            id="q5",
+            explicit_mods=["+80 to maximum Life", "+20 to Strength"],
+            explicit_mod_details=[_detail_with_all_tiers(80.0), ModDetail()],
+        )
+    ]
+    out = summarize_equipment(items)
+    m = _by_section(out)
+    assert m["resources"].quality_pct is not None
+    # Strength has no all_tiers data → attributes section quality_pct is None
+    if "attributes" in m:
+        assert m["attributes"].quality_pct is None

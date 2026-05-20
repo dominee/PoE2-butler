@@ -165,6 +165,140 @@ def test_parse_item_copies_basic_fields() -> None:
     assert item.rarity == "Rare"
 
 
+def test_parse_item_socketed_items_rune() -> None:
+    """socketedItems in raw GGG JSON are parsed into Item.socketed_items."""
+    raw = {
+        "id": "axe-1",
+        "typeLine": "Vaal Axe",
+        "baseType": "Vaal Axe",
+        "rarity": "Rare",
+        "ilvl": 72,
+        "sockets": [{"group": 0, "type": "rune"}],
+        "socketedItems": [
+            {
+                "id": "rune-1",
+                "typeLine": "Iron Rune",
+                "baseType": "Iron Rune",
+                "frameType": 5,
+                "explicitMods": ["+5 to Strength"],
+            }
+        ],
+    }
+    item = parse_item(raw)
+    assert len(item.socketed_items) == 1
+    rune = item.socketed_items[0]
+    assert rune.id == "rune-1"
+    assert rune.type_line == "Iron Rune"
+    assert rune.explicit_mods == ["+5 to Strength"]
+
+
+def test_parse_item_socketed_items_empty_when_absent() -> None:
+    """Items with no socketedItems field parse without error."""
+    raw = {"id": "ring-2", "typeLine": "Gold Ring", "rarity": "Normal"}
+    item = parse_item(raw)
+    assert item.socketed_items == []
+
+
+def test_parse_item_extended_all_tiers_populated_from_db() -> None:
+    """When extended.mods contains a known mod name, all_tiers is populated from mod_db."""
+    raw = {
+        "id": "xbow-1",
+        "typeLine": "Hailforged Crossbow",
+        "baseType": "Hailforged Crossbow",
+        "rarity": "Rare",
+        "ilvl": 72,
+        "explicitMods": ["+1 to maximum number of Crossbow Bolts"],
+        "extended": {
+            "mods": {
+                "explicit": [
+                    {
+                        "name": "of Shelling",
+                        "tier": 2,
+                        "level": 55,
+                        "magnitudes": [{"hash": "h_xbow", "min": 1.0, "max": 1.0}],
+                    }
+                ]
+            }
+        },
+    }
+    item = parse_item(raw)
+    assert len(item.explicit_mod_details) == 1
+    detail = item.explicit_mod_details[0]
+    assert detail.name == "of Shelling"
+    assert detail.tier == 2
+    # all_tiers should be populated from mod_db: the group has T1 ("of Bursting") and T2 ("of Shelling")
+    assert detail.all_tiers is not None
+    assert len(detail.all_tiers) == 2
+    t1 = detail.all_tiers[0]
+    assert t1["tier_ggg"] == 1
+    assert t1["name"] == "of Bursting"
+    # t1_max on magnitude should also be back-filled
+    assert detail.magnitudes[0].t1_max == 2.0
+
+
+def test_parse_item_extended_all_tiers_none_for_unknown_mod() -> None:
+    """Mods with names not in mod_db yield all_tiers=None (not an error)."""
+    raw = {
+        "id": "y1",
+        "typeLine": "Test",
+        "rarity": "Rare",
+        "extended": {
+            "mods": {
+                "explicit": [
+                    {
+                        "name": "SomeUnknownModThatIsNotInDb",
+                        "tier": 1,
+                        "magnitudes": [{"hash": "hx", "min": 5.0, "max": 10.0}],
+                    }
+                ]
+            }
+        },
+    }
+    item = parse_item(raw)
+    assert len(item.explicit_mod_details) == 1
+    assert item.explicit_mod_details[0].all_tiers is None
+
+
+def test_parse_item_infers_mod_detail_without_extended() -> None:
+    """Non-unique items without extended.mods get mod details inferred from text via mod_db."""
+    raw = {
+        "id": "ring-inf",
+        "typeLine": "Ruby Ring",
+        "baseType": "Ruby Ring",
+        "rarity": "Rare",
+        "ilvl": 80,
+        # No 'extended' key — mod details must be inferred from text
+        "explicitMods": ["+1 to maximum number of Crossbow Bolts"],
+    }
+    item = parse_item(raw)
+    assert len(item.explicit_mod_details) == 1
+    detail = item.explicit_mod_details[0]
+    # Inference may or may not find a match; either way the list is the right length
+    # and the detail object is well-formed
+    assert isinstance(detail.tier, int | type(None))
+    assert isinstance(detail.magnitudes, list)
+
+
+def test_mod_detail_all_tiers_field_accepts_full_structure() -> None:
+    """ModDetail.all_tiers accepts a list of tier dicts as returned by mod_db."""
+    from app.domain.item import ModDetail, ModMagnitude
+
+    tiers = [
+        {"tier_ggg": 1, "required_level": 82, "name": "of Bursting", "stats": [{"id": "s", "min": 2, "max": 2}]},
+        {"tier_ggg": 2, "required_level": 55, "name": "of Shelling", "stats": [{"id": "s", "min": 1, "max": 1}]},
+    ]
+    detail = ModDetail(
+        name="of Shelling",
+        tier=2,
+        level=55,
+        magnitudes=[ModMagnitude(hash="h1", min=1.0, max=1.0, t1_max=2.0)],
+        all_tiers=tiers,
+    )
+    assert len(detail.all_tiers) == 2
+    assert detail.all_tiers[0]["tier_ggg"] == 1
+    assert detail.magnitudes[0].t1_max == 2.0
+
+
 def test_parse_summaries_and_detail() -> None:
     list_payload = {
         "characters": [

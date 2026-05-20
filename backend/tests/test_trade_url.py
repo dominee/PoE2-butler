@@ -5,12 +5,15 @@ from __future__ import annotations
 import pytest
 
 from app.domain.item import Item
+from app.domain.item import ModDetail, ModMagnitude
 from app.services.trade_url import (
     TRADE_BASE,
+    _tier_weight,
     build_exact_search,
     build_trade_url,
     build_trade_url_with_search_id,
     build_upgrade_search,
+    build_weighted_upgrade_search,
     parse_mod_line,
 )
 
@@ -283,3 +286,156 @@ def test_implicit_life_mod_uses_implicit_stat_id() -> None:
     result = build_exact_search(item, tolerance_pct=10)
     f = result["payload"]["query"]["stats"][0]["filters"][0]
     assert f["id"] == "implicit.stat_3299347043"
+
+
+# --- _tier_weight -------------------------------------------------------------
+
+
+def test_tier_weight_t1_is_30() -> None:
+    assert _tier_weight(1) == 30
+
+
+def test_tier_weight_t2_is_20() -> None:
+    assert _tier_weight(2) == 20
+
+
+def test_tier_weight_t3_is_15() -> None:
+    assert _tier_weight(3) == 15
+
+
+def test_tier_weight_t4_is_default() -> None:
+    assert _tier_weight(4) == 10
+
+
+def test_tier_weight_none_is_default() -> None:
+    assert _tier_weight(None) == 10
+
+
+def test_tier_weight_high_tier_is_default() -> None:
+    assert _tier_weight(10) == 10
+
+
+# --- build_weighted_upgrade_search --------------------------------------------
+
+
+def _make_detail(tier: int | None, t1_max: float | None = None) -> ModDetail:
+    return ModDetail(
+        name="",
+        tier=tier,
+        level=None,
+        magnitudes=[ModMagnitude(hash="h", min=None, max=None, t1_max=t1_max)],
+    )
+
+
+def test_weighted_upgrade_mode_and_type() -> None:
+    item = make_item(explicit_mods=["+100 to maximum Life"])
+    result = build_weighted_upgrade_search(item, league="Std")
+    assert result["mode"] == "weighted_upgrade"
+    assert result["league"] == "Std"
+    assert result["url"].startswith(TRADE_BASE)
+
+
+def test_weighted_upgrade_uses_weight_stats_group() -> None:
+    item = make_item(explicit_mods=["+100 to maximum Life"])
+    result = build_weighted_upgrade_search(item)
+    stats = result["payload"]["query"].get("stats", [])
+    assert len(stats) == 1
+    assert stats[0]["type"] == "weight"
+    assert "value" in stats[0]
+    assert "min" in stats[0]["value"]
+
+
+def test_weighted_upgrade_t1_mod_gets_weight_30() -> None:
+    """A T1 mod detail should produce weight=30 in the filter."""
+    detail = _make_detail(tier=1)
+    item = make_item(
+        explicit_mods=["+100 to maximum Life"],
+        explicit_mod_details=[detail],
+    )
+    result = build_weighted_upgrade_search(item)
+    filters = result["payload"]["query"]["stats"][0]["filters"]
+    assert len(filters) == 1
+    assert filters[0]["value"]["weight"] == 30
+
+
+def test_weighted_upgrade_t2_mod_gets_weight_20() -> None:
+    detail = _make_detail(tier=2)
+    item = make_item(
+        explicit_mods=["+100 to maximum Life"],
+        explicit_mod_details=[detail],
+    )
+    result = build_weighted_upgrade_search(item)
+    filters = result["payload"]["query"]["stats"][0]["filters"]
+    assert filters[0]["value"]["weight"] == 20
+
+
+def test_weighted_upgrade_unknown_tier_gets_default_weight() -> None:
+    detail = _make_detail(tier=None)
+    item = make_item(
+        explicit_mods=["+100 to maximum Life"],
+        explicit_mod_details=[detail],
+    )
+    result = build_weighted_upgrade_search(item)
+    filters = result["payload"]["query"]["stats"][0]["filters"]
+    assert filters[0]["value"]["weight"] == 10
+
+
+def test_weighted_upgrade_floor_is_85pct_of_weighted_sum() -> None:
+    """floor( 100 * 30 * 0.85 ) = floor(2550) = 2550."""
+    detail = _make_detail(tier=1)
+    item = make_item(
+        explicit_mods=["+100 to maximum Life"],
+        explicit_mod_details=[detail],
+    )
+    result = build_weighted_upgrade_search(item)
+    floor_val = result["payload"]["query"]["stats"][0]["value"]["min"]
+    assert floor_val == 2550  # 100 * 30 * 0.85 = 2550
+
+
+def test_weighted_upgrade_multiple_mods_sum_correctly() -> None:
+    """Two mods both with bundled stat ids: T1 explicit life (+100) and T2 implicit life (+20).
+
+    Only mods with a resolvable stat id contribute to the weighted sum.
+    ``+20 to maximum Life`` (implicit, T2) → weight 20, contribution 20*20 = 400.
+    ``+100 to maximum Life`` (explicit, T1) → weight 30, contribution 100*30 = 3000.
+    Weighted sum = 3400. Floor = floor(3400 * 0.85) = 2890.
+    """
+    item = make_item(
+        implicit_mods=["+20 to maximum Life"],
+        implicit_mod_details=[_make_detail(tier=2)],
+        explicit_mods=["+100 to maximum Life"],
+        explicit_mod_details=[_make_detail(tier=1)],
+    )
+    result = build_weighted_upgrade_search(item)
+    floor_val = result["payload"]["query"]["stats"][0]["value"]["min"]
+    assert floor_val == 2890
+
+
+def test_weighted_upgrade_drops_non_numeric_mods() -> None:
+    item = make_item(
+        explicit_mods=["+100 to maximum Life", "Trigger Socketed Spells when you Focus"]
+    )
+    result = build_weighted_upgrade_search(item)
+    stats = result["payload"]["query"].get("stats", [])
+    if stats:
+        # "Trigger" has no numeric value so it cannot appear as a weight filter
+        filter_texts = [f.get("text", "") for f in stats[0]["filters"]]
+        assert not any("Trigger" in t for t in filter_texts)
+
+
+def test_weighted_upgrade_no_stat_ids_yields_empty_stats() -> None:
+    """A mod with no bundled stat id is skipped; if all are skipped stats is absent."""
+    item = make_item(explicit_mods=["+999 to Fictional Attribute That Is Not In Catalog"])
+    result = build_weighted_upgrade_search(item)
+    # No stats group, or empty stats list
+    stats = result["payload"]["query"].get("stats", [])
+    assert stats == []
+
+
+def test_weighted_upgrade_keeps_base_type_and_rarity() -> None:
+    item = make_item()
+    result = build_weighted_upgrade_search(item)
+    q = result["payload"]["query"]
+    assert q["type"] == "Spine Bow"
+    assert q["status"]["option"] == "securable"
+    assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "rare"
