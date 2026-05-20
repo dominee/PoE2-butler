@@ -162,7 +162,7 @@ export function useUpdatePrefs() {
 }
 
 export interface TradeSearchArgs {
-  mode: "exact" | "upgrade";
+  mode: "exact" | "upgrade" | "weighted_upgrade";
   item: Item;
   league: string | null;
   tolerance_pct?: number;

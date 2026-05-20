@@ -23,20 +23,21 @@ from app.services.trade_url import (
     build_exact_search,
     build_trade_url_with_search_id,
     build_upgrade_search,
+    build_weighted_upgrade_search,
 )
 
 router = APIRouter(prefix="/api/trade", tags=["trade"])
 
 
 class TradeSearchRequest(BaseModel):
-    mode: Literal["exact", "upgrade"]
+    mode: Literal["exact", "upgrade", "weighted_upgrade"]
     item: Item
     league: str | None = None
     tolerance_pct: float | None = Field(default=None, ge=0, le=500)
 
 
 class TradeSearchResponse(BaseModel):
-    mode: Literal["exact", "upgrade"]
+    mode: Literal["exact", "upgrade", "weighted_upgrade"]
     league: str
     url: str
     payload: dict
@@ -85,6 +86,23 @@ async def trade_search(
         )
         return TradeSearchResponse(
             mode="upgrade",
+            league=result["league"],
+            url=url,
+            payload=result["payload"],
+        )
+    if body.mode == "weighted_upgrade":
+        result = build_weighted_upgrade_search(body.item, league=body.league)
+        enrich_trade_payload_stat_ids(result["payload"])
+        search_id, _, _ = await submit_trade_search(
+            settings, result["league"], result["payload"], redis=redis
+        )
+        url = (
+            build_trade_url_with_search_id(result["league"], search_id)
+            if search_id
+            else result["url"]
+        )
+        return TradeSearchResponse(
+            mode="weighted_upgrade",
             league=result["league"],
             url=url,
             payload=result["payload"],

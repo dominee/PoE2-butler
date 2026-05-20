@@ -46,6 +46,8 @@ class ActivityResponse(BaseModel):
     total_new: int
     total_changed: int
     entries: list[ActivityEntry]
+    # Character gear diffs (one entry per character with equipped item changes).
+    gear_entries: list[ActivityEntry] = []
 
 
 # ── diff helpers ───────────────────────────────────────────────────────────────
@@ -99,7 +101,7 @@ async def get_activity(
 ) -> ActivityResponse:
     effective_league = league or user.preferred_league or ""
 
-    # Load all STASH_TAB snapshots for this user+league.
+    # ── stash tab diffs ────────────────────────────────────────────────────────
     stmt = (
         select(Snapshot)
         .where(Snapshot.user_id == user.id)
@@ -107,12 +109,12 @@ async def get_activity(
         .where(Snapshot.key.startswith(f"{effective_league}:"))
     )
     result = await db.execute(stmt)
-    snaps: list[Snapshot] = list(result.scalars().all())
+    stash_snaps: list[Snapshot] = list(result.scalars().all())
 
     entries: list[ActivityEntry] = []
     any_prev = False
 
-    for snap in snaps:
+    for snap in stash_snaps:
         tab_id = snap.key.split(":", 1)[1] if ":" in snap.key else snap.key
         tab_name = _tab_name(snap.payload, tab_id)
 
@@ -133,8 +135,46 @@ async def get_activity(
                 )
             )
 
-    total_new = sum(len(e.new_items) for e in entries)
-    total_changed = sum(len(e.changed_items) for e in entries)
+    # ── character gear diffs ───────────────────────────────────────────────────
+    char_stmt = (
+        select(Snapshot)
+        .where(Snapshot.user_id == user.id)
+        .where(Snapshot.kind == SnapshotKind.CHARACTER)
+    )
+    char_result = await db.execute(char_stmt)
+    char_snaps: list[Snapshot] = list(char_result.scalars().all())
+
+    gear_entries: list[ActivityEntry] = []
+
+    for snap in char_snaps:
+        char_league = _character_league(snap.payload)
+        if effective_league and char_league and char_league != effective_league:
+            continue
+
+        if snap.prev_payload is None:
+            continue
+
+        any_prev = True
+        char_name = snap.key  # key is the character name
+        new_items, changed, removed = _diff_tab(snap.prev_payload, snap.payload)
+
+        if new_items or changed or removed:
+            gear_entries.append(
+                ActivityEntry(
+                    tab_id=char_name,
+                    tab_name=char_name,
+                    new_items=new_items,
+                    changed_items=changed,
+                    removed_items=removed,
+                )
+            )
+
+    total_new = sum(len(e.new_items) for e in entries) + sum(
+        len(e.new_items) for e in gear_entries
+    )
+    total_changed = sum(len(e.changed_items) for e in entries) + sum(
+        len(e.changed_items) for e in gear_entries
+    )
 
     return ActivityResponse(
         league=effective_league,
@@ -142,8 +182,14 @@ async def get_activity(
         total_new=total_new,
         total_changed=total_changed,
         entries=entries,
+        gear_entries=gear_entries,
     )
 
 
 def _tab_name(payload: dict[str, Any], fallback: str) -> str:
     return str(payload.get("tab", {}).get("name") or fallback)
+
+
+def _character_league(payload: dict[str, Any]) -> str:
+    """Extract the league field from a raw CHARACTER snapshot payload."""
+    return str(payload.get("character", {}).get("league") or "")

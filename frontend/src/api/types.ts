@@ -120,6 +120,8 @@ export interface StatSection {
   label: string;
   sort_index: number;
   rows: StatRow[];
+  /** Average T1 quality across mods in this section (0–100; >100 = overroll). */
+  quality_pct?: number | null;
 }
 
 /** Per-section mod rollups from the backend; see `stat_summary` domain. */
@@ -174,7 +176,7 @@ export interface AppriseQueued {
 }
 
 export interface TradeSearchResponse {
-  mode: "exact" | "upgrade";
+  mode: "exact" | "upgrade" | "weighted_upgrade";
   league: string;
   url: string;
   payload: Record<string, unknown>;
@@ -304,4 +306,6 @@ export interface ActivityResponse {
   total_new: number;
   total_changed: number;
   entries: ActivityEntry[];
+  /** Character gear diffs — one entry per character with equipped item changes. */
+  gear_entries: ActivityEntry[];
 }
