@@ -4,6 +4,30 @@ Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. I
 
 ---
 
+## 2026-05-21
+
+### App · weighted upgrade search
+
+- The detail pane now offers **two upgrade search buttons** below the full-width "Trade Search" button: **Upgrade** (hard per-stat min values) and **Upgrade (weighted)** (weights mods by their current tier: T1=30, T2=20, T3=15, T4+=10).
+- **GGG trade API limitation:** GGG's server-side trade2 API rejects `weight`-type stat groups from anonymous (non-browser) callers as "Query is too complex — logging in will increase this limit." This is a GGG constraint on unauthenticated server requests; the weight group base complexity exceeds the anonymous budget regardless of filter count. **When this rejection occurs, the backend automatically falls back to the regular upgrade search** (min-value `and` group) so you always receive a working trade URL instead of a blank search. The payload in clipboard still contains the weighted structure for reference. This limitation is tracked in [`docs/trade_deeplinks.md`](docs/trade_deeplinks.md).
+
+### App · activity log — character gear diffs
+
+- The **Activity** panel now includes a **Gear** section that shows new and changed equipped items across your characters, in addition to stash tab diffs. The `GET /api/activity` response includes a `gear_entries` field, and the total event count in the panel header reflects gear changes too.
+
+### App · character stat quality %
+
+- Each section in the **Character Stats** summary (Life/ES, Resistances, Offence, Defence) now shows a `PercentBar` indicating the average T1 quality of mods in that section — 100% means every roll in the section is at T1 maximum, values above 100% are possible for overrolls.
+
+### App · roll quality bars — tier breakpoints and candle bars
+
+- **Unique items**: roll bars continue to show a fill bar with tier breakpoint markers as subtle vertical lines.
+- **Rare items**: each mod now shows a single **candle bar** — the segment covers the current tier's range (min → max) within the T1 scale, and a brighter marker indicates the actual roll position. This replaces the previous two-bar layout.
+- Bars are now displayed for **rare items** whose mods were inferred from text when `extended.mods` is absent (the backend infers tier data from the RePoE mod ranges bundle in this case).
+- The sub-row label was renamed from "This affix band:" to **"Range:"**, and the Roll/Range chart text is vertically aligned.
+
+---
+
 ## 2026-04-29
 
 ### App · refined trade median (GGG)
