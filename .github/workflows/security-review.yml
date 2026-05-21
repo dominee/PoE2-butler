@@ -70,7 +70,7 @@ jobs:
             -v "${PWD}:/src" \
             -w /src \
             ghcr.io/google/osv-scanner:latest \
-            scan source -r . --format json --output-file /src/artifacts/osv.json
+            scan source -r . --config /src/.osv-scanner.toml --format json --output-file /src/artifacts/osv.json
       - name: Upload OSV report
         uses: actions/upload-artifact@v4
         with:
@@ -94,7 +94,8 @@ jobs:
         run: |
           uv sync --frozen || uv sync
           uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements-audit.txt
-          uv run pip-audit --strict -r /tmp/requirements-audit.txt
+          # PYSEC-2025-183 (pyjwt): no upstream fix available; tracked and reviewed.
+          uv run pip-audit --strict --ignore-vuln PYSEC-2025-183 -r /tmp/requirements-audit.txt
 
   npm-audit:
     name: npm audit (frontend)
