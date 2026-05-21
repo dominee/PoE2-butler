@@ -75,7 +75,10 @@ def test_range_adds_template_sums_mins_and_maxes() -> None:
 
 # ── quality_pct ───────────────────────────────────────────────────────────────
 
-_T1_TIER = [{"tier_ggg": 1, "required_level": 1, "name": "of the Titan", "stats": [{"id": "life", "min": 70, "max": 80}]}]
+_T1_TIER = [
+    {"tier_ggg": 1, "required_level": 1, "name": "of the Titan",
+     "stats": [{"id": "life", "min": 70, "max": 80}]},
+]
 
 
 def _detail_with_all_tiers(t1_max: float) -> ModDetail:

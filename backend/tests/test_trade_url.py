@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.domain.item import Item
-from app.domain.item import ModDetail, ModMagnitude
+from app.domain.item import Item, ModDetail, ModMagnitude
 from app.services.trade_url import (
     TRADE_BASE,
     _tier_weight,

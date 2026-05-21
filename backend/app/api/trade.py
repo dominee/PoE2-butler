@@ -16,8 +16,8 @@ from redis.asyncio import Redis
 from app.config import Settings, get_settings
 from app.db.models import User
 from app.deps import get_current_user, get_redis
-from app.logging import get_logger
 from app.domain.item import Item
+from app.logging import get_logger
 from app.services.trade_search_submit import submit_trade_search
 from app.services.trade_stat_index import enrich_trade_payload_stat_ids, ensure_trade_stats_index
 from app.services.trade_url import (

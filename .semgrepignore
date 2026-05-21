@@ -1,0 +1,32 @@
+# Semgrep ignore patterns (gitignore-style).
+# NOTE: Creating this file overrides semgrep's built-in ignores, so common
+#       non-production paths are listed here explicitly.
+
+# ── dependency / build artefacts ──────────────────────────────────────────────
+node_modules/
+.venv/
+venv/
+dist/
+build/
+frontend/dist/
+*.min.js
+*.min.ts
+
+# ── version control / IDE ─────────────────────────────────────────────────────
+.git/
+.github/
+
+# ── test directories ──────────────────────────────────────────────────────────
+# Test files intentionally contain fixture hashes, pickle serialization helpers,
+# and other constructs that trigger SAST rules out of context.
+backend/tests/
+admin/tests/
+mock-ggg/tests/
+frontend/src/**/*.test.ts
+frontend/src/**/*.test.tsx
+frontend/e2e/
+
+# ── operator maintenance scripts ──────────────────────────────────────────────
+# These are run manually by developers, not part of the production web surface.
+# Dynamic urllib URLs are CLI-supplied by trusted operators, not end users.
+backend/scripts/

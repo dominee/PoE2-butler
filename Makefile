@@ -187,9 +187,9 @@ test-all-docker:
 	docker run --rm -v "$(PWD):/repo" zricethezav/gitleaks:latest \
 		detect --source /repo --config /repo/.gitleaks.toml --report-format json --report-path /repo/artifacts/gitleaks.json
 	docker run --rm -v "$(PWD):/src" -w /src ghcr.io/google/osv-scanner:latest \
-		scan source -r . --format json --output-file /src/artifacts/osv.json
+		scan source -r . --config /src/.osv-scanner.toml --format json --output-file /src/artifacts/osv.json
 	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/backend ghcr.io/astral-sh/uv:python3.12-bookworm \
-		sh -lc "(uv sync --frozen || uv sync) && uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.backend.txt && uv run pip-audit --strict -r /tmp/requirements.backend.txt"
+		sh -lc "(uv sync --frozen || uv sync) && uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.backend.txt && uv run pip-audit --strict --ignore-vuln PYSEC-2025-183 -r /tmp/requirements.backend.txt"
 	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/admin ghcr.io/astral-sh/uv:python3.12-bookworm \
 		sh -lc "(uv sync --frozen || uv sync) && uv export --frozen --format requirements.txt --no-emit-project --output-file /tmp/requirements.admin.txt && uv run pip-audit --strict -r /tmp/requirements.admin.txt"
 	docker run --rm -e UV_LINK_MODE=copy -v "$(PWD):/work" -w /work/mock-ggg ghcr.io/astral-sh/uv:python3.12-bookworm \

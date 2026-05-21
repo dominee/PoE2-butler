@@ -226,7 +226,8 @@ def test_parse_item_extended_all_tiers_populated_from_db() -> None:
     detail = item.explicit_mod_details[0]
     assert detail.name == "of Shelling"
     assert detail.tier == 2
-    # all_tiers should be populated from mod_db: the group has T1 ("of Bursting") and T2 ("of Shelling")
+    # all_tiers should be populated from mod_db: the group has
+    # T1 ("of Bursting") and T2 ("of Shelling")
     assert detail.all_tiers is not None
     assert len(detail.all_tiers) == 2
     t1 = detail.all_tiers[0]
@@ -284,8 +285,10 @@ def test_mod_detail_all_tiers_field_accepts_full_structure() -> None:
     from app.domain.item import ModDetail, ModMagnitude
 
     tiers = [
-        {"tier_ggg": 1, "required_level": 82, "name": "of Bursting", "stats": [{"id": "s", "min": 2, "max": 2}]},
-        {"tier_ggg": 2, "required_level": 55, "name": "of Shelling", "stats": [{"id": "s", "min": 1, "max": 1}]},
+        {"tier_ggg": 1, "required_level": 82, "name": "of Bursting",
+         "stats": [{"id": "s", "min": 2, "max": 2}]},
+        {"tier_ggg": 2, "required_level": 55, "name": "of Shelling",
+         "stats": [{"id": "s", "min": 1, "max": 1}]},
     ]
     detail = ModDetail(
         name="of Shelling",

@@ -50,7 +50,7 @@ async def submit_trade_search(
     """
     league = (league or "").strip()
     if not league:
-        return None, None, False
+        return None, None, False, 0
     body = ggg_search_body_from_result_payload(result_payload)
     url = trade_search_post_url(settings, league)
     if redis is not None:
