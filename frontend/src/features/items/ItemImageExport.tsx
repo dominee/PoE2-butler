@@ -9,7 +9,7 @@ import {
   type CurrencyChaosPair,
   computeItemScore,
 } from "./itemMetrics";
-import { RefinedEstimateValueRow } from "./DivExPriceText";
+
 import { itemRollScoreState } from "./modRollMetrics";
 import { ExplicitModLine, ModDivider, ModSection, ModText, PANE_SECTION_HEADING } from "./ItemModPresentation";
 import { PercentBar } from "./PercentBar";
@@ -18,7 +18,7 @@ import { PriceBadge } from "./PriceBadge";
 import { IconImageExport } from "./itemPaneIcons";
 
 /**
- * Optional pricing lines for PNG export (detail); mirrors the item detail pane.
+ * Optional pricing snapshot for PNG export; mirrors the item detail pane header.
  */
 export interface ItemExportPriceSnapshot {
   quickPrice: PriceEstimate | null;
@@ -27,46 +27,18 @@ export interface ItemExportPriceSnapshot {
   refinedJob: PriceJobState | null;
 }
 
-function ItemExportPriceSection({ snap }: { snap: ItemExportPriceSnapshot }) {
-  const { quickPrice, currencyChaos, valuableThresholdChaos, refinedJob } = snap;
-  return (
-    <div className="mt-2 rounded border border-ink-700 bg-ink-800/50 px-2 py-1.5">
-      <h4 className={PANE_SECTION_HEADING}>Pricing</h4>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-        {quickPrice ? (
-          <PriceBadge
-            price={quickPrice}
-            threshold={valuableThresholdChaos}
-            currencyChaos={currencyChaos}
-          />
-        ) : (
-          <span className="text-[11px] text-parchment-200/80">No quick price</span>
-        )}
-      </div>
-      <div className="mt-1 space-y-0.5 text-[11px] text-parchment-100/85">
-        {refinedJob?.status === "queued" || refinedJob?.status === "running" ? (
-          <span>Refined estimate: working…</span>
-        ) : null}
-        {refinedJob?.status === "failed" && (
-          <span className="text-amber-300/90">Refined estimate unavailable (try again later)</span>
-        )}
-        {refinedJob?.status === "completed" &&
-          refinedJob.result &&
-          (refinedJob.result.estimate_method === "trade_median" ||
-            refinedJob.result.estimate_method === "poe2scout") && (
-            <div
-              title={
-                refinedJob.result.estimate_method === "trade_median"
-                  ? `Median from ${refinedJob.result.sample_size ?? "?"} trade listings (indicative). Not live market.`
-                  : undefined
-              }
-            >
-              <RefinedEstimateValueRow result={refinedJob.result} currencyChaos={currencyChaos} />
-            </div>
-          )}
-      </div>
-    </div>
-  );
+/** Resolve the badge price using the same priority as the live detail pane header. */
+function resolveBadgePrice(snap: ItemExportPriceSnapshot): PriceEstimate | null {
+  if (snap.quickPrice) return snap.quickPrice;
+  if (
+    snap.refinedJob?.status === "completed" &&
+    snap.refinedJob.result &&
+    (snap.refinedJob.result.estimate_method === "trade_median" ||
+      snap.refinedJob.result.estimate_method === "poe2scout")
+  ) {
+    return snap.refinedJob.result;
+  }
+  return null;
 }
 
 function errDetail(err: unknown): string {
@@ -166,10 +138,20 @@ function ItemExportSnapshot({
             {item.ilvl != null && <span className="ml-1">ilvl {item.ilvl}</span>}
             {item.corrupted && <span className="ml-1 text-red-400">corrupted</span>}
           </div>
+          {priceSnapshot && (() => {
+            const p = resolveBadgePrice(priceSnapshot);
+            return p ? (
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <PriceBadge
+                  price={p}
+                  threshold={priceSnapshot.valuableThresholdChaos}
+                  currencyChaos={priceSnapshot.currencyChaos}
+                />
+              </div>
+            ) : null;
+          })()}
         </div>
       </div>
-
-      {variant === "detail" && priceSnapshot ? <ItemExportPriceSection snap={priceSnapshot} /> : null}
 
       {hasRollData && itemScore != null && (
         <div className="mt-2 flex items-center gap-2 text-xs">
