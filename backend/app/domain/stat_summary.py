@@ -19,7 +19,7 @@ from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
-from app.domain.item import Item, _strip_tags
+from app.domain.item import Item, ModDetail, _strip_tags
 
 # Numbers: optional sign, int or float (e.g. 8.2)
 _NUM = re.compile(r"[-+]?\d+(?:\.\d+)?")
@@ -190,10 +190,64 @@ class StatSection(BaseModel):
     label: str
     sort_index: int = 0
     rows: list[StatRow] = Field(default_factory=list)
+    # Average T1 quality across mods in this section (0–100; can exceed 100 for overrolls).
+    quality_pct: float | None = None
 
 
 class EquipmentStatSummary(BaseModel):
     sections: list[StatSection] = Field(default_factory=list)
+
+
+def _t1_max_from_detail(detail: ModDetail) -> float | None:
+    """Extract T1 maximum value from a ModDetail's all_tiers list."""
+    if not detail.all_tiers:
+        return None
+    t1_stats = (detail.all_tiers[0].get("stats") or []) if detail.all_tiers else []
+    if not t1_stats:
+        return None
+    mx = t1_stats[0].get("max")
+    return float(mx) if mx is not None else None
+
+
+def _section_quality_pcts(items: list[Item]) -> dict[str, float]:
+    """Compute section-level T1 quality percentages from explicit/implicit mod details.
+
+    For each mod with ``all_tiers`` data the primary numeric value is compared
+    to the T1 maximum.  Scores are grouped by section (using the same classifier
+    as :func:`summarize_equipment`) and averaged.  Returns a mapping of
+    ``section_id -> quality_pct`` (0–110+; values above 100 occur when an item
+    roll exceeds T1 due to quality or crafting).
+    """
+    section_scores: dict[str, list[float]] = defaultdict(list)
+
+    def _add_mod_scores(mods: list[str], details: list[ModDetail]) -> None:
+        for mod_text, detail in zip(mods, details, strict=False):
+            t1_max = _t1_max_from_detail(detail)
+            if t1_max is None or t1_max <= 0:
+                continue
+            clean = _clean_mod_line(_strip_tags(mod_text))
+            parsed = _template_from_line(clean)
+            if not parsed:
+                continue
+            _, nums = parsed
+            if not nums:
+                continue
+            primary_value = nums[0]
+            quality = primary_value / t1_max
+            sid = _classify_section(clean)
+            section_scores[sid].append(quality)
+
+    for item in items:
+        _add_mod_scores(item.explicit_mods, item.explicit_mod_details)
+        _add_mod_scores(item.implicit_mods, item.implicit_mod_details)
+        for socketed in item.socketed_items:
+            _add_mod_scores(socketed.explicit_mods, socketed.explicit_mod_details)
+
+    return {
+        sid: (sum(scores) / len(scores)) * 100
+        for sid, scores in section_scores.items()
+        if scores
+    }
 
 
 def _all_mod_texts(item: Item) -> list[str]:
@@ -226,6 +280,9 @@ def summarize_equipment(items: list[Item]) -> EquipmentStatSummary:
             template, nums = parsed
             sid = _classify_section(clean)
             per_section[sid].add(template, nums, clean)
+
+    quality_map = _section_quality_pcts(items)
+
     out_sections: list[StatSection] = []
     for sid, default_label, _ in _SECTION_META:
         if sid not in per_section or not per_section[sid].rows:
@@ -247,6 +304,7 @@ def summarize_equipment(items: list[Item]) -> EquipmentStatSummary:
                 label=_SECTION_LABEL.get(sid, default_label),
                 sort_index=_order_index(sid),
                 rows=rows,
+                quality_pct=quality_map.get(sid),
             )
         )
     return EquipmentStatSummary(sections=out_sections)

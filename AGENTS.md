@@ -46,7 +46,7 @@ Authoritative detail: [INSTRUCTIONS.md](INSTRUCTIONS.md) section **“Product ex
 - **Queue:** **Redis + arq** for background work; per–API throttling in [`backend/app/services/third_party_ratelimit.py`](backend/app/services/third_party_ratelimit.py); job `refresh_trade_filter_catalog` in worker. No RabbitMQ unless requirements outgrow this.
 - **Pricing (hybrid):** Aggregators (e.g. poe.ninja) for bulk/cache + optional community APIs; for detail-pane “refined” numbers, the **public** GGG PoE2 **trade JSON** API: **POST** search returns the first page of listing ids in **`result`**; **`GET …/fetch`** loads listing JSON for median chaos (optional **GET …/search** paging when the API includes a `result` array). Not browser HTML scraping. Label as indicative / snapshot. **All** server-side trade2 calls (worker + `POST /api/trade/search`) share a **global Redis lock** (`tp3:ggg_trade:lock` in `third_party_ratelimit.py`): wait before each call, extend TTL after HTTP 200 (min interval + extra spacing), and on **429** parse `Please wait N seconds` (plus buffer, capped). Env: `GGG_TRADE_*` in `deploy/env/.env.example`. See [docs/pricing_estimates.md](docs/pricing_estimates.md) and [docs/trade_deeplinks.md](docs/trade_deeplinks.md). The item detail pane only **enqueues** a refined estimate after an explicit user action (refresh), not automatically on open/login.
 - **Admin console:** Overview shows arq job breakdown, Redis **throttle** key PTTLs (including `ggg_trade2_lock`), price-job samples with **Updated** (UTC) from last `save_job_state`, and optional **manual** or **user-started** live refresh to `/admin/api/summary` (no auto-poll on login when live refresh is enabled). See [admin/README.md](admin/README.md).
-- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) (bundled template→stat hash map) + [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py); deep link POST in [`backend/app/services/trade_search_submit.py`](backend/app/services/trade_search_submit.py); see [docs/trade_deeplinks.md](docs/trade_deeplinks.md); weighted/sum filters later.
+- **Trade filters:** [`backend/app/services/trade_stat_catalog.py`](backend/app/services/trade_stat_catalog.py) (bundled template→stat hash map) + [`backend/app/services/trade_url.py`](backend/app/services/trade_url.py); deep link POST in [`backend/app/services/trade_search_submit.py`](backend/app/services/trade_search_submit.py); see [docs/trade_deeplinks.md](docs/trade_deeplinks.md). Three search modes: `exact` (tolerance-based min/max per stat), `upgrade` (min-floor at 95% of current roll per stat), `weighted_upgrade` (top stats weighted by current tier — T1=30, T2=20, T3=15, T4+=10 — floor = `⌊Σ(baseline × weight) × 0.85⌋`). **GGG anonymous API restriction:** the `weight` stat-group type exceeds GGG's server-side complexity budget for unauthenticated callers; when GGG returns HTTP 400, the backend automatically retries as a regular `upgrade` search so the user always receives a valid trade URL. See Known gotchas § *GGG weight group*.
 
 ---
 
@@ -369,9 +369,10 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 | 4 | Currency stash tab renderer | Fixed-grid layout matching in-game currency tab |
 | 5 | Real GGG API approval | Apply to developer@grindinggear.com |
 | 6 | DigitalOcean VM provisioning | See `DEPLOY.md` |
-| 7 | Backend tests: update Item fixtures | Add `explicit_mod_details`, `socketed_items` fields |
-| 8 | Frontend tests: ActivityLog, PercentBar | Unit tests missing |
+| 7 | ~~Backend tests: update Item fixtures~~ | ~~Add `explicit_mod_details`, `socketed_items` fields~~ — **DONE** |
+| 8 | ~~Frontend tests: ActivityLog, PercentBar~~ | ~~Unit tests missing~~ — **DONE** |
 | 9 | `AGENTS.md` subagent skills | Create skills for domain-specific contexts if needed |
+| 10 | Weighted upgrade search — GGG weight group | Falls back to min-floor upgrade when GGG rejects weight group (anonymous complexity limit). Future: pass user's GGG OAuth token in request headers so authenticated callers get the higher complexity budget. |
 
 ---
 
@@ -387,6 +388,7 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 - **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`.
 - **Frontend CI cache key**: `actions/cache` uses `frontend/package.json` (no root lockfile in repo for npm).
 - **UAT → PROD parity rule**: any bug found in UAT must be verified against production config/code paths too. Fixes should either (a) apply to both environments, or (b) be intentionally environment-scoped with an explicit note explaining why prod is unaffected.
+- **GGG weight group (trade2)**: GGG's server-side trade2 API rejects `weight`-type stat groups from unauthenticated (non-browser-session) callers with HTTP 400 "Query is too complex". The `weight` group has a high base complexity that exceeds the anonymous budget regardless of filter count — `and` groups with 6 filters (complexity 14) succeed while `weight` groups with even 3 filters fail. `submit_trade_search` now returns a 4-tuple `(search_id, data, rate_limited, status_code)`; callers check `status_code == 400` to distinguish this from other errors. The `weighted_upgrade` handler in `trade.py` automatically retries as a regular `upgrade` search on 400. Future fix: attach the user's GGG OAuth access token to the request — authenticated users get a higher complexity limit on the GGG trade site ("Logging in will increase this limit").
 
 ---
 

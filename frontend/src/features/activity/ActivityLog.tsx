@@ -90,7 +90,8 @@ export function ActivityLog({ league, onSelectItem }: ActivityLogProps) {
   const activityQ = useActivity(league);
   const data = activityQ.data;
   const totalRemoved =
-    data?.entries.reduce((n, e) => n + (e.removed_items?.length ?? 0), 0) ?? 0;
+    (data?.entries.reduce((n, e) => n + (e.removed_items?.length ?? 0), 0) ?? 0) +
+    (data?.gear_entries?.reduce((n, e) => n + (e.removed_items?.length ?? 0), 0) ?? 0);
   const totalEvents =
     (data?.total_new ?? 0) + (data?.total_changed ?? 0) + totalRemoved;
 
@@ -142,6 +143,16 @@ export function ActivityLog({ league, onSelectItem }: ActivityLogProps) {
           {data?.entries.map((entry) => (
             <TabSection key={entry.tab_id} entry={entry} onSelect={onSelectItem} />
           ))}
+          {data?.gear_entries && data.gear_entries.length > 0 && (
+            <>
+              <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-parchment-300/60">
+                Gear
+              </p>
+              {data.gear_entries.map((entry) => (
+                <TabSection key={entry.tab_id} entry={entry} onSelect={onSelectItem} />
+              ))}
+            </>
+          )}
         </div>
       )}
     </aside>

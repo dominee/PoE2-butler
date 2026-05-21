@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 
 import type { CharacterDetail, EquipmentStatSummary, StatRow, StatSection } from "@/api/types";
+import { PercentBar } from "@/features/items/PercentBar";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
 function formatNumber(n: number): string {
@@ -340,7 +341,17 @@ export function CharacterStatSummary({ detail }: CharacterStatSummaryProps) {
         <div id={panelId} className="mt-2 space-y-3 text-sm text-parchment-100/90" role="region">
           {sections.map((section) => (
             <div key={section.id}>
-              <h4 className={PANE_SECTION_HEADING}>{section.label}</h4>
+              <div className="flex items-center gap-2">
+                <h4 className={PANE_SECTION_HEADING}>{section.label}</h4>
+                {section.quality_pct != null && (
+                  <div
+                    className="flex min-w-0 flex-1 items-center gap-1.5"
+                    title={`Section T1 quality: ${Math.round(section.quality_pct)}%`}
+                  >
+                    <PercentBar pct={section.quality_pct} size="sm" showValue />
+                  </div>
+                )}
+              </div>
               <div className="mt-1 overflow-x-auto">
                 <table className="w-full min-w-[12rem] border-separate border-spacing-0 text-left text-xs">
                   <tbody>

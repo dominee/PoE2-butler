@@ -132,7 +132,7 @@ export function ItemDetailPane({
 
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
-  const onSearch = async (mode: "exact" | "upgrade") => {
+  const onSearch = async (mode: "exact" | "upgrade" | "weighted_upgrade") => {
     const result = await tradeSearch.mutateAsync({
       mode,
       item,
@@ -594,25 +594,38 @@ export function ItemDetailPane({
                 <span>save</span>
               </button>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="btn-primary inline-flex flex-1 items-center justify-center gap-2 text-center"
+                className="btn-primary inline-flex w-full items-center justify-center gap-2 text-center"
                 onClick={() => onSearch("exact")}
                 disabled={tradeSearch.isPending}
               >
                 <IconSearchExact />
                 <span>Trade Search</span>
               </button>
-              <button
-                type="button"
-                className="btn-ghost inline-flex flex-1 items-center justify-center gap-2 text-center"
-                onClick={() => onSearch("upgrade")}
-                disabled={tradeSearch.isPending}
-              >
-                <IconChevronsUp />
-                <span>Upgrade search</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost inline-flex flex-1 items-center justify-center gap-2 text-center"
+                  onClick={() => onSearch("upgrade")}
+                  disabled={tradeSearch.isPending}
+                  title="Hard min-value filters per stat (≥95% of current roll)"
+                >
+                  <IconChevronsUp />
+                  <span>Upgrade</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost inline-flex flex-1 items-center justify-center gap-2 text-center"
+                  onClick={() => onSearch("weighted_upgrade")}
+                  disabled={tradeSearch.isPending}
+                  title="Weighted sum filter — T1 stats count more; finds items that are better overall"
+                >
+                  <IconChevronsUp />
+                  <span>Upgrade (weighted)</span>
+                </button>
+              </div>
             </div>
             {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}
             <p className="text-[11px] text-parchment-100/85">

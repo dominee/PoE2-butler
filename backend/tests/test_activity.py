@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from app.api.activity import _diff_tab, _item_changed
+from app.api.activity import _character_league, _diff_tab, _item_changed
 from app.db import base as db_base
 from app.db.models import Snapshot, SnapshotKind
 from app.services.snapshot import upsert_snapshot
@@ -192,3 +192,149 @@ async def test_activity_empty_stash_list(app_stack) -> None:  # type: ignore[no-
     assert body["has_prev"] is False
     assert body["total_new"] == 0
     assert body["entries"] == []
+
+
+# ── character gear diffs ─────────────────────────────────────────────────────
+
+
+def _char_payload(
+    name: str,
+    league: str,
+    items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {"character": {"id": name, "name": name, "league": league}, "items": items}
+
+
+def _raw_gear(oid: str, slot: str, life_mod: str) -> dict[str, Any]:
+    return {
+        **_MIN,
+        "id": oid,
+        "name": f"Item-{oid}",
+        "inventoryId": slot,
+        "explicitMods": [life_mod],
+    }
+
+
+def test_character_league_helper() -> None:
+    payload = {"character": {"name": "X", "league": "Fate of the Vaal"}, "items": []}
+    assert _character_league(payload) == "Fate of the Vaal"
+    assert _character_league({}) == ""
+
+
+@pytest.mark.asyncio
+async def test_activity_gear_diff_new_item(app_stack) -> None:  # type: ignore[no-untyped-def]
+    """Equipping a new weapon shows up in gear_entries.new_items."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = (await client.get("/api/me")).json()
+    user_id = uuid.UUID(me["id"])
+    fac = db_base._session_factory()
+
+    pprev = _char_payload("Slayer", LEAGUE, [])
+    pnew = _char_payload("Slayer", LEAGUE, [_raw_gear("w1", "Weapon", "+100 to maximum Life")])
+
+    async with fac() as session:
+        session.add(
+            Snapshot(
+                user_id=user_id,
+                kind=SnapshotKind.CHARACTER,
+                key="Slayer",
+                payload=pnew,
+                prev_payload=pprev,
+            )
+        )
+        await session.commit()
+
+    r = await client.get("/api/activity", params={"league": LEAGUE})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["has_prev"] is True
+    assert body["total_new"] == 1
+    assert len(body["gear_entries"]) == 1
+    ge = body["gear_entries"][0]
+    assert ge["tab_id"] == "Slayer"
+    assert ge["tab_name"] == "Slayer"
+    assert len(ge["new_items"]) == 1
+    assert ge["new_items"][0]["id"] == "w1"
+    assert ge["changed_items"] == []
+    assert ge["removed_items"] == []
+
+
+@pytest.mark.asyncio
+async def test_activity_gear_diff_changed_item(app_stack) -> None:  # type: ignore[no-untyped-def]
+    """A mod change on an equipped item shows up in gear_entries.changed_items."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = (await client.get("/api/me")).json()
+    user_id = uuid.UUID(me["id"])
+    fac = db_base._session_factory()
+
+    pprev = _char_payload("Witch", LEAGUE, [_raw_gear("helm1", "Helm", "+50 to maximum Life")])
+    pnew = _char_payload("Witch", LEAGUE, [_raw_gear("helm1", "Helm", "+60 to maximum Life")])
+
+    async with fac() as session:
+        session.add(
+            Snapshot(
+                user_id=user_id,
+                kind=SnapshotKind.CHARACTER,
+                key="Witch",
+                payload=pnew,
+                prev_payload=pprev,
+            )
+        )
+        await session.commit()
+
+    r = await client.get("/api/activity", params={"league": LEAGUE})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total_changed"] >= 1
+    gear = body["gear_entries"]
+    witch_entry = next(g for g in gear if g["tab_id"] == "Witch")
+    assert len(witch_entry["changed_items"]) == 1
+    assert witch_entry["changed_items"][0]["old"]["id"] == "helm1"
+    assert witch_entry["changed_items"][0]["new"]["id"] == "helm1"
+
+
+@pytest.mark.asyncio
+async def test_activity_gear_excluded_for_different_league(app_stack) -> None:  # type: ignore[no-untyped-def]
+    """Character in a different league does not appear in the activity response."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = (await client.get("/api/me")).json()
+    user_id = uuid.UUID(me["id"])
+    fac = db_base._session_factory()
+
+    pprev = _char_payload("Standard_Char", "Standard", [])
+    pnew = _char_payload(
+        "Standard_Char", "Standard", [_raw_gear("s1", "Weapon", "+1 to life")]
+    )
+
+    async with fac() as session:
+        session.add(
+            Snapshot(
+                user_id=user_id,
+                kind=SnapshotKind.CHARACTER,
+                key="Standard_Char",
+                payload=pnew,
+                prev_payload=pprev,
+            )
+        )
+        await session.commit()
+
+    r = await client.get("/api/activity", params={"league": LEAGUE})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    gear_ids = [g["tab_id"] for g in body["gear_entries"]]
+    assert "Standard_Char" not in gear_ids
+
+
+@pytest.mark.asyncio
+async def test_activity_response_includes_gear_entries_field(app_stack) -> None:  # type: ignore[no-untyped-def]
+    """The response always includes the gear_entries key (empty list when no gear diffs)."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    r = await client.get("/api/activity", params={"league": LEAGUE})
+    assert r.status_code == 200
+    body = r.json()
+    assert "gear_entries" in body
+    assert isinstance(body["gear_entries"], list)
