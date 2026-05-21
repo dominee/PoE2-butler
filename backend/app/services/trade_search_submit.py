@@ -105,12 +105,12 @@ async def submit_trade_search(
         data: dict[str, Any] = r.json()
     except json.JSONDecodeError:
         log.warning("trade_search.submit_bad_json", url=url)
-        return None, None, False
+        return None, None, False, r.status_code
 
     sid = data.get("id")
     if not isinstance(sid, str) or not sid.strip():
         log.warning("trade_search.submit_missing_id", url=url, keys=list(data.keys()))
-        return None, None, False
+        return None, None, False, 200
     if redis is not None:
         await ggg_trade_mark_success(redis, settings)
     return sid.strip(), data, False, 200

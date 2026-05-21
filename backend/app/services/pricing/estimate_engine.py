@@ -143,7 +143,7 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
         enrich_trade_payload_stat_ids(pl)
         last_total = 0
         for _attempt in range(200):
-            sid, post_body, submit_rl = await submit_trade_search(
+            sid, post_body, submit_rl, _status_code = await submit_trade_search(
                 settings, league, pl, redis=redis
             )
             if submit_rl:
