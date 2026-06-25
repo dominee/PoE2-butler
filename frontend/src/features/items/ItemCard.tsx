@@ -3,6 +3,7 @@ import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
 import { PriceBadge } from "./PriceBadge";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
 import { ModText } from "./ItemModPresentation";
+import { isRuneforgedItem, runeforgedBorderClass } from "./itemVisualStyles";
 
 const RARITY_CLASSNAME: Record<ItemRarity, string> = {
   Normal: "text-rarity-normal border-ink-600",
@@ -34,6 +35,7 @@ export interface ItemCardProps {
   price?: PriceEstimate | null;
   valuableThreshold?: number;
   activityStatus?: ActivityStatus;
+  className?: string;
 }
 
 const ACTIVITY_DOT: Record<NonNullable<ActivityStatus>, string> = {
@@ -49,8 +51,12 @@ export function ItemCard({
   price,
   valuableThreshold,
   activityStatus,
+  className,
 }: ItemCardProps) {
-  const rarityClass = RARITY_CLASSNAME[item.rarity] ?? RARITY_CLASSNAME.Normal;
+  const runeforged = isRuneforgedItem(item);
+  const rarityClass = runeforged
+    ? runeforgedBorderClass
+    : (RARITY_CLASSNAME[item.rarity] ?? RARITY_CLASSNAME.Normal);
   const nameClass = RARITY_NAME_CLASS[item.rarity] ?? "text-parchment-50";
   const stack =
     item.stack_size != null && item.max_stack_size != null
@@ -67,6 +73,7 @@ export function ItemCard({
         "hover:border-ember-400/80",
         selected ? "ring-2 ring-ember-400" : "",
         rarityClass,
+        className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}

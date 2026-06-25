@@ -21,7 +21,7 @@ import {
   ModText,
   PANE_SECTION_HEADING,
 } from "@/features/items/ItemModPresentation";
-import { PANE_RARITY_BORDER, RARITY_NAME_CLASS } from "@/features/items/itemVisualStyles";
+import { paneBorderColor, RARITY_NAME_CLASS, isRuneforgedItem, runeforgedBorderClass } from "@/features/items/itemVisualStyles";
 import type { Item, ItemRarity, Prefs } from "@/api/types";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
@@ -205,7 +205,8 @@ export function ItemDetailPane({
     }));
   };
 
-  const borderCol = PANE_RARITY_BORDER[item.rarity as ItemRarity] ?? "rgba(80,80,90,0.45)";
+  const borderCol = paneBorderColor(item);
+  const runeforged = isRuneforgedItem(item);
   const flavour =
     item.flavour_text?.trim() || item.flavourText?.trim() || item.flavorText?.trim() || "";
 
@@ -223,7 +224,12 @@ export function ItemDetailPane({
       {/* ── Header ── */}
       <header className="flex items-start gap-3">
         {/* Item icon */}
-        <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
+        <div
+          className={[
+            "flex shrink-0 items-center justify-center rounded border bg-ink-950/60 p-1",
+            runeforged ? runeforgedBorderClass : "border-ink-700",
+          ].join(" ")}
+        >
           <img
             src={itemIconDisplayUrl(item)}
             alt={item.name || item.type_line}

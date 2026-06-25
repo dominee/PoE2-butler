@@ -16,6 +16,8 @@ const base: CharacterDetail = {
     experience: null,
   },
   equipped: [],
+  gems: [],
+  jewels: [],
   inventory: [],
   stat_summary: { sections: [] },
 };

@@ -89,8 +89,33 @@ def convert_item_data(raw: dict, *, depth: int = 0) -> dict:
     return item
 
 
+# poe.ninja wraps gear as { itemData, itemSlot }; slot id is authoritative when present.
+_POE_NINJA_ITEM_SLOT_TO_INVENTORY_ID: dict[int, str] = {
+    1: "Helm",
+    2: "Gloves",
+    3: "BodyArmour",
+    4: "Amulet",
+    5: "Boots",
+    6: "Offhand",
+    7: "Weapon",
+    8: "Ring",
+    9: "Ring2",
+    11: "Belt",
+    12: "PassiveJewels",
+    14: "Flask",
+    15: "Weapon2",
+    16: "Offhand2",
+}
+
+
 def convert_item(wrapped: dict) -> dict:
-    return convert_item_data(wrapped["itemData"])
+    item = convert_item_data(wrapped["itemData"])
+    slot = wrapped.get("itemSlot")
+    if isinstance(slot, int):
+        mapped = _POE_NINJA_ITEM_SLOT_TO_INVENTORY_ID.get(slot)
+        if mapped:
+            item["inventoryId"] = mapped
+    return item
 
 
 def pack_items(items: list[dict], grid_w: int = 12, grid_h: int = 12) -> list[dict]:

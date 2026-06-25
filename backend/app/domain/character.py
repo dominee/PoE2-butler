@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.domain.item import Item, parse_item
+from app.domain.item import Item, parse_item, resolve_item_inventory_id
 from app.domain.stat_summary import EquipmentStatSummary, summarize_equipment
 
 
@@ -25,12 +25,14 @@ class CharacterSummary(BaseModel):
 class CharacterDetail(BaseModel):
     summary: CharacterSummary
     equipped: list[Item] = Field(default_factory=list)
+    gems: list[Item] = Field(default_factory=list)
+    jewels: list[Item] = Field(default_factory=list)
     inventory: list[Item] = Field(default_factory=list)
     # Cumulative mod rollups; see :mod:`app.domain.stat_summary`.
     stat_summary: EquipmentStatSummary = Field(default_factory=EquipmentStatSummary)
 
 
-_INVENTORY_SLOTS = {
+_EQUIPPED_SLOTS = {
     "Weapon",
     "Weapon2",
     "Offhand",
@@ -45,6 +47,20 @@ _INVENTORY_SLOTS = {
     "Belt",
     "Flask",
 }
+
+_GEM_SLOTS = {"SkillSlots", "AscendancySkills", "DefaultAttackSkills"}
+_JEWEL_SLOTS = {"PassiveJewels"}
+
+
+def _expand_nested_item_dicts(raw: object) -> list[dict[str, Any]]:
+    """Walk skill-gem trees (``allGems``, ``socketedItems``) from live or poe.ninja payloads."""
+    if not isinstance(raw, dict):
+        return []
+    out: list[dict[str, Any]] = [raw]
+    for key in ("allGems", "socketedItems"):
+        for child in raw.get(key) or []:
+            out.extend(_expand_nested_item_dicts(child))
+    return out
 
 
 def collect_character_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -78,9 +94,12 @@ def collect_character_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
     char = payload.get("character")
     if isinstance(char, dict):
-        for key in ("equipment", "inventory", "rucksack", "jewels", "skills"):
+        for key in ("equipment", "inventory", "rucksack", "jewels"):
             for raw in char.get(key) or []:
                 add(raw)
+        for raw in char.get("skills") or []:
+            for expanded in _expand_nested_item_dicts(raw):
+                add(expanded)
 
     return out
 
@@ -117,18 +136,29 @@ def parse_detail(payload: dict[str, Any]) -> CharacterDetail:
         experience=char.get("experience"),
     )
     equipped: list[Item] = []
+    gems: list[Item] = []
+    jewels: list[Item] = []
     inventory: list[Item] = []
     for raw in collect_character_items(payload):
         if not isinstance(raw, dict):
             continue
         item = parse_item(raw)
-        if item.inventory_id in _INVENTORY_SLOTS:
+        iid = resolve_item_inventory_id(raw) or item.inventory_id
+        if iid and item.inventory_id != iid:
+            item = item.model_copy(update={"inventory_id": iid})
+        if iid in _EQUIPPED_SLOTS:
             equipped.append(item)
+        elif iid in _GEM_SLOTS:
+            gems.append(item)
+        elif iid in _JEWEL_SLOTS:
+            jewels.append(item)
         else:
             inventory.append(item)
     return CharacterDetail(
         summary=summary,
         equipped=equipped,
+        gems=gems,
+        jewels=jewels,
         inventory=inventory,
         stat_summary=summarize_equipment(equipped),
     )

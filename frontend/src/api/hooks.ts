@@ -102,6 +102,12 @@ export function useCharacter(name: string | null) {
     enabled: Boolean(name),
     // Detail can take minutes against the Poe.ninja mock; retries multiply painful waits.
     retry: false,
+    select: (data) => ({
+      ...data,
+      gems: data.gems ?? [],
+      jewels: data.jewels ?? [],
+      inventory: data.inventory ?? [],
+    }),
   });
 }
 

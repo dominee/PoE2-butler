@@ -8,6 +8,7 @@
 import type { Item } from "@/api/types";
 import { itemIconDisplayUrl } from "@/features/items/itemRarityFavicon";
 import { ModText } from "@/features/items/ItemModPresentation";
+import { filterNotableCharacterGems, isNotableCharacterGem } from "@/features/characters/characterGemFilter";
 
 const SLOT_LABELS: Record<string, string> = {
   Helm: "Helm",
@@ -23,22 +24,30 @@ const SLOT_LABELS: Record<string, string> = {
   Belt: "Belt",
   Boots: "Boots",
   PassiveJewels: "Jewel",
+  SkillSlots: "Skill gem",
+  AscendancySkills: "Ascendancy skill",
 };
 
 export interface CharacterTableProps {
   equipped: Item[];
+  gems: Item[];
   jewels: Item[];
+  other: Item[];
   selectedItemId: string | null;
   onSelect: (item: Item) => void;
 }
 
 export function CharacterTable({
   equipped,
+  gems,
   jewels,
+  other,
   selectedItemId,
   onSelect,
 }: CharacterTableProps) {
-  const allItems = [...equipped, ...jewels];
+  const visibleGems = filterNotableCharacterGems(gems);
+  const visibleOther = other.filter((i) => i.rarity !== "Gem" || isNotableCharacterGem(i));
+  const allItems = [...equipped, ...visibleGems, ...jewels, ...visibleOther];
 
   if (allItems.length === 0) {
     return <p className="text-sm text-ui-muted">No items equipped.</p>;

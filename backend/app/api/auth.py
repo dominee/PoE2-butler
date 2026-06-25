@@ -27,7 +27,12 @@ from app.security.pkce import (
     generate_code_verifier,
     generate_state,
 )
-from app.security.sessions import PendingAuth, PendingAuthStore, SessionStore
+from app.security.sessions import (
+    CompletedAuth,
+    PendingAuth,
+    PendingAuthStore,
+    SessionStore,
+)
 from app.services.snapshot import refresh_stashes, refresh_user_snapshot
 
 log = get_logger("app.api.auth")
@@ -62,6 +67,18 @@ def _clear_session_cookie(response: Response, settings: Settings) -> None:
         response.delete_cookie(name, path="/")
 
 
+def _login_redirect(
+    *,
+    redirect_after: str,
+    settings: Settings,
+    sid: str,
+    csrf: str,
+) -> RedirectResponse:
+    response = RedirectResponse(redirect_after, status_code=status.HTTP_302_FOUND)
+    _set_session_cookie(response, settings, sid, csrf)
+    return response
+
+
 @router.get("/login", summary="Begin OAuth2 login")
 async def login(
     settings: Settings = Depends(get_settings),
@@ -94,6 +111,16 @@ async def callback(
 
     pending = await pending_store.consume(state)
     if pending is None:
+        completed = await pending_store.get_completed(state)
+        if completed is None:
+            completed = await pending_store.wait_for_completed(state)
+        if completed is not None:
+            return _login_redirect(
+                redirect_after=completed.redirect_after,
+                settings=settings,
+                sid=completed.sid,
+                csrf=completed.csrf,
+            )
         raise HTTPException(status_code=400, detail="invalid_or_expired_state")
 
     try:
@@ -192,12 +219,17 @@ async def callback(
 
     sid, data = await sessions.create(user_id=str(user.id), league=user.preferred_league)
 
-    response = RedirectResponse(
-        pending.redirect_after or settings.app_base_url,
-        status_code=status.HTTP_302_FOUND,
+    redirect_after = pending.redirect_after or settings.app_base_url
+    await pending_store.mark_completed(
+        state,
+        CompletedAuth(redirect_after=redirect_after, sid=sid, csrf=data.csrf),
     )
-    _set_session_cookie(response, settings, sid, data.csrf)
-    return response
+    return _login_redirect(
+        redirect_after=redirect_after,
+        settings=settings,
+        sid=sid,
+        csrf=data.csrf,
+    )
 
 
 @router.post("/logout", summary="Logout and revoke session")

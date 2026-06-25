@@ -7,6 +7,7 @@ resets the TTL.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import secrets
 from dataclasses import asdict, dataclass
@@ -16,6 +17,7 @@ from redis.asyncio import Redis
 
 _SESSION_KEY_PREFIX = "sess:"
 _PENDING_AUTH_PREFIX = "oauth:pending:"
+_COMPLETED_AUTH_PREFIX = "oauth:complete:"
 _REFRESH_COOLDOWN_PREFIX = "refresh:cooldown:"
 
 
@@ -25,6 +27,10 @@ def _session_key(sid: str) -> str:
 
 def _pending_key(state: str) -> str:
     return f"{_PENDING_AUTH_PREFIX}{state}"
+
+
+def _completed_key(state: str) -> str:
+    return f"{_COMPLETED_AUTH_PREFIX}{state}"
 
 
 @dataclass
@@ -81,11 +87,30 @@ class PendingAuth:
         return cls(**json.loads(blob))
 
 
+@dataclass
+class CompletedAuth:
+    """Cached OAuth callback outcome for duplicate browser navigations."""
+
+    redirect_after: str
+    sid: str
+    csrf: str
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self), separators=(",", ":"))
+
+    @classmethod
+    def from_json(cls, blob: str) -> CompletedAuth:
+        return cls(**json.loads(blob))
+
+
 class PendingAuthStore:
     """Stores the in-flight OAuth2 code-verifier keyed by ``state``.
 
     The entry is *consumed* on the callback: a successful ``GETDEL`` guarantees
-    the state cannot be replayed.  TTL is a few minutes.
+    the state cannot be replayed.  After a successful login, :meth:`mark_completed`
+    stores the redirect target and session cookies so duplicate callback hits
+    (common when GGG or the browser fires two redirects) can replay the same
+    outcome instead of returning ``invalid_or_expired_state``.
     """
 
     TTL_SECONDS = 5 * 60
@@ -103,6 +128,33 @@ class PendingAuthStore:
         if isinstance(blob, bytes):
             blob = blob.decode("utf-8")
         return PendingAuth.from_json(blob)
+
+    async def mark_completed(self, state: str, completed: CompletedAuth) -> None:
+        await self._redis.set(_completed_key(state), completed.to_json(), ex=self.TTL_SECONDS)
+
+    async def get_completed(self, state: str) -> CompletedAuth | None:
+        blob: Any = await self._redis.get(_completed_key(state))
+        if blob is None:
+            return None
+        if isinstance(blob, bytes):
+            blob = blob.decode("utf-8")
+        return CompletedAuth.from_json(blob)
+
+    async def wait_for_completed(
+        self,
+        state: str,
+        *,
+        timeout_sec: float = 30.0,
+        poll_sec: float = 0.1,
+    ) -> CompletedAuth | None:
+        """Poll until another callback finishes login for the same ``state``."""
+        deadline = asyncio.get_running_loop().time() + timeout_sec
+        while asyncio.get_running_loop().time() < deadline:
+            completed = await self.get_completed(state)
+            if completed is not None:
+                return completed
+            await asyncio.sleep(poll_sec)
+        return None
 
 
 class RefreshCooldown:

@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.base import get_session
 from app.db.models import Snapshot, SnapshotKind, User
 from app.deps import get_current_user
-from app.domain.item import Item, parse_item
+from app.domain.character import collect_character_items
+from app.domain.item import Item, _unwrap_ggg_item_dict, parse_item
 
 router = APIRouter(prefix="/api/activity", tags=["activity"])
 
@@ -53,12 +54,20 @@ class ActivityResponse(BaseModel):
 # ── diff helpers ───────────────────────────────────────────────────────────────
 
 
-def _items_by_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {
-        raw["id"]: raw
-        for raw in (payload.get("items") or [])
-        if isinstance(raw, dict) and raw.get("id")
-    }
+def _items_by_id(payload: dict[str, Any], *, character: bool = False) -> dict[str, dict[str, Any]]:
+    if character:
+        raw_items = collect_character_items(payload)
+    else:
+        raw_items = payload.get("items") or []
+    out: dict[str, dict[str, Any]] = {}
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        normalized = _unwrap_ggg_item_dict(raw) if character else raw
+        iid = normalized.get("id")
+        if iid:
+            out[str(iid)] = normalized
+    return out
 
 
 _CHANGE_KEYS = ("explicitMods", "implicitMods", "craftedMods", "enchantMods", "runeMods")
@@ -76,9 +85,11 @@ def _item_changed(old: dict[str, Any], new: dict[str, Any]) -> bool:
 def _diff_tab(
     old_p: dict[str, Any],
     new_p: dict[str, Any],
+    *,
+    character: bool = False,
 ) -> tuple[list[Item], list[ChangedItem], list[Item]]:
-    old_map = _items_by_id(old_p)
-    new_map = _items_by_id(new_p)
+    old_map = _items_by_id(old_p, character=character)
+    new_map = _items_by_id(new_p, character=character)
 
     new_items = [parse_item(v) for k, v in new_map.items() if k not in old_map]
     removed = [parse_item(v) for k, v in old_map.items() if k not in new_map]
@@ -156,7 +167,9 @@ async def get_activity(
 
         any_prev = True
         char_name = snap.key  # key is the character name
-        new_items, changed, removed = _diff_tab(snap.prev_payload, snap.payload)
+        new_items, changed, removed = _diff_tab(
+            snap.prev_payload, snap.payload, character=True
+        )
 
         if new_items or changed or removed:
             gear_entries.append(

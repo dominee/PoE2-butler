@@ -120,16 +120,18 @@ async def dashboard_metrics() -> dict:
 def _item_ids_from_character_payload(payload: object) -> set[str]:
     if not isinstance(payload, dict):
         return set()
+    from app.domain.character import collect_character_items
+    from app.domain.item import _unwrap_ggg_item_dict
+
     out: set[str] = set()
-    for slot in ("equipment", "items"):
-        arr = payload.get(slot)
-        if not isinstance(arr, list):
+    for raw in collect_character_items(payload):
+        if not isinstance(raw, dict):
             continue
-        for raw in arr:
-            if isinstance(raw, dict) and raw.get("id") is not None:
-                s = str(raw["id"]).strip()
-                if s:
-                    out.add(s)
+        iid = _unwrap_ggg_item_dict(raw).get("id")
+        if iid is not None:
+            s = str(iid).strip()
+            if s:
+                out.add(s)
     return out
 
 

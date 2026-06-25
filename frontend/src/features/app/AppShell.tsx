@@ -19,7 +19,9 @@ import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPane
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { CharacterTable } from "@/features/characters/CharacterTable";
+import { filterNotableCharacterGems, isNotableCharacterGem } from "@/features/characters/characterGemFilter";
 import { PaperDoll } from "@/features/characters/PaperDoll";
+import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 import { ItemCard } from "@/features/items/ItemCard";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
 import { StashBrowser } from "@/features/stashes/StashBrowser";
@@ -317,19 +319,53 @@ export function AppShell() {
             {characterQ.data && charLayout === "doll" && (
               <>
                 <PaperDoll
-                  equipped={characterQ.data.equipped}
+                  equipped={collectPaperDollItems(characterQ.data)}
                   selectedItemId={selectedItem?.id ?? null}
                   onSelectItem={setSelectedItem}
                 />
-                {characterQ.data.inventory.length > 0 && (
+                {characterQ.data.jewels?.length > 0 && (
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Jewels</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {characterQ.data.inventory.map((jewel) => (
+                      {characterQ.data.jewels.map((jewel) => (
                         <ItemCard
                           key={jewel.id}
                           item={jewel}
                           selected={selectedItem?.id === jewel.id}
+                          onClick={setSelectedItem}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {filterNotableCharacterGems(characterQ.data.gems ?? []).length > 0 && (
+                  <div className="mt-2">
+                    <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {filterNotableCharacterGems(characterQ.data.gems ?? []).map((gem) => (
+                        <ItemCard
+                          key={gem.id}
+                          item={gem}
+                          selected={selectedItem?.id === gem.id}
+                          onClick={setSelectedItem}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(characterQ.data.inventory ?? []).filter(
+                  (i) => i.rarity !== "Gem" || isNotableCharacterGem(i),
+                ).length > 0 && (
+                  <div className="mt-2">
+                    <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Other</h3>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(characterQ.data.inventory ?? [])
+                        .filter((i) => i.rarity !== "Gem" || isNotableCharacterGem(i))
+                        .map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          selected={selectedItem?.id === item.id}
                           onClick={setSelectedItem}
                         />
                       ))}
@@ -341,7 +377,9 @@ export function AppShell() {
             {characterQ.data && charLayout === "table" && (
               <CharacterTable
                 equipped={characterQ.data.equipped}
-                jewels={characterQ.data.inventory}
+                gems={characterQ.data.gems}
+                jewels={characterQ.data.jewels}
+                other={characterQ.data.inventory}
                 selectedItemId={selectedItem?.id ?? null}
                 onSelect={setSelectedItem}
               />

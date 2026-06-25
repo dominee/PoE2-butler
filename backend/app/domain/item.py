@@ -29,18 +29,101 @@ def strip_item_mod_text(text: str) -> str:
     return _strip_tags(text)
 
 
+# Poe.ninja / live GGG character payloads may expose slot as numeric ``itemSlot`` only.
+_GGG_ITEM_SLOT_TO_INVENTORY_ID: dict[int, str] = {
+    1: "Helm",
+    2: "Gloves",
+    3: "BodyArmour",
+    4: "Amulet",
+    5: "Boots",
+    6: "Offhand",
+    7: "Weapon",
+    8: "Ring",
+    9: "Ring2",
+    11: "Belt",
+    12: "PassiveJewels",
+    14: "Flask",
+    15: "Weapon2",
+    16: "Offhand2",
+}
+
+
+def _inventory_id_from_item_slot(slot: object) -> str | None:
+    if isinstance(slot, int):
+        return _GGG_ITEM_SLOT_TO_INVENTORY_ID.get(slot)
+    if isinstance(slot, str) and slot.isdigit():
+        return _GGG_ITEM_SLOT_TO_INVENTORY_ID.get(int(slot))
+    return None
+
+
+def _normalize_inventory_id(raw: dict[str, Any]) -> str | None:
+    """Resolve slot name from a flat or merged item dict (no wrapper precedence)."""
+    mapped = _inventory_id_from_item_slot(raw.get("itemSlot"))
+    if mapped:
+        return mapped
+    iid = raw.get("inventoryId")
+    if isinstance(iid, str) and iid.strip():
+        return iid.strip()
+    return _inventory_id_from_item_slot(iid)
+
+
+def resolve_item_inventory_id(raw: dict[str, Any]) -> str | None:
+    """Resolve ``inventoryId`` / slot for a raw GGG or poe.ninja character row.
+
+    Works on flat items and ``{ itemData, itemSlot?, inventoryId? }`` wrappers.
+    Live PoE2 often puts ``itemSlot`` on the wrapper while ``itemData.inventoryId``
+    is missing or stale — without this, only rows with outer ``inventoryId`` (often
+    just the weapon) classify as equipped gear.
+    """
+    if not isinstance(raw, dict):
+        return None
+    inner = raw.get("itemData")
+    if isinstance(inner, dict):
+        merged: dict[str, Any] = {**inner}
+        for k, v in raw.items():
+            if k == "itemData" or v is None:
+                continue
+            if k not in merged or merged[k] in (None, "", []):
+                merged[k] = v
+        return _resolve_inventory_id(raw, merged)
+    return _normalize_inventory_id(raw)
+
+
+def _resolve_inventory_id(wrapper: dict[str, Any], merged: dict[str, Any]) -> str | None:
+    """Pick the equipment slot for a wrapped GGG character item.
+
+    Live PoE2 payloads keep authoritative slot metadata on the wrapper
+    (``inventoryId`` or numeric ``itemSlot``) while ``itemData.inventoryId`` is
+    often stale (e.g. ``SkillSlots`` on armour). Wrapper metadata must win.
+    """
+    outer_iid = wrapper.get("inventoryId")
+    if isinstance(outer_iid, str) and outer_iid.strip():
+        return outer_iid.strip()
+    outer_slot = _inventory_id_from_item_slot(wrapper.get("itemSlot"))
+    if outer_slot:
+        return outer_slot
+    return _normalize_inventory_id(merged)
+
+
 def _unwrap_ggg_item_dict(raw: dict[str, Any]) -> dict[str, Any]:
     """Path of Exile 2 character payloads often put the item under ``itemData``; flavour and
     ``extended`` live there while ``inventoryId`` / slot metadata stay on the outer object."""
     inner = raw.get("itemData")
     if not isinstance(inner, dict):
-        return raw
+        out = dict(raw)
+        resolved = _normalize_inventory_id(out)
+        if resolved:
+            out["inventoryId"] = resolved
+        return out
     out: dict[str, Any] = {**inner}
     for k, v in raw.items():
         if k == "itemData" or v is None:
             continue
         if k not in out or out[k] in (None, "", []):
             out[k] = v
+    resolved = _resolve_inventory_id(raw, out)
+    if resolved:
+        out["inventoryId"] = resolved
     return out
 
 
@@ -160,6 +243,8 @@ class Item(BaseModel):
     stack_size: int | None = None
     max_stack_size: int | None = None
     icon: str | None = None
+    frame_type_id: str | None = None
+    runeforged: bool = False
     raw: dict[str, Any] | None = None
 
 
@@ -401,6 +486,16 @@ def parse_item(raw: dict[str, Any]) -> Item:
         parse_item(si) for si in (raw.get("socketedItems") or []) if isinstance(si, dict)
     ]
 
+    base_type = str(raw.get("baseType", raw.get("typeLine", "")))
+    frame_type_id = raw.get("frameTypeId")
+    frame_type_id_str = str(frame_type_id).strip() if isinstance(frame_type_id, str) and frame_type_id.strip() else None
+    runeforged = _is_runeforged_item(
+        base_type=base_type,
+        type_line=str(raw.get("typeLine", "")),
+        frame_type_id=frame_type_id_str,
+        frame_type=raw.get("frameType"),
+    )
+
     return Item(
         id=str(raw.get("id", "")) or str(raw.get("name", "")),
         inventory_id=raw.get("inventoryId"),
@@ -411,7 +506,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         item_class=item_class,
         name=str(raw.get("name", "")),
         type_line=str(raw.get("typeLine", "")),
-        base_type=str(raw.get("baseType", raw.get("typeLine", ""))),
+        base_type=base_type,
         rarity=rarity,
         ilvl=raw.get("ilvl"),
         identified=bool(raw.get("identified", True)),
@@ -433,8 +528,28 @@ def parse_item(raw: dict[str, Any]) -> Item:
         stack_size=raw.get("stackSize"),
         max_stack_size=raw.get("maxStackSize"),
         icon=raw.get("icon"),
+        frame_type_id=frame_type_id_str,
+        runeforged=runeforged,
         raw=None,
     )
+
+
+_RUNEFORGED_NAME_RE = re.compile(r"^(Runemastered|Runeforged)\s", re.IGNORECASE)
+
+
+def _is_runeforged_item(
+    *,
+    base_type: str,
+    type_line: str,
+    frame_type_id: str | None,
+    frame_type: object,
+) -> bool:
+    if frame_type_id == "RunicUnique":
+        return True
+    if frame_type == 14:
+        return True
+    label = base_type or type_line
+    return bool(_RUNEFORGED_NAME_RE.match(label.strip()))
 
 
 _FRAME_TO_RARITY = {

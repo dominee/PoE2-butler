@@ -80,6 +80,10 @@ export interface Item {
   stack_size: number | null;
   max_stack_size: number | null;
   icon: string | null;
+  /** PoE2 GGG ``frameTypeId`` when present (e.g. ``RunicUnique`` for Runemastered gear). */
+  frame_type_id?: string | null;
+  /** Runemastered / Runeforged league item (light blue in-game outline). */
+  runeforged?: boolean;
   /** Normalized from the API (GGG `flavourText` / US `flavorText` parsed in the backend). */
   flavour_text?: string | null;
   /**
@@ -132,6 +136,8 @@ export interface EquipmentStatSummary {
 export interface CharacterDetail {
   summary: CharacterSummary;
   equipped: Item[];
+  gems: Item[];
+  jewels: Item[];
   inventory: Item[];
   /** Templated mod rollups (all numeric mod lines, grouped by section heuristics). */
   stat_summary?: EquipmentStatSummary;

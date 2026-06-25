@@ -159,6 +159,68 @@ async def test_full_login_flow_sets_session_and_exposes_me(app_stack) -> None:
     assert body["account_name"] == "dominee_9275"
 
 
+async def test_oauth_duplicate_callback_reuses_session(app_stack) -> None:
+    """GGG/browsers may hit /callback twice; the second should still log the user in."""
+    _app, client, mock_app = app_stack
+
+    resp = await client.get("/api/auth/login")
+    assert resp.status_code == 302
+    authorize_url = resp.headers["location"]
+
+    mock_client = AsyncClient(transport=ASGITransport(app=mock_app), base_url="http://ggg-mock")
+    from urllib.parse import parse_qs, urlparse
+
+    parsed = urlparse(authorize_url)
+    resp = await mock_client.get(parsed.path + "?" + parsed.query)
+    assert resp.status_code == 200
+    import re
+
+    match = re.search(r'name="request_id" value="([^"]+)"', resp.text)
+    assert match
+    request_id = match.group(1)
+
+    resp = await mock_client.post(
+        "/oauth/authorize",
+        data={"request_id": request_id, "user": "dominee_9275"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    callback_url = resp.headers["location"]
+    cb_path = callback_url[callback_url.index("/api/auth/callback") :]
+    state = parse_qs(urlparse(callback_url).query)["state"][0]
+
+    resp1 = await client.get(cb_path)
+    assert resp1.status_code == 302, resp1.text
+    sid1 = client.cookies.get("poe2b_session")
+    assert sid1
+
+    # Simulate a duplicate navigation with a fresh auth code for the same state.
+    resp2 = await mock_client.post(
+        "/oauth/authorize",
+        data={"request_id": request_id, "user": "dominee_9275"},
+        follow_redirects=False,
+    )
+    assert resp2.status_code == 302
+    dup_path = resp2.headers["location"][resp2.headers["location"].index("/api/auth/callback") :]
+    assert state in dup_path
+
+    dup_client = AsyncClient(
+        transport=client._transport,
+        base_url="http://testserver",
+        follow_redirects=False,
+    )
+    resp_dup = await dup_client.get(dup_path)
+    assert resp_dup.status_code == 302, resp_dup.text
+    assert dup_client.cookies.get("poe2b_session")
+    dup_client.cookies.update(resp_dup.cookies)
+    me = await dup_client.get("/api/me")
+    assert me.status_code == 200
+    assert me.json()["account_name"] == "dominee_9275"
+
+    await mock_client.aclose()
+    await dup_client.aclose()
+
+
 async def test_characters_endpoint_after_login(app_stack) -> None:
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)

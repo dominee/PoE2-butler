@@ -379,3 +379,267 @@ def test_parse_detail_poe2_character_equipment() -> None:
     assert detail.equipped[0].type_line == "Spine Bow"
     assert detail.equipped[0].inventory_id == "Weapon"
     assert len(detail.inventory) == 0
+
+
+def test_parse_detail_splits_gems_jewels_and_equipment() -> None:
+    """Skill gems and passive jewels must not share the inventory bucket."""
+    payload = {
+        "character": {
+            "id": "c1",
+            "name": "A",
+            "class": "Ranger",
+            "level": 90,
+            "league": "L",
+            "equipment": [
+                {
+                    "inventoryId": "Weapon",
+                    "itemData": {
+                        "id": "w1",
+                        "typeLine": "Spine Bow",
+                        "baseType": "Spine Bow",
+                        "rarity": "Rare",
+                    },
+                },
+                {
+                    "inventoryId": "Helm",
+                    "itemData": {
+                        "id": "h1",
+                        "typeLine": "Iron Hat",
+                        "baseType": "Iron Hat",
+                        "rarity": "Magic",
+                    },
+                },
+            ],
+            "skills": [
+                {
+                    "inventoryId": "SkillSlots",
+                    "itemData": {
+                        "id": "g1",
+                        "typeLine": "Forge Hammer",
+                        "baseType": "Forge Hammer",
+                        "rarity": "Gem",
+                        "frameType": 4,
+                    },
+                }
+            ],
+            "jewels": [
+                {
+                    "inventoryId": "PassiveJewels",
+                    "itemData": {
+                        "id": "j1",
+                        "typeLine": "Crimson Jewel",
+                        "baseType": "Crimson Jewel",
+                        "rarity": "Rare",
+                    },
+                }
+            ],
+        },
+    }
+    detail = parse_detail(payload)
+    assert [i.inventory_id for i in detail.equipped] == ["Weapon", "Helm"]
+    assert len(detail.gems) == 1
+    assert detail.gems[0].type_line == "Forge Hammer"
+    assert len(detail.jewels) == 1
+    assert detail.jewels[0].type_line == "Crimson Jewel"
+    assert detail.inventory == []
+
+
+def test_parse_item_runeforged_runemastered() -> None:
+    item = parse_item(
+        {
+            "id": "r1",
+            "name": "Runeseeker's Call",
+            "typeLine": "Runemastered Runic Fork",
+            "baseType": "Runemastered Runic Fork",
+            "rarity": "Unique",
+            "frameType": 14,
+            "frameTypeId": "RunicUnique",
+        }
+    )
+    assert item.runeforged is True
+    assert item.frame_type_id == "RunicUnique"
+
+
+def test_parse_detail_weapon_slot_from_item_slot_and_outer_wrapper() -> None:
+    """Live GGG may omit string inventoryId on weapons; wrapper slot metadata must win."""
+    base_char = {
+        "id": "c1",
+        "name": "A",
+        "class": "Ranger",
+        "level": 90,
+        "league": "L",
+    }
+    item_slot_payload = {
+        "character": {
+            **base_char,
+            "equipment": [
+                {
+                    "itemSlot": 7,
+                    "itemData": {
+                        "id": "w1",
+                        "typeLine": "Spine Bow",
+                        "baseType": "Spine Bow",
+                        "rarity": "Rare",
+                    },
+                },
+                {
+                    "itemSlot": 6,
+                    "itemData": {
+                        "id": "q1",
+                        "typeLine": "Broadhead Quiver",
+                        "baseType": "Broadhead Quiver",
+                        "rarity": "Rare",
+                    },
+                },
+            ],
+            "skills": [],
+        },
+    }
+    detail = parse_detail(item_slot_payload)
+    slots = {i.inventory_id: i.type_line for i in detail.equipped}
+    assert slots["Weapon"] == "Spine Bow"
+    assert slots["Offhand"] == "Broadhead Quiver"
+
+    outer_wins_payload = {
+        "character": {
+            **base_char,
+            "equipment": [
+                {
+                    "inventoryId": "Weapon",
+                    "itemData": {
+                        "id": "w2",
+                        "inventoryId": "SkillSlots",
+                        "typeLine": "Ashbark Talisman",
+                        "baseType": "Ashbark Talisman",
+                        "rarity": "Unique",
+                    },
+                },
+            ],
+            "skills": [],
+        },
+    }
+    detail2 = parse_detail(outer_wins_payload)
+    assert len(detail2.equipped) == 1
+    assert detail2.equipped[0].inventory_id == "Weapon"
+    assert detail2.gems == []
+
+
+def test_parse_detail_item_slot_only_wrapper_like_live_ggg() -> None:
+    """Regression: 0089df3 read character.equipment but ignored wrapper itemSlot."""
+    payload = {
+        "character": {
+            "id": "c1",
+            "name": "Live",
+            "class": "Ranger",
+            "level": 90,
+            "league": "Runes of Aldur",
+            "equipment": [
+                {
+                    "inventoryId": "Weapon",
+                    "itemData": {
+                        "id": "w1",
+                        "typeLine": "Spine Bow",
+                        "baseType": "Spine Bow",
+                        "rarity": "Rare",
+                    },
+                },
+                {
+                    "itemSlot": 1,
+                    "itemData": {
+                        "id": "h1",
+                        "typeLine": "Iron Hat",
+                        "baseType": "Iron Hat",
+                        "rarity": "Magic",
+                    },
+                },
+                {
+                    "itemSlot": 3,
+                    "itemData": {
+                        "id": "b1",
+                        "typeLine": "Leather Vest",
+                        "baseType": "Leather Vest",
+                        "rarity": "Rare",
+                    },
+                },
+                {
+                    "itemSlot": 8,
+                    "itemData": {
+                        "id": "r1",
+                        "typeLine": "Gold Ring",
+                        "baseType": "Gold Ring",
+                        "rarity": "Rare",
+                    },
+                },
+            ],
+            "skills": [],
+        },
+    }
+    detail = parse_detail(payload)
+    slots = {i.inventory_id for i in detail.equipped}
+    assert slots == {"Weapon", "Helm", "BodyArmour", "Ring"}
+    assert detail.gems == []
+    assert detail.inventory == []
+
+
+def test_parse_detail_outer_item_slot_wins_over_stale_inner_inventory_id() -> None:
+    """Live GGG armour often has stale ``itemData.inventoryId`` (e.g. SkillSlots)."""
+    payload = {
+        "character": {
+            "id": "c1",
+            "name": "A",
+            "class": "Ranger",
+            "level": 90,
+            "league": "L",
+            "equipment": [
+                {
+                    "itemSlot": 7,
+                    "itemData": {
+                        "id": "w1",
+                        "typeLine": "Spine Bow",
+                        "baseType": "Spine Bow",
+                        "rarity": "Rare",
+                        "inventoryId": "SkillSlots",
+                    },
+                },
+                {
+                    "itemSlot": 1,
+                    "itemData": {
+                        "id": "h1",
+                        "typeLine": "Iron Hat",
+                        "baseType": "Iron Hat",
+                        "rarity": "Magic",
+                        "inventoryId": "SkillSlots",
+                    },
+                },
+                {
+                    "itemSlot": 3,
+                    "itemData": {
+                        "id": "b1",
+                        "typeLine": "Leather Vest",
+                        "baseType": "Leather Vest",
+                        "rarity": "Rare",
+                        "inventoryId": "SkillSlots",
+                    },
+                },
+                {
+                    "itemSlot": 12,
+                    "itemData": {
+                        "id": "j1",
+                        "typeLine": "Crimson Jewel",
+                        "baseType": "Crimson Jewel",
+                        "rarity": "Rare",
+                        "inventoryId": "SkillSlots",
+                    },
+                },
+            ],
+            "skills": [],
+        },
+    }
+    detail = parse_detail(payload)
+    slots = {i.inventory_id: i.type_line for i in detail.equipped}
+    assert slots["Weapon"] == "Spine Bow"
+    assert slots["Helm"] == "Iron Hat"
+    assert slots["BodyArmour"] == "Leather Vest"
+    assert detail.gems == []
+    assert len(detail.jewels) == 1
+    assert detail.jewels[0].type_line == "Crimson Jewel"
