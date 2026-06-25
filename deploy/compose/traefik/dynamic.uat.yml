@@ -2,7 +2,7 @@
 # Each router on "websecure" must set `tls: {}` so Traefik v3 actually attaches the
 # route to HTTPS; otherwise the Host rules never match and every request is 404.
 #
-# List every Host in your Origin certificate. app: /api* → API, /* → static SPA.
+# No mock-ggg routes — UAT uses live GGG OAuth2.
 
 tls:
   stores:
@@ -20,27 +20,6 @@ http:
       service: uat-app-api
       priority: 100
       tls: {}
-    uat-app-api-02:
-      rule: Host(`app.hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints:
-        - websecure
-      service: uat-app-api
-      priority: 100
-      tls: {}
-    uat-app-api-03:
-      rule: Host(`hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints:
-        - websecure
-      service: uat-app-api
-      priority: 100
-      tls: {}
-    uat-app-api-04:
-      rule: Host(`www.hideoutbutler.com`) && PathPrefix(`/api`)
-      entryPoints:
-        - websecure
-      service: uat-app-api
-      priority: 100
-      tls: {}
 
     uat-app-spa-01:
       rule: Host(`app.uat.hideoutbutler.com`)
@@ -49,49 +28,9 @@ http:
       service: uat-app-frontend
       priority: 1
       tls: {}
-    uat-app-spa-02:
-      rule: Host(`app.hideoutbutler.com`)
-      entryPoints:
-        - websecure
-      service: uat-app-frontend
-      priority: 1
-      tls: {}
-    uat-app-spa-03:
-      rule: Host(`hideoutbutler.com`)
-      entryPoints:
-        - websecure
-      service: uat-app-frontend
-      priority: 1
-      tls: {}
-    uat-app-spa-04:
-      rule: Host(`www.hideoutbutler.com`)
-      entryPoints:
-        - websecure
-      service: uat-app-frontend
-      priority: 1
-      tls: {}
-
-    uat-ggg-01:
-      rule: Host(`ggg.uat.hideoutbutler.com`)
-      entryPoints:
-        - websecure
-      service: uat-mockggg
-      tls: {}
-    uat-ggg-02:
-      rule: Host(`ggg.hideoutbutler.com`)
-      entryPoints:
-        - websecure
-      service: uat-mockggg
-      tls: {}
 
     uat-admin-01:
       rule: Host(`admin.uat.hideoutbutler.com`)
-      entryPoints:
-        - websecure
-      service: uat-admin
-      tls: {}
-    uat-admin-02:
-      rule: Host(`admin.hideoutbutler.com`)
       entryPoints:
         - websecure
       service: uat-admin
@@ -106,10 +45,6 @@ http:
       loadBalancer:
         servers:
           - url: http://frontend:80
-    uat-mockggg:
-      loadBalancer:
-        servers:
-          - url: http://mock-ggg:9000
     uat-admin:
       loadBalancer:
         servers:

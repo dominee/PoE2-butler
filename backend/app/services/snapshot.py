@@ -19,7 +19,7 @@ from app.clients.ggg import GGGClient, GGGError
 from app.config import get_settings
 from app.db.models import Snapshot, SnapshotKind, User
 from app.domain.character import parse_summaries
-from app.domain.league import parse_leagues, pick_current_league
+from app.domain.league import parse_leagues, pick_current_league, pick_league_from_characters
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
 from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_access
@@ -166,20 +166,27 @@ async def refresh_user_snapshot(
         log.error("snapshot.profile_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"profile:{exc}")
 
+    leagues_payload: dict | None = None
     try:
-        leagues = await ggg.get_leagues(access)
+        leagues_payload = await ggg.get_leagues(access)
         await upsert_snapshot(
-            session, user_id=user.id, kind=SnapshotKind.LEAGUES, key="", payload=leagues
+            session, user_id=user.id, kind=SnapshotKind.LEAGUES, key="", payload=leagues_payload
         )
         outcome.leagues = True
         # Promote the current league to the user row on first login (preferred_league
         # is None) so the session carries a meaningful league from the very first request.
         if user.preferred_league is None:
-            current = pick_current_league(parse_leagues(leagues))
+            current = pick_current_league(parse_leagues(leagues_payload))
             if current:
                 user.preferred_league = current
     except Exception as exc:  # noqa: BLE001
-        log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
+        # account:leagues scope may not be granted (e.g. GGG PoE2 grant is profile +
+        # characters only). Log at info level — it is expected when the scope is absent.
+        log.info(
+            "snapshot.leagues_skipped",
+            error=str(exc),
+            note="preferred_league will be inferred from characters",
+        )
         outcome.errors.append(f"leagues:{exc}")
 
     # Stash list + tab payloads are fast against the mock; Poe.ninja ``revalidate=1`` on the
@@ -199,6 +206,13 @@ async def refresh_user_snapshot(
             session, user_id=user.id, kind=SnapshotKind.CHARACTERS, key="", payload=chars
         )
         outcome.characters = True
+        # Fallback: if account:leagues was unavailable, infer preferred_league from
+        # the character list (each character carries its current league name).
+        if user.preferred_league is None:
+            inferred = pick_league_from_characters(parse_summaries(chars))
+            if inferred:
+                user.preferred_league = inferred
+                log.info("snapshot.league_inferred_from_characters", league=inferred)
     except Exception as exc:  # noqa: BLE001
         log.error("snapshot.characters_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"characters:{exc}")

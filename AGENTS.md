@@ -24,15 +24,27 @@ Mandatory legal copy (GGG requirement):
 - Display this exact sentence in a visible place (web footer + docs): **"This product isn't affiliated with or endorsed by Grinding Gear Games in any way."**
 - GGG API requests must send an identifiable User-Agent prefixed as: **`User-Agent: OAuth {$clientId}/{$version} (contact: {$contact}) ...`** using contact **`dev@hell.sk`**.
 
-### 1.1 GGG API: PoE2 stash scope (product reality)
+### 1.1 GGG API: OAuth2 grant status (2026-06)
 
-Per the [GGG API reference (stashes)](https://www.pathofexile.com/developer/docs/reference#stashes), **no stash scope is available for Path of Exile 2** at this time. Stash-related OAuth scopes in the official docs are **Path of Exile 1** only, for example:
+GGG has granted OAuth2 access for the application. Approved scopes:
 
-- Account stashes — `account:stashes`
-- Guild stashes — `account:guild:stashes` (special request)
-- Public stashes — `service:psapi`
+| Scope | Status |
+|---|---|
+| `account:profile` | ✅ Granted — live in UAT and prod |
+| `account:characters` | ✅ Granted — live in UAT and prod |
+| `account:stashes` | ⏳ PoE1 only; no PoE2 stash scope available yet — blocked on GGG upstream |
+| `account:leagues` | ⏳ Not yet granted — backend infers preferred league from character data |
 
-**Implication for this product:** live stash data for **PoE2** from the real GGG API **cannot** be used in production until GGG adds a PoE2 stash (or equivalent) scope. The app is implemented so stash browsing works end-to-end when that API exists; **today**, development and demos rely on **`mock-ggg/`** and fixtures. The same limitations are recorded in `INSTRUCTIONS.md` (§ Limitations). The expectation is that GGG will extend the official API for PoE2; until then, treat real-GGG stash integration as **blocked on upstream**.
+**Stash:** `account:stashes` and related scopes apply to **Path of Exile 1** only. Per the [GGG API reference](https://www.pathofexile.com/developer/docs/reference#stashes), no PoE2 stash scope exists yet. PoE2 stash browsing still uses `mock-ggg/` in the dev stack. The app is implemented to work when GGG provides a PoE2 scope; treat stash integration as **blocked on upstream**.
+
+**Leagues:** `account:leagues` was not granted. `GET /account/leagues` is **not** called. `snapshot.py → refresh_user_snapshot` falls back to `pick_league_from_characters` (in `domain/league.py`), which extracts the most common non-permanent league from the character list and sets `user.preferred_league`.
+
+**Environments:**
+- **Dev** (`docker-compose.dev.yml`): uses `mock-ggg/`; GGG_CLIENT_ID/SECRET are placeholders.
+- **UAT** (`docker-compose.uat.yml`): uses **live GGG** credentials; **no mock-ggg service**. DNS `*.uat.hideoutbutler.com → 127.0.0.1` required locally. See `GGG_API.md` §6.1.
+- **Prod**: same as UAT configuration with production redirect URI.
+
+**`GGG_SCOPES` must only contain granted scopes.** Requesting `account:stashes` or `account:leagues` will cause GGG to reject the entire authorization flow.
 
 ### 1.2 Product extensions and delivery policy (INSTRUCTIONS §Product extensions)
 
@@ -367,7 +379,7 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 | 2 | Cross-tab stash search | Query all loaded tab snapshots, not just current |
 | 3 | Character items table view | Mirror stash table view for equipped gear |
 | 4 | Currency stash tab renderer | Fixed-grid layout matching in-game currency tab |
-| 5 | Real GGG API approval | Apply to developer@grindinggear.com |
+| 5 | ~~Real GGG API approval~~ | **DONE** (2026-06) — `account:profile` + `account:characters` granted. `account:stashes` (PoE2) and `account:leagues` pending. |
 | 6 | DigitalOcean VM provisioning | See `DEPLOY.md` |
 | 7 | ~~Backend tests: update Item fixtures~~ | ~~Add `explicit_mod_details`, `socketed_items` fields~~ — **DONE** |
 | 8 | ~~Frontend tests: ActivityLog, PercentBar~~ | ~~Unit tests missing~~ — **DONE** |

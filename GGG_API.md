@@ -2,7 +2,7 @@
 
 Reference for integrating **PoE2 Hideout Butler** with the official GGG (Grinding Gear Games) account & game data API.
 
-> The GGG API requires a manually approved OAuth2 client application. Approval is not instant; plan for weeks of lead time. Until approval is granted, development uses the `mock-ggg/` service which exposes the same surface area against fixture data.
+> **Status (2026-06):** GGG OAuth2 access has been granted for `account:profile` and `account:characters`. The UAT environment uses live GGG credentials; the dev stack continues to use `mock-ggg/`. `account:stashes` (PoE2) and `account:leagues` are **not yet granted** — see §2 for scope details and §6.1 for the UAT runbook.
 
 ## PoE2 and stash data (current limitation)
 
@@ -65,12 +65,14 @@ Use these when emailing **developer@grindinggear.com** or filling an application
 
 ## 2. Required scopes
 
-| Scope | Used for |
-|---|---|
-| `account:profile` | Identify the user (GGG account name is our primary key). |
-| `account:characters` | List characters and their equipped items. |
-| `account:stashes` | List and read stash tabs (includes currency/special tabs). |
-| `account:leagues` | Enumerate leagues the user participates in. |
+| Scope | Used for | Status |
+|---|---|---|
+| `account:profile` | Identify the user (GGG account name is our primary key). | ✅ Granted |
+| `account:characters` | List characters and their equipped items. | ✅ Granted |
+| `account:stashes` | List and read stash tabs (includes currency/special tabs). | ⏳ PoE1 only; pending PoE2 equivalent from GGG |
+| `account:leagues` | Enumerate leagues the user participates in. | ⏳ Not yet granted — preferred league is inferred from the character list |
+
+**Scope handling:** `GGG_SCOPES` in `.env.uat` / prod must only list granted scopes. Requesting an undeclared scope causes the entire authorization to fail. The backend gracefully falls back to character-derived league detection when `account:leagues` is absent (see `snapshot.py` → `pick_league_from_characters`).
 
 Ask for the minimum set only; do **not** request any write scopes. The app never mutates GGG-side state.
 
@@ -137,6 +139,41 @@ GGG returns rate-limit telemetry via `X-Rate-Limit-*` headers and uses HTTP 429 
 2. Maintains a Redis token-bucket keyed by `ggg:rl:<policy>:<account>` to pre-emptively throttle.
 3. On 429, honours `Retry-After`; on repeated 429, backs off exponentially and surfaces a user-visible error.
 4. Per-user `POST /api/refresh` is additionally rate-limited by a 60 s cooldown, enforced with `SET NX EX 60` in Redis.
+
+## 6.1 Local UAT with live GGG
+
+The UAT compose stack (`docker-compose.uat.yml`) no longer includes `mock-ggg`. It uses the real GGG OAuth2 endpoints.
+
+**Pre-requisites:**
+
+1. **DNS:** add to `/etc/hosts`:
+   ```
+   127.0.0.1  app.uat.hideoutbutler.com
+   127.0.0.1  api.uat.hideoutbutler.com
+   127.0.0.1  admin.uat.hideoutbutler.com
+   ```
+2. **TLS cert:** `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` must be present (Origin CA cert covering `*.uat.hideoutbutler.com`).
+3. **Credentials:** copy `.env.uat.example` to `.env.uat` and fill in `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET`.
+
+**Start the stack:**
+```bash
+docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat up -d --build
+docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat exec -T backend alembic upgrade head
+```
+
+**Verify config before first login:**
+```bash
+cd backend
+source ../.env.uat 2>/dev/null || true  # or export vars manually
+uv run python scripts/verify_ggg_oauth.py --probe
+```
+
+**Full round-trip test** (after a manual login that stores a refresh token in Postgres):
+```bash
+uv run pytest -m live_ggg -v
+# With a known refresh token:
+GGG_TEST_REFRESH_TOKEN=<token> uv run pytest -m live_ggg -v
+```
 
 ## 6. Local development with the mock
 

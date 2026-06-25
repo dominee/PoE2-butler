@@ -1,8 +1,11 @@
 name: poe2b-uat
 
-# UAT: mock GGG (like dev) + public HTTPS on the origin with Cloudflare Origin CA
+# UAT: live GGG OAuth2 + public HTTPS on the origin with Cloudflare Origin CA
 # (like prod). Traefik uses a static file provider (no Docker socket) + :443.
-# The app host splits /api → backend and / → static SPA (same-origin as dev w/ Vite).
+# The app host splits /api → backend and / → static SPA.
+#
+# No mock-ggg service: UAT uses real GGG OAuth2. DNS *.uat.hideoutbutler.com
+# must resolve to 127.0.0.1 on the local machine (add to /etc/hosts).
 
 networks:
   uat_edge:
@@ -14,7 +17,6 @@ networks:
 volumes:
   poe2b_uat_postgres:
   poe2b_uat_redis:
-  poe2b_uat_mock_ggg_tokens:
 
 services:
   traefik:
@@ -76,20 +78,6 @@ services:
       timeout: 3s
       retries: 10
 
-  mock-ggg:
-    build:
-      context: ../../mock-ggg
-    container_name: poe2b-uat-mock-ggg
-    restart: unless-stopped
-    user: "0:0"
-    environment:
-      MOCK_GGG_TOKEN_FILE: /data/tokens.json
-    volumes:
-      - poe2b_uat_mock_ggg_tokens:/data
-    networks:
-      - uat_edge
-      - uat_internal
-
   backend:
     build:
       context: ../../backend
@@ -101,14 +89,12 @@ services:
       ENVIRONMENT: uat
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
       REDIS_URL: redis://redis:6379/0
-      GGG_OAUTH_BASE_URL: http://mock-ggg:9000
-      GGG_API_BASE_URL: http://mock-ggg:9000
+      # GGG_OAUTH_BASE_URL and GGG_API_BASE_URL come from .env.uat (real GGG endpoints).
     command:
       - uvicorn
       - app.main:app
       - --host=0.0.0.0
       - --port=8000
-      # Single worker: UAT is often a small VM; two workers can OOM-kill child processes
       - --workers=1
       - --proxy-headers
       - --forwarded-allow-ips=*
@@ -117,14 +103,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mock-ggg:
-        condition: service_started
     networks:
       - uat_edge
       - uat_internal
 
-  # arq worker: must share uat_edge with the API so outbound HTTPS/DNS works (trade2 is public GGG).
-  # uat_internal alone blocks egress (Errno -3 name resolution on pathofexile.com) — same as dev ``edge`` + ``internal``.
+  # arq worker: must be on uat_edge for outbound HTTPS/DNS to real GGG and poe.ninja.
   worker:
     build:
       context: ../../backend
@@ -136,8 +119,6 @@ services:
       ENVIRONMENT: uat
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-poe2b}:${POSTGRES_PASSWORD:-poe2b-dev-password}@postgres:5432/${POSTGRES_DB:-poe2b}
       REDIS_URL: redis://redis:6379/0
-      GGG_OAUTH_BASE_URL: http://mock-ggg:9000
-      GGG_API_BASE_URL: http://mock-ggg:9000
     command:
       - arq
       - app.workers.arq_worker.WorkerSettings
@@ -146,8 +127,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mock-ggg:
-        condition: service_started
     networks:
       - uat_edge
       - uat_internal

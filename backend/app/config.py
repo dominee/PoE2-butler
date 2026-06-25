@@ -54,7 +54,10 @@ class Settings(BaseSettings):
     ggg_client_id: str = "poe2-butler-dev"
     ggg_client_secret: SecretStr = SecretStr("poe2-butler-dev-secret")
     ggg_redirect_uri: str = "http://api.localhost/api/auth/callback"
-    ggg_scopes: str = "account:profile account:characters account:stashes account:leagues"
+    # Only scopes granted by GGG for PoE2. account:stashes is PoE1-only and not
+    # yet available for PoE2. account:leagues was not granted — preferred league is
+    # inferred from the character list (each character carries a "league" field).
+    ggg_scopes: str = "account:profile account:characters"
     app_version: str = "0.1.0"
     ggg_user_agent_contact: str = "dev@hell.sk"
     ggg_user_agent_suffix: str = "PoE2-Hideout-Butler"

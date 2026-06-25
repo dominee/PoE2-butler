@@ -63,3 +63,6 @@ ignore = [
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+markers = [
+    "live_ggg: integration tests that call the real GGG API (require credentials; skipped in CI)",
+]

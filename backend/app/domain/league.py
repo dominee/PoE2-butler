@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from app.domain.character import CharacterSummary
 
 
 class League(BaseModel):
@@ -41,3 +47,25 @@ def pick_current_league(leagues: list[League]) -> str | None:
         if league.current:
             return league.id
     return leagues[0].id if leagues else None
+
+
+# Permanent leagues never expire; a character in one of these is not a signal
+# that the player is actively playing a challenge league.
+_PERMANENT_LEAGUES = frozenset(
+    {"standard", "hardcore", "ssf standard", "ssf hardcore", "hardcore ssf"}
+)
+
+
+def pick_league_from_characters(summaries: list[CharacterSummary]) -> str | None:
+    """Infer the preferred league from character summaries.
+
+    Used when ``account:leagues`` scope is unavailable (e.g. not granted by GGG).
+    Prefers the most common non-permanent (challenge) league; falls back to the
+    first league present in the character list if all are permanent.
+    """
+    leagues: list[str] = [c.league for c in summaries if c.league]
+    if not leagues:
+        return None
+    non_perm = [lg for lg in leagues if lg.lower() not in _PERMANENT_LEAGUES]
+    candidates = non_perm if non_perm else leagues
+    return Counter(candidates).most_common(1)[0][0]
