@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.character import parse_detail, parse_summaries
+from app.domain.character import collect_character_items, parse_detail, parse_summaries
 from app.domain.item import parse_item
 from app.domain.league import parse_leagues, pick_current_league
 
@@ -337,3 +337,45 @@ def test_parse_summaries_and_detail() -> None:
     assert life.values == [45.0]
     tri = next(r for r in sm["resistances"].rows if "Elemental" in r.label and "Resist" in r.label)
     assert tri.values == [5.0]
+
+
+def test_parse_detail_poe2_character_equipment() -> None:
+    """Live GGG PoE2 nests gear under character.equipment, not top-level items."""
+    detail_payload = {
+        "character": {
+            "id": "c1",
+            "name": "BringTheRainz",
+            "class": "Ranger",
+            "level": 90,
+            "league": "Runes of Aldur",
+            "equipment": [
+                {
+                    "inventoryId": "Weapon",
+                    "itemData": {
+                        "id": "w1",
+                        "typeLine": "Spine Bow",
+                        "baseType": "Spine Bow",
+                        "rarity": "Rare",
+                        "explicitMods": ["+45 to maximum Life"],
+                    },
+                },
+                {
+                    "inventoryId": "Helm",
+                    "itemData": {
+                        "id": "h1",
+                        "typeLine": "Iron Hat",
+                        "baseType": "Iron Hat",
+                        "rarity": "Magic",
+                    },
+                },
+            ],
+            "skills": [],
+        },
+    }
+    assert len(collect_character_items(detail_payload)) == 2
+    detail = parse_detail(detail_payload)
+    assert detail.summary.name == "BringTheRainz"
+    assert len(detail.equipped) == 2
+    assert detail.equipped[0].type_line == "Spine Bow"
+    assert detail.equipped[0].inventory_id == "Weapon"
+    assert len(detail.inventory) == 0

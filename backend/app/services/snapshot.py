@@ -18,8 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient, GGGError
 from app.config import get_settings
 from app.db.models import Snapshot, SnapshotKind, User
-from app.domain.character import parse_summaries
-from app.domain.league import parse_leagues, pick_current_league, pick_league_from_characters
+from app.domain.character import collect_character_items, parse_summaries
+from app.domain.league import (
+    _PERMANENT_LEAGUES,
+    parse_leagues,
+    pick_current_league,
+    pick_league_from_characters,
+)
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
 from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_access
@@ -208,11 +213,17 @@ async def refresh_user_snapshot(
         outcome.characters = True
         # Fallback: if account:leagues was unavailable, infer preferred_league from
         # the character list (each character carries its current league name).
-        if user.preferred_league is None:
-            inferred = pick_league_from_characters(parse_summaries(chars))
-            if inferred:
+        inferred = pick_league_from_characters(parse_summaries(chars))
+        if inferred and inferred != user.preferred_league:
+            current_is_permanent = (user.preferred_league or "").lower() in _PERMANENT_LEAGUES
+            if user.preferred_league is None or current_is_permanent:
                 user.preferred_league = inferred
                 log.info("snapshot.league_inferred_from_characters", league=inferred)
+        elif user.preferred_league is None:
+            fallback = get_settings().ggg_default_league
+            if fallback:
+                user.preferred_league = fallback
+                log.info("snapshot.league_default_fallback", league=fallback)
     except Exception as exc:  # noqa: BLE001
         log.error("snapshot.characters_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"characters:{exc}")
@@ -277,10 +288,7 @@ def _character_detail_snapshot_ttl_seconds(payload: dict[str, Any]) -> float:
     api = settings.ggg_api_base_url.lower()
     if "mock-ggg" not in api and "127.0.0.1" not in api:
         return 60.0
-    items = payload.get("items")
-    if items is None:
-        return 5.0
-    if isinstance(items, (list, tuple)) and len(items) == 0:
+    if not collect_character_items(payload):
         return 5.0
     return 60.0
 

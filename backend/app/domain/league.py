@@ -49,6 +49,20 @@ def pick_current_league(leagues: list[League]) -> str | None:
     return leagues[0].id if leagues else None
 
 
+def resolve_leagues_current(leagues: list[League], preferred: str | None) -> str | None:
+    """Pick the league id exposed as ``current`` in GET /api/leagues.
+
+    When at least one league carries ``current=True`` (GGG snapshot or synthesized
+    from ``preferred``), use :func:`pick_current_league`. Otherwise fall back to
+    ``preferred``, then the first league in the list.
+    """
+    if any(lg.current for lg in leagues):
+        return pick_current_league(leagues)
+    if preferred:
+        return preferred
+    return pick_current_league(leagues)
+
+
 # Permanent leagues never expire; a character in one of these is not a signal
 # that the player is actively playing a challenge league.
 _PERMANENT_LEAGUES = frozenset(

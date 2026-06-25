@@ -245,7 +245,7 @@ async def test_characters_with_refresh_token(refresh_token: str) -> None:
         access_token = r.json().get("access_token", "")
         assert access_token
 
-        chars_url = f"{s['api_base'].rstrip('/')}/account/characters"
+        chars_url = f"{s['api_base'].rstrip('/')}/character/poe2"
         rc = await client.get(
             chars_url,
             headers={

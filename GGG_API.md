@@ -124,8 +124,9 @@ All calls are authenticated with `Authorization: Bearer <access_token>` and use 
 |---|---|---|
 | `GET` | `/profile` | Current account profile (name, UUID). |
 | `GET` | `/account/leagues` | Leagues the account has played in, with active flags. |
-| `GET` | `/account/characters` | List of characters with league, class, level. |
-| `GET` | `/account/characters/{name}` | Full character data incl. equipped items and inventory. |
+| `GET` | `/character/poe2` | List of PoE2 characters with league, class, level. |
+| `GET` | `/character/poe2/{name}` | Full PoE2 character data incl. equipped items and inventory. |
+| `GET` | `/account/characters` | PoE1 PC realm (mock-ggg uses this shape in dev). |
 | `GET` | `/account/stashes/{league}` | List of stash tabs for a league. |
 | `GET` | `/account/stashes/{league}/{tab_id}` | Contents of a stash tab. |
 
@@ -154,6 +155,8 @@ The UAT compose stack (`docker-compose.uat.yml`) no longer includes `mock-ggg`. 
    ```
 2. **TLS cert:** `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` must be present (Origin CA cert covering `*.uat.hideoutbutler.com`).
 3. **Credentials:** copy `.env.uat.example` to `.env.uat` and fill in `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET`.
+4. **PoE2 paths:** set `GGG_API_REALM=poe2` so the backend calls `GET /character/poe2` (not PoE1 `/account/characters`, which returns 404).
+5. **Default league:** set `GGG_DEFAULT_LEAGUE=Runes of Aldur` (or the current challenge league) when `account:leagues` is not granted.
 
 **Start the stack:**
 ```bash

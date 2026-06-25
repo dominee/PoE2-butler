@@ -65,9 +65,9 @@ async def refresh(
 
     settings = get_settings()
     api = settings.ggg_api_base_url.lower()
-    # Poe.ninja full-list revalidate can run many minutes per account; the local mock
-    # already serves summaries without ?revalidate=1, and character detail refills on GET.
-    revalidate_list = "mock-ggg" not in api and "127.0.0.1" not in api
+    # Poe.ninja full-list revalidate is mock-ggg only; real GGG uses /character/poe2 without it.
+    is_mock = "mock-ggg" in api or "127.0.0.1" in api
+    revalidate_list = is_mock
 
     stash_league = (league or "").strip() or (user.preferred_league or "").strip()
 

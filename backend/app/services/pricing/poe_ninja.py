@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from app.config import get_settings
 from app.logging import get_logger
 from app.services.pricing.matcher import ItemKey
 from app.services.pricing.source import PriceEstimate, PriceUnit
@@ -213,7 +214,7 @@ class PoeNinjaSource:
         if cache_key in self._cache and now - self._cache_ts.get(cache_key, 0.0) < self._ttl:
             return self._cache[cache_key]
 
-        if self._poe1:
+        if self._poe1 and get_settings().ggg_api_realm != "poe2":
             path = "currencyoverview" if bucket in CURRENCY_BUCKETS else "itemoverview"
             url = f"{self._base}/{path}"
             params = {"league": league, "type": bucket}

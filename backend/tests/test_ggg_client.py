@@ -51,7 +51,46 @@ async def test_ggg_client_sends_mandatory_user_agent_header() -> None:
         assert profile["name"] == "OAuthMockProfile#1"
 
 
-def test_ggg_error_implies_reauth_on_invalid_grant() -> None:
+@pytest.mark.asyncio
+async def test_ggg_client_poe2_character_paths() -> None:
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        if request.url.path == "/character/poe2":
+            return httpx.Response(200, json={"characters": []})
+        if request.url.path == "/character/poe2/Hero":
+            return httpx.Response(200, json={"character": {"name": "Hero"}})
+        return httpx.Response(404)
+
+    settings = _settings()
+    settings.ggg_api_realm = "poe2"
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, base_url="http://ggg.test") as client:
+        ggg = GGGClient(settings, client=client)
+        await ggg.get_characters("token")
+        await ggg.get_character("token", "Hero")
+    assert "/character/poe2" in seen_paths
+    assert "/character/poe2/Hero" in seen_paths
+    assert not any("account/characters" in p for p in seen_paths)
+
+
+@pytest.mark.asyncio
+async def test_ggg_client_mock_revalidate_only_on_legacy_paths() -> None:
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        q = request.url.query.decode() if request.url.query else ""
+        seen_paths.append(request.url.path + (f"?{q}" if q else ""))
+        return httpx.Response(200, json={"characters": []})
+
+    settings = _settings()
+    settings.ggg_api_realm = ""
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, base_url="http://ggg.test") as client:
+        ggg = GGGClient(settings, client=client)
+        await ggg.get_characters("token", revalidate=True)
+    assert seen_paths == ["/account/characters?revalidate=1"]
     assert ggg_error_implies_reauth(GGGError(400, {"detail": "invalid_grant"}))
     assert ggg_error_implies_reauth(GGGError(400, "invalid_grant"))
     assert not ggg_error_implies_reauth(GGGError(400, "bad request"))

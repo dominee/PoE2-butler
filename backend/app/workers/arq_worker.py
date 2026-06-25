@@ -33,6 +33,7 @@ from app.clients.ggg import GGGClient
 from app.config import get_settings
 from app.db.base import _session_factory
 from app.db.models import SnapshotKind, User
+from app.domain.character import collect_character_items
 from app.domain.item import Item, parse_item
 from app.logging import configure_logging, get_logger
 from app.security.crypto import TokenCipher
@@ -126,7 +127,7 @@ async def warm_prices(ctx: dict, user_id: str, league: str) -> dict:
             char_snaps = await _all_character_snapshots(session, user.id)
             for payload in char_snaps:
                 await throttle(redis, KEY_POE_NINJA)
-                items = [parse_item(i) for i in payload.get("equipment", [])]
+                items = [parse_item(i) for i in collect_character_items(payload)]
                 priced += await pricing.warm(league, items)
         return {"ok": True, "priced": priced}
     finally:
@@ -400,7 +401,7 @@ async def _collect_stash_and_gear_raws(
         out.append((iid, raw))
 
     for payload in await _all_character_snapshots(session, user_id):
-        for raw in payload.get("equipment", []) or []:
+        for raw in collect_character_items(payload):
             push(raw)
     return out
 

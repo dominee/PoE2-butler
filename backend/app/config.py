@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     ggg_client_id: str = "poe2-butler-dev"
     ggg_client_secret: SecretStr = SecretStr("poe2-butler-dev-secret")
     ggg_redirect_uri: str = "http://api.localhost/api/auth/callback"
+    # PoE2 realm for live GGG character endpoints: GET /character/poe2[/{name}].
+    # Leave empty for mock-ggg (legacy /account/characters paths).
+    ggg_api_realm: str = ""
+    # Fallback league when account:leagues scope is unavailable and inference fails.
+    ggg_default_league: str = ""
     # Only scopes granted by GGG for PoE2. account:stashes is PoE1-only and not
     # yet available for PoE2. account:leagues was not granted — preferred league is
     # inferred from the character list (each character carries a "league" field).

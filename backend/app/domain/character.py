@@ -47,6 +47,44 @@ _INVENTORY_SLOTS = {
 }
 
 
+def collect_character_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten item dicts from GGG character detail JSON (PoE1, PoE2, and mock shapes).
+
+    Live PoE2 OAuth returns gear under ``character.equipment`` (and ``character.skills``);
+    mock / Poe.ninja fixtures use a top-level ``items`` array; PoE1 may use ``inventory``.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(raw: object) -> None:
+        if not isinstance(raw, dict):
+            return
+        inner = raw.get("itemData")
+        iid = str(
+            raw.get("id")
+            or (inner.get("id") if isinstance(inner, dict) else None)
+            or ""
+        ).strip()
+        if iid:
+            if iid in seen:
+                return
+            seen.add(iid)
+        out.append(raw)
+
+    for raw in payload.get("items") or []:
+        add(raw)
+    for raw in payload.get("equipment") or []:
+        add(raw)
+
+    char = payload.get("character")
+    if isinstance(char, dict):
+        for key in ("equipment", "inventory", "rucksack", "jewels", "skills"):
+            for raw in char.get(key) or []:
+                add(raw)
+
+    return out
+
+
 def parse_summaries(payload: dict[str, Any]) -> list[CharacterSummary]:
     raw = payload.get("characters") or []
     out: list[CharacterSummary] = []
@@ -80,7 +118,7 @@ def parse_detail(payload: dict[str, Any]) -> CharacterDetail:
     )
     equipped: list[Item] = []
     inventory: list[Item] = []
-    for raw in payload.get("items", []) or []:
+    for raw in collect_character_items(payload):
         if not isinstance(raw, dict):
             continue
         item = parse_item(raw)

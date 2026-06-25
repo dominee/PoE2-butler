@@ -44,8 +44,9 @@ export function AppShell() {
   const [charLayout, setCharLayout] = useState<"doll" | "table">("doll");
 
   useEffect(() => {
-    if (!selectedLeague && leaguesQ.data?.current) {
-      setLeague(leaguesQ.data.current);
+    if (!selectedLeague) {
+      const autoSelect = leaguesQ.data?.current ?? leaguesQ.data?.preferred;
+      if (autoSelect) setLeague(autoSelect);
     }
   }, [leaguesQ.data, selectedLeague, setLeague]);
 

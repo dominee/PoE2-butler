@@ -3,6 +3,7 @@
 # League slug in the URL path is arbitrary (``vaal``, ``vaalssf``, etc.); each entry must be a comma-separated string.
 
 character_urls = [
+  "https://poe.ninja/poe2/profile/dominee-9275/runesofaldur/character/BringTheRainz",
   "https://poe.ninja/poe2/profile/dominee-9275/vaal/character/Catticiaan",
   "https://poe.ninja/poe2/profile/dominee-9275/vaal/character/NextWizardKing",
   "https://poe.ninja/poe2/profile/dominee-9275/vaal/character/IamGothmog",

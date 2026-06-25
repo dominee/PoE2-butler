@@ -130,20 +130,31 @@ class GGGClient:
     async def get_leagues(self, access_token: str) -> dict[str, Any]:
         return await self._get("/account/leagues", access_token)
 
+    def _character_base_path(self) -> str:
+        """PoE2 live API uses ``/character/poe2``; mock-ggg uses ``/account/characters``."""
+        realm = (self._settings.ggg_api_realm or "").strip()
+        if realm:
+            return f"/character/{realm}"
+        return "/account/characters"
+
+    def _uses_mock_character_paths(self) -> bool:
+        return not (self._settings.ggg_api_realm or "").strip()
+
     async def get_characters(
         self, access_token: str, *, revalidate: bool = False
     ) -> dict[str, Any]:
-        path = "/account/characters"
-        if revalidate:
+        path = self._character_base_path()
+        # ``?revalidate=1`` is mock-ggg only (Poe.ninja rescrape); real GGG ignores/404s it.
+        if revalidate and self._uses_mock_character_paths():
             path = f"{path}?revalidate=1"
-        # Mock scrapes Poe.ninja sequentially (rate-limited); allow a long read.
         long = httpx.Timeout(900.0, connect=30.0) if revalidate else None
         return await self._get(path, access_token, timeout=long)
 
     async def get_character(self, access_token: str, name: str) -> dict[str, Any]:
-        # Dev mock may scrape Poe.ninja for several minutes; align with revalidate list budget.
         detail_timeout = httpx.Timeout(connect=30.0, read=900.0, write=120.0, pool=120.0)
-        return await self._get(f"/account/characters/{name}", access_token, timeout=detail_timeout)
+        return await self._get(
+            f"{self._character_base_path()}/{name}", access_token, timeout=detail_timeout
+        )
 
     async def get_stash_list(self, access_token: str, league: str) -> dict[str, Any]:
         return await self._get(f"/account/stashes/{league}", access_token)
