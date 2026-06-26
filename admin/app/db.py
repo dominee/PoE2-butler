@@ -117,21 +117,51 @@ async def dashboard_metrics() -> dict:
         }
 
 
+def _item_id_from_raw(raw: dict) -> str | None:
+    inner = raw.get("itemData")
+    for source in (raw, inner if isinstance(inner, dict) else None):
+        if isinstance(source, dict):
+            iid = source.get("id")
+            if iid is not None:
+                s = str(iid).strip()
+                if s:
+                    return s
+    return None
+
+
+def _collect_character_items(payload: dict) -> list[dict]:
+    """Flatten gear rows from a character snapshot (PoE2 / mock shapes)."""
+    out: list[dict] = []
+    seen: set[str] = set()
+
+    def add(raw: object) -> None:
+        if not isinstance(raw, dict):
+            return
+        iid = _item_id_from_raw(raw)
+        if iid:
+            if iid in seen:
+                return
+            seen.add(iid)
+        out.append(raw)
+
+    for raw in payload.get("items") or []:
+        add(raw)
+    char = payload.get("character")
+    if isinstance(char, dict):
+        for key in ("equipment", "inventory", "rucksack", "jewels"):
+            for raw in char.get(key) or []:
+                add(raw)
+    return out
+
+
 def _item_ids_from_character_payload(payload: object) -> set[str]:
     if not isinstance(payload, dict):
         return set()
-    from app.domain.character import collect_character_items
-    from app.domain.item import _unwrap_ggg_item_dict
-
     out: set[str] = set()
-    for raw in collect_character_items(payload):
-        if not isinstance(raw, dict):
-            continue
-        iid = _unwrap_ggg_item_dict(raw).get("id")
-        if iid is not None:
-            s = str(iid).strip()
-            if s:
-                out.add(s)
+    for raw in _collect_character_items(payload):
+        iid = _item_id_from_raw(raw)
+        if iid:
+            out.add(iid)
     return out
 
 

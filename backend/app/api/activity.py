@@ -55,10 +55,9 @@ class ActivityResponse(BaseModel):
 
 
 def _items_by_id(payload: dict[str, Any], *, character: bool = False) -> dict[str, dict[str, Any]]:
-    if character:
-        raw_items = collect_character_items(payload)
-    else:
-        raw_items = payload.get("items") or []
+    raw_items = (
+        collect_character_items(payload) if character else payload.get("items") or []
+    )
     out: dict[str, dict[str, Any]] = {}
     for raw in raw_items:
         if not isinstance(raw, dict):

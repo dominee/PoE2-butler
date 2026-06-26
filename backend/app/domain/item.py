@@ -488,7 +488,11 @@ def parse_item(raw: dict[str, Any]) -> Item:
 
     base_type = str(raw.get("baseType", raw.get("typeLine", "")))
     frame_type_id = raw.get("frameTypeId")
-    frame_type_id_str = str(frame_type_id).strip() if isinstance(frame_type_id, str) and frame_type_id.strip() else None
+    frame_type_id_str = (
+        str(frame_type_id).strip()
+        if isinstance(frame_type_id, str) and frame_type_id.strip()
+        else None
+    )
     runeforged = _is_runeforged_item(
         base_type=base_type,
         type_line=str(raw.get("typeLine", "")),

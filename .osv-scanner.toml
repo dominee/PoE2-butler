@@ -3,11 +3,6 @@
 # right now, with an explicit reason.  Remove an entry once the upstream fix is
 # available and the lock file is updated.
 
-# ── pyjwt ────────────────────────────────────────────────────────────────────
-[[IgnoredVulns]]
-id = "PYSEC-2025-183"
-reason = "No fixed version published on PyPI as of 2026-05-21. Tracked; remove this entry once pyjwt releases a patch."
-
 # ── frontend dev dependencies ─────────────────────────────────────────────────
 # The following packages appear only in the development/test toolchain
 # (Vite, Vitest, Playwright).  They are NOT present in the production JS bundle
@@ -19,3 +14,15 @@ reason = "brace-expansion: dev-only transitive dep; not included in the producti
 [[IgnoredVulns]]
 id = "GHSA-58qx-3vcg-4xpx"
 reason = "ws: dev-only transitive dep; not included in the production bundle. npm audit --omit=dev reports 0 vulnerabilities."
+
+[[IgnoredVulns]]
+id = "GHSA-hmw2-7cc7-3qxx"
+reason = "form-data: dev-only transitive dep (Playwright/axios); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-h67p-54hq-rp68"
+reason = "js-yaml: dev-only transitive dep (eslint); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-96hv-2xvq-fx4p"
+reason = "ws: dev-only transitive dep; not in the production bundle."
