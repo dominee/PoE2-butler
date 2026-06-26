@@ -36,7 +36,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 96M
+          memory: 88M
 
   postgres:
     image: postgres:16-alpine
@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 320M
+          memory: 288M
 
   redis:
     image: redis:7-alpine
@@ -89,7 +89,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 160M
+          memory: 144M
 
   backend:
     build:
@@ -164,10 +164,13 @@ services:
     networks:
       - edge
       - internal
+    # Backend image HEALTHCHECK curls :8000; the arq worker does not listen there.
+    healthcheck:
+      disable: true
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 112M
 
   frontend:
     build:
@@ -188,7 +191,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 48M
 
   admin:
     build:
@@ -223,4 +226,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 128M

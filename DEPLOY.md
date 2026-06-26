@@ -329,6 +329,28 @@ Production Traefik discovers routes via the **Docker socket** (`docker-compose.p
 
 On the **1 GB** droplet, exit **137** usually means the OOM killer removed a container during startup. Prod compose uses **one** Uvicorn worker and conservative memory limits; stop other stacks (UAT/dev) before prod, and check `dmesg | tail` or `journalctl -k` for OOM lines if restarts continue.
 
+**Admin 404 with `poe2b-admin` restarting (exit 137, empty logs)**
+
+Traefik returns **404** for `admin.…` when the admin container is not running — access logs show `OriginStatus:0` and no `RouterName`. The admin image is Python + FastAPI; a **64 MB** cgroup limit is too low to finish importing dependencies (the process is SIGKILL'd before Uvicorn prints anything). Prod compose sets **128 MB** for admin. After `git pull`:
+
+```bash
+docker compose -f deploy/compose/docker-compose.prod.yml --env-file deploy/env/.env.prod \
+  up -d --force-recreate admin
+docker logs poe2b-admin   # expect "Uvicorn running on http://0.0.0.0:8001"
+```
+
+If the host is still memory-starved, add **swap** (common on 1 GB droplets) and enable Redis’s recommended setting:
+
+```bash
+sudo fallocate -l 1G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+sudo sysctl vm.overcommit_memory=1
+```
+
+**Worker shows `(unhealthy)`**
+
+The worker reuses the backend image, whose `HEALTHCHECK` curls `http://127.0.0.1:8000/healthz`. The arq worker does not listen on :8000 — prod compose disables that check for the worker service. Recreate the worker after pulling if status still says unhealthy.
+
 ### 4.5 Updating to a new version
 
 ```bash
@@ -444,16 +466,16 @@ Accessible at `https://admin.hideoutbutler.com`. Protected by:
 
 | Service | Memory limit |
 |---|---|
-| Traefik | 96 MB |
-| Postgres | 320 MB |
-| Redis | 160 MB |
+| Traefik | 88 MB |
+| Postgres | 288 MB |
+| Redis | 144 MB |
 | Backend | 256 MB |
-| Worker | 128 MB |
-| Frontend (nginx) | 64 MB |
-| Admin | 64 MB |
-| **Total** | **~1088 MB** |
+| Worker | 112 MB |
+| Frontend (nginx) | 48 MB |
+| Admin | 128 MB |
+| **Total (limits)** | **~1064 MB** |
 
-On a 1 GB VM, keep the OS footprint low and avoid running other services.
+On a 1 GB VM, keep the OS footprint low and avoid running other services. **Admin needs ≥128 MB** — 64 MB OOM-loops with exit 137. A **1 GB swap file** is recommended so brief startup spikes do not kill containers.
 
 ---
 
