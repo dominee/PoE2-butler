@@ -18,7 +18,7 @@ volumes:
 
 services:
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.7.1
     container_name: poe2b-traefik
     restart: unless-stopped
     command:
@@ -103,13 +103,13 @@ services:
       ENVIRONMENT: prod
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
-      UVICORN_WORKERS: "2"
+      UVICORN_WORKERS: "1"
     command:
       - uvicorn
       - app.main:app
       - --host=0.0.0.0
       - --port=8000
-      - --workers=2
+      - --workers=1
       - --proxy-headers
       - --forwarded-allow-ips=*
     depends_on:

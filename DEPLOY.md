@@ -296,6 +296,39 @@ docker compose \
 
 If you only see `80` and `8080` and **no** `443`, you are on the **development** stack (`docker-compose.dev.yml`) or an **old** prod compose that omitted the host port. Use `deploy/compose/docker-compose.prod.yml` and `docker compose ... up -d --force-recreate traefik` after adding `443:443`. On the VM, ensure nothing else binds to host `:443` before starting Traefik.
 
+**Traefik Docker provider: `client version 1.24 is too old`**
+
+Production Traefik discovers routes via the **Docker socket** (`docker-compose.prod.yml`). Docker Engine **29+** rejects the old API client bundled in **Traefik v3.1**, so you see repeated `providerName=docker` errors and no routes to the app/API/admin.
+
+- **Fix:** use **Traefik v3.6.1+** (this repo pins **v3.7.1** in prod compose). After `git pull`, recreate Traefik:
+
+  ```bash
+  docker compose -f deploy/compose/docker-compose.prod.yml --env-file deploy/env/.env.prod \
+    up -d --force-recreate traefik
+  ```
+
+- **Why UAT worked on the same VM:** UAT Traefik uses the **file provider only** (no Docker socket) — see `traefik.uat.yml`. Prod and UAT differ here by design.
+
+- **Temporary workaround (not recommended):** pin Docker Engine to **28.5.x** on the host until Traefik is upgraded.
+
+**Switching from UAT to prod on one VM**
+
+1. Stop UAT so **:80/:443** are free and memory is available:
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat down
+   ```
+
+2. Create **`deploy/env/.env.prod`** — prod compose mounts this path on backend/admin/worker (`env_file` in the YAML). Copy secrets from `.env.uat` but set **production** hostnames and URLs, e.g. `APP_DOMAIN=app.hideoutbutler.com`, `APP_BASE_URL=https://app.hideoutbutler.com`, `GGG_REDIRECT_URI=https://app.hideoutbutler.com/api/auth/callback`, `CORS_ALLOW_ORIGINS=["https://app.hideoutbutler.com"]`, `ENVIRONMENT=prod`. Passing `--env-file .env.uat` on the CLI only substitutes `${…}` in the compose file; it does **not** replace the service `env_file: .env.prod` paths.
+
+3. Ensure the Origin certificate SANs cover prod hostnames (`app.`, `api.`, `admin.`).
+
+4. Start prod with `.env.prod` (see commands above).
+
+**Backend child process died / admin exit 137**
+
+On the **1 GB** droplet, exit **137** usually means the OOM killer removed a container during startup. Prod compose uses **one** Uvicorn worker and conservative memory limits; stop other stacks (UAT/dev) before prod, and check `dmesg | tail` or `journalctl -k` for OOM lines if restarts continue.
+
 ### 4.5 Updating to a new version
 
 ```bash
