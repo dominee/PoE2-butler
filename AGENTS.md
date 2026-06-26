@@ -152,16 +152,17 @@ Browser
 
 | Topic | Details |
 |-------|--------|
-| **Purpose** | Public acceptance testing: **mock-ggg** (same as dev) + **HTTPS** to the origin with the same **Cloudflare Origin CA** pattern as prod. |
+| **Purpose** | Public acceptance testing against **live GGG OAuth2** with **HTTPS** to the origin (Cloudflare Origin CA), same cookie/`/api` pattern as prod. |
 | **Project** | Compose name **`poe2b-uat`**, networks **`poe2b_uat_*`**, containers **`poe2b-uat-*`** — can run beside dev/prod on one host. |
-| **Routing** | **File provider only** (`traefik.uat.yml` + **`dynamic.uat.yml`**) — no Docker socket. Each router on **`websecure` must set `tls: {}`** or Traefik v3 will not match **HTTPS** traffic (404, `OriginStatus: 0`). |
-| **App host** | Traefik matches **`PathPrefix(/api)`** → backend, else → static **`frontend`**. `dynamic.uat.yml` uses **separate routers per hostname** (no chained OR in one rule): `app.uat…`, `app.…`, **apex** `hideoutbutler.com`, **`www`**, plus ggg/admin pairs. Put every hostname you use on the **Origin cert** SANs. Align `.env.uat` `APP_BASE_URL`, `CORS`, and `GGG_REDIRECT_URI` with the **exact** browser origin. |
-| **Other hosts** | mock-ggg / admin: see `dynamic.uat.yml` (`ggg.uat` + `ggg.`, `admin.uat` + `admin.`). |
+| **GGG** | **No `mock-ggg` service.** Real `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET`; `GGG_API_REALM=poe2`; `GGG_SCOPES=account:profile account:characters` only. |
+| **Routing** | **File provider only** (`traefik.uat.yml` + **`dynamic.uat.yml`**) — no Docker socket. Each router on **`websecure` must set `tls: {}`**. |
+| **App host** | Traefik matches **`PathPrefix(/api)`** → backend, else → static **`frontend`**. Set `APP_BASE_URL`, `CORS`, and `GGG_REDIRECT_URI` to the **exact** browser origin (`https://app.uat…`). |
+| **Other hosts** | `admin.uat…` (+ prod admin pair if configured); no `ggg.uat` host (browser OAuth goes to GGG). |
 | **TLS / CF** | Same `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` paths as prod; add **`*.uat.hideoutbutler.com`** (or each FQDN) to the Origin certificate. |
 | **Worker** | `arq` worker service included. |
 | **Env** | `deploy/env/.env.uat` (copy from **`.env.uat.example`**) and `ENVIRONMENT=uat` (enables `Secure` cookies in backend, like prod). |
 
-`DEPLOY.md` §4.6 has the full runbook.
+`DEPLOY.md` §4.6 and `GGG_API.md` §6.1 have the full runbook.
 
 ---
 
@@ -248,12 +249,13 @@ class Snapshot(Base):
 | Concern | Approach |
 |---|---|
 | CI trigger | `.github/workflows/ci.yml` runs on push/PR to `main` |
-| Python CI | `uv sync --frozen || uv sync`, then `ruff check` and `pytest` |
+| Python CI | `uv sync --frozen || uv sync`, then `ruff check` and `pytest` (backend default `addopts` excludes `live_ggg`; run `pytest -m live_ggg` manually against UAT) |
+| Pre-push (full) | `make test-all-docker` — all services in Docker plus security scans (see [TESTS.md](TESTS.md)) |
 | Frontend runtime | Node `22` |
 | Frontend cache | `actions/cache` caches `~/.npm` keyed by `hashFiles('frontend/package.json')` |
 | Frontend lint | `npm run lint || true` (non-blocking today) |
 | Dependency audits | `pip-audit` and `npm audit` run with `|| true` (informational) |
-| Pre-push expectation | Run backend + frontend tests locally before pushing (same commands as README) |
+| Pre-push expectation | Run backend + frontend tests locally before pushing (same commands as README); optional `make test-all-docker` for full parity |
 
 ### Security review workflow plan (stored context)
 
@@ -408,13 +410,14 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 
 | File | Use |
 |------|-----|
+| `CHANGELOG.md` | User-facing behavior and UI changes by date |
 | `README.md` | Human quick start, feature list, links |
 | `DEPLOY.md` | VM setup, Cloudflare, origin PEM/key paths, compose commands, mod tier DB re-import (§2.4) |
-| `GGG_API.md` | GGG OAuth registration, redirect URIs, flows |
+| `GGG_API.md` | GGG OAuth registration, redirect URIs, flows, UAT live-GGG runbook (§6.1), `verify_ggg_oauth.py`, `live_ggg` tests |
 | `docs/pricing_estimates.md` | Hybrid tier A/B/C, POST `result` ids + fetch, GGG lock + 429, async jobs, `GGG_TRADE_*` / `TRADE_LISTING_*` |
 | `docs/trade_deeplinks.md` | Trade2 POST (ids in body), optional GET paging, fetch URL, User-Agent, server-side throttling pointer |
 | `docs/unique_reference.md` | Unique-item extra data (flavour text, per-mod type hints); maintainer ingest from poe2db |
 | `admin/README.md` | Admin routes, dashboard refresh controls, throttle / job tables |
-| `SECURITY.md` | Checklist; disclosure via `SECURITY_CONTACT_EMAIL` (optional in `.env`) |
+| `TESTS.md` | Local and Docker test commands; `live_ggg` marker; `make test-all-docker` |
 | `backend/scripts/ingest_repoe_mods.py` | Re-imports mod tier data from RePoE into `mod_ranges.json`; run after game patches |
 | `backend/scripts/extract_mod_ranges.py` | Populates `stat_hashes` section from poe.ninja character samples; run after adding new samples |

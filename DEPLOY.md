@@ -317,24 +317,26 @@ docker compose \
 
 **After a PoE2 game patch (~quarterly):** if the patch added or changed modifiers, update the mod tier DB before redeploying (see §2.4). The updated `mod_ranges.json` is committed to the repo and baked into the image during `up --build`. No extra command is needed on the server beyond `git pull` + rebuild.
 
-### 4.6 UAT environment (mock GGG + public HTTPS)
+### 4.6 UAT environment (live GGG + public HTTPS)
 
-**UAT** is for acceptance testing on a **public** VM with **Cloudflare** in front and **Origin CA** TLS to Traefik, while the stack still uses **`mock-ggg`** and dev-like OAuth client IDs (not real GGG). It is defined in `deploy/compose/docker-compose.uat.yml` and `deploy/compose/traefik/{traefik.uat,dynamic.uat}.yml`.
+**UAT** is for acceptance testing on a **public** VM with **Cloudflare** in front and **Origin CA** TLS to Traefik, using **real GGG OAuth2** credentials (not mock GGG). It is defined in `deploy/compose/docker-compose.uat.yml` and `deploy/compose/traefik/{traefik.uat,dynamic.uat}.yml`.
 
 - **Isolated project**: Compose project name `poe2b-uat` with separate Docker networks (`poe2b_uat_edge`, `poe2b_uat_internal`) and **prefixed** container names (`poe2b-uat-*`) so you can run UAT on the same host as dev/prod without network clashes.
+- **No mock-ggg service** — browser OAuth goes to `www.pathofexile.com`; the backend calls `api.pathofexile.com` with `GGG_API_REALM=poe2` for character data.
 - **No Docker socket in Traefik** (static routes only, like dev).
 - **App host** `app.uat.hideoutbutler.com` routes `PathPrefix(/api)` to the **backend** and the rest to the **static** SPA, so the browser can keep **same-origin** `fetch("/api/...")` and OAuth `GGG_REDIRECT_URI` on `https://app.uat.../api/auth/callback` (analogous to the Vite proxy in dev).
 - **Worker** (`arq`) is included for snapshot jobs.
+- **Leagues / stash:** `account:leagues` is not granted — set `GGG_DEFAULT_LEAGUE` and rely on character-derived league inference. PoE2 stash API calls will fail until GGG grants a PoE2 stash scope; this is expected in UAT.
 
 **Setup**
 
-1. In Cloudflare, add proxied A records e.g. `app.uat`, `ggg.uat`, `admin.uat` under your zone (or a delegated sub-zone) pointing to the UAT droplet. SSL mode: **Full (strict)**.
-2. Issue or re-use a Cloudflare **Origin** certificate that covers `app.uat.hideoutbutler.com`, `ggg.uat.hideoutbutler.com`, and `admin.uat.hideoutbutler.com` (a **`*.uat.hideoutbutler.com` wildcard** is typical). Place PEM + key in `deploy/compose/traefik/certs/` as `cloudflare-origin.pem` and `cloudflare-origin.key` (same filenames as production; use a **separate** UAT keypair if the prod and UAT origins differ).
+1. In Cloudflare, add proxied A records e.g. `app.uat`, `api.uat`, `admin.uat` under your zone (or a delegated sub-zone) pointing to the UAT droplet. SSL mode: **Full (strict)**. (No `ggg.uat` host is required — OAuth uses real GGG.)
+2. Issue or re-use a Cloudflare **Origin** certificate that covers `app.uat.hideoutbutler.com`, `api.uat.hideoutbutler.com`, and `admin.uat.hideoutbutler.com` (a **`*.uat.hideoutbutler.com` wildcard** is typical). Place PEM + key in `deploy/compose/traefik/certs/` as `cloudflare-origin.pem` and `cloudflare-origin.key` (same filenames as production; use a **separate** UAT keypair if the prod and UAT origins differ).
 3. On the host:
 
    ```bash
    cp deploy/env/.env.uat.example deploy/env/.env.uat
-   # Edit: secrets, POSTGRES_PASSWORD, ADMIN_*, etc.
+   # Edit: APP_SECRET_KEY, POSTGRES_PASSWORD, ADMIN_*, GGG_CLIENT_ID, GGG_CLIENT_SECRET, …
 
    docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat up -d --build
 
@@ -342,11 +344,19 @@ docker compose \
      exec backend alembic upgrade head
    ```
 
-4. `docker ps` should show `poe2b-uat-traefik` with `80` and `443` published (not `8080`).
+4. **Verify GGG config** before first login (from repo root, with `.env.uat` exported or on the host):
 
-5. **404 from Traefik** (access log `RequestHost` present, `OriginStatus:0`): the **Host** header must match a rule in `dynamic.uat.yml`, and each router on **`websecure` must include `tls: {}`** (Traefik v3 — without it, HTTPS requests do not match any router). The UAT file uses **one router per hostname** for `app.uat…`, `app.…`, the **apex** `hideoutbutler.com`, **`www.hideoutbutler.com`**, and ggg/admin variants. All of those names must be on the **Origin certificate** SANs. **Recreate Traefik** after editing: `docker compose ... up -d --force-recreate traefik`. On the VM, confirm the mounted file: `docker exec poe2b-uat-traefik head -30 /etc/traefik/dynamic.uat.yml`. Set `APP_BASE_URL`, `CORS_ALLOW_ORIGINS`, and `GGG_REDIRECT_URI` in `.env.uat` to the **exact** origin users use.
+   ```bash
+   cd backend && uv run python scripts/verify_ggg_oauth.py --probe
+   ```
 
-6. If you need another hostname, add two routers in `dynamic.uat.yml` (one for `PathPrefix(/api)`, one for the SPA) and extend the Cloudflare Origin certificate.
+   See [GGG_API.md](GGG_API.md) §6.1 for optional `pytest -m live_ggg` round-trip tests.
+
+5. `docker ps` should show `poe2b-uat-traefik` with `80` and `443` published (not `8080`).
+
+6. **404 from Traefik** (access log `RequestHost` present, `OriginStatus:0`): the **Host** header must match a rule in `dynamic.uat.yml`, and each router on **`websecure` must include `tls: {}`** (Traefik v3 — without it, HTTPS requests do not match any router). The UAT file uses **one router per hostname** for `app.uat…`, `app.…`, the **apex** `hideoutbutler.com`, **`www.hideoutbutler.com`**, and admin variants. All of those names must be on the **Origin certificate** SANs. **Recreate Traefik** after editing: `docker compose ... up -d --force-recreate traefik`. On the VM, confirm the mounted file: `docker exec poe2b-uat-traefik head -30 /etc/traefik/dynamic.uat.yml`. Set `APP_BASE_URL`, `CORS_ALLOW_ORIGINS`, and `GGG_REDIRECT_URI` in `.env.uat` to the **exact** origin users use.
+
+7. If you need another hostname, add two routers in `dynamic.uat.yml` (one for `PathPrefix(/api)`, one for the SPA) and extend the Cloudflare Origin certificate.
 
 ---
 

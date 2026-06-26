@@ -12,7 +12,8 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 
 ## Features
 
-- Log in with your GGG account to load your characters, gear, and stash in one place.
+- Log in with your GGG account to load your characters and equipped gear. **Production and UAT** use **live GGG OAuth2** for `account:profile` and `account:characters`; **local dev** uses a mock GGG service with fixture / Poe.ninja-backed data. **PoE2 stash OAuth is not available from GGG yet** — stash browsing works only in dev via the mock until GGG grants a PoE2 stash scope.
+- Browse characters in a **paper doll** or **table** view; passive jewels and notable skill gems appear alongside equipped gear.
 - Browse all your stash tabs (including currency/special tabs) in a familiar grid or a clean table view.
 - Click any item to see a rich detail panel with mods, requirements, sockets/runes, and quick actions.
 - See how good each roll is: the panel shows a candle bar (rare) or fill bar (unique) with your roll position vs the current tier range and T1 max; per-stat % scores can exceed 100% for overrolls.
@@ -73,7 +74,7 @@ OAuth in dev is configured so the browser hits the mock GGG host above while the
 
 Public deployment uses **`hideoutbutler.com`**: SPA at `https://app.hideoutbutler.com`, API also reachable at `https://api.hideoutbutler.com`, admin at `https://admin.hideoutbutler.com`. Traefik sends **`/api` on the app host** to the same backend as UAT (relative `fetch("/api/…")`). Register **`GGG_REDIRECT_URI`** with GGG on the **app** host (e.g. `https://app.hideoutbutler.com/api/auth/callback`) so session cookies match the SPA origin — see [GGG_API.md](GGG_API.md) *Redirect target*.
 
-**UAT** (optional): a third stack, `deploy/compose/docker-compose.uat.yml`, uses **mock GGG** like dev but **HTTPS** to the origin with a **Cloudflare Origin CA** certificate (same `certs/` filenames as prod; include `*.uat.hideoutbutler.com` on the cert). Copy `deploy/env/.env.uat.example` to `deploy/env/.env.uat`, then see [DEPLOY.md](DEPLOY.md) §4.6 and [AGENTS.md](AGENTS.md) §4.3.
+**UAT** (optional): a third stack, `deploy/compose/docker-compose.uat.yml`, uses **live GGG OAuth2** (same scope model as production — no mock GGG) with **HTTPS** to the origin via a **Cloudflare Origin CA** certificate (same `certs/` filenames as prod; include `*.uat.hideoutbutler.com` on the cert). Copy `deploy/env/.env.uat.example` to `deploy/env/.env.uat`, set real GGG credentials and `GGG_API_REALM=poe2`, then see [DEPLOY.md](DEPLOY.md) §4.6, [GGG_API.md](GGG_API.md) §6.1, and [AGENTS.md](AGENTS.md) §4.3.
 
 ## CI workflow
 
@@ -123,10 +124,11 @@ npm run test:e2e
 
 ## Documentation
 
+- [CHANGELOG.md](CHANGELOG.md) — user-facing behavior and UI changes by date.
 - [AGENTS.md](AGENTS.md) — context for AI agents contributing to the project.
 - [GGG_API.md](GGG_API.md) — GGG OAuth2 setup, scopes, rate-limits.
 - [DEPLOY.md](DEPLOY.md) — build and deploy procedure.
-- [SECURITY.md](SECURITY.md) — cross-cutting security checklist.
+- [TESTS.md](TESTS.md) — local and Docker test commands, `live_ggg` integration tests.
 - [admin/README.md](admin/README.md) — operator console (dashboard, throttles, `ADMIN_DASHBOARD_REFRESH_SEC`).
 - [docs/pricing_estimates.md](docs/pricing_estimates.md) — hybrid pricing, GGG trade2 throttling, env vars, detail-pane job behaviour.
 - [docs/trade_deeplinks.md](docs/trade_deeplinks.md) — official trade2 JSON flow and server-side rate limiting.

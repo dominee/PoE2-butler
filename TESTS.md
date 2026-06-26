@@ -12,10 +12,10 @@ The repository root [Makefile](Makefile) wraps the same commands: `make test` (a
 
 | Area | Technology | What it exercises |
 |------|------------|-------------------|
-| **Backend** | `pytest` + `pytest-asyncio`, Ruff | FastAPI routes (including in-process “stack” tests with the real [mock-ggg](mock-ggg) app, FakeRedis, and SQLite), domain parsing, trade URL / pricing helpers, security/crypto helpers, health and CDN proxy, public shares, item text API, and [`GET /api/activity`](backend/app/api/activity.py). |
-| **Admin** | `pytest`, Ruff | `SessionManager` (bcrypt, session token issue/validate, TOTP gating) in [admin/tests/](admin/tests/). |
-| **mock-ggg** | Ruff | Lint only in CI; no test runner in the mock service itself. |
-| **Frontend** | Vitest + Testing Library, ESLint (CI allows failures), `tsc -b` | Components (items, landing, `CharacterStatSummary`, …), and pure utilities (clipboard, `poecdn`, stash [filters](frontend/src/features/stashes/filters.test.ts)). |
+| **Backend** | `pytest` + `pytest-asyncio`, Ruff | FastAPI routes (including in-process “stack” tests with the real [mock-ggg](mock-ggg) app, FakeRedis, and SQLite), domain parsing (including live GGG-shaped character payloads and `itemSlot` wrappers), trade URL / pricing helpers, security/crypto helpers, health and CDN proxy, public shares, item text API, [`GET /api/activity`](backend/app/api/activity.py) (stash + character gear diffs), leagues fallback from characters, and OAuth idempotency. |
+| **Admin** | `pytest`, Ruff | Auth/session/TOTP, dashboard, Redis job samples, price-queue enrichment in [admin/tests/](admin/tests/). |
+| **mock-ggg** | `pytest`, Ruff | Poe.ninja URL config and event parsing in [mock-ggg/tests/](mock-ggg/tests/). |
+| **Frontend** | Vitest + Testing Library, ESLint (CI allows failures), `tsc -b` | Components (items, landing, `CharacterStatSummary`, `PaperDoll`, …), character gem filtering, and pure utilities (clipboard, `poecdn`, stash [filters](frontend/src/features/stashes/filters.test.ts)). |
 | **E2E** | Playwright | [frontend/e2e/login.spec.ts](frontend/e2e/login.spec.ts): landing → mock OAuth → `/app` with a fixture character. [frontend/e2e/stash-item.spec.ts](frontend/e2e/stash-item.spec.ts): same login, then Stash view, a stash tab, and the item detail pane. |
 
 **Not covered here:** broad UI coverage of every feature; Playwright is intentionally a small browser smoke. Backend tests avoid requiring Docker or a live PostgreSQL/Redis for the default `pytest` run (see [backend/tests/test_auth_flow.py](backend/tests/test_auth_flow.py) fixtures).
@@ -44,6 +44,17 @@ uv run ruff check .
 uv run pytest -ra
 ```
 
+Default backend pytest **excludes** tests marked `live_ggg` (real GGG credentials and network). To run them explicitly after UAT is configured:
+
+```bash
+cd backend
+uv run pytest -m live_ggg -v
+# Optional full token round-trip when GGG_TEST_REFRESH_TOKEN is set:
+GGG_TEST_REFRESH_TOKEN=<token> uv run pytest -m live_ggg -v
+```
+
+See [GGG_API.md](GGG_API.md) §6.1 and `backend/scripts/verify_ggg_oauth.py --probe`.
+
 ### Admin
 
 ```bash
@@ -53,12 +64,13 @@ uv run ruff check .
 uv run pytest -ra
 ```
 
-### mock-ggg (lint only)
+### mock-ggg
 
 ```bash
 cd mock-ggg
 uv sync
 uv run ruff check .
+uv run pytest -ra
 ```
 
 ### Frontend
@@ -84,12 +96,16 @@ If your shell is at the repository root and `uv` / `npm` are on your `PATH`:
 ```bash
 ( cd backend   && uv sync && uv run ruff check . && uv run pytest -ra ) && \
 ( cd admin     && uv sync && uv run ruff check . && uv run pytest -ra ) && \
-( cd mock-ggg  && uv sync && uv run ruff check . ) && \
+( cd mock-ggg  && uv sync && uv run ruff check . && uv run pytest -ra ) && \
 ( cd frontend  && npm install && npm run lint && npx tsc -b && npm test ) && \
 echo "All non-E2E tests passed"
 ```
 
 Run each block separately if you prefer clearer failure output.
+
+### Docker-only full suite (no host `npm` / `uv`)
+
+From the repository root, **`make test-all-docker`** runs backend, admin, mock-ggg, and frontend lint/tests inside containers, then Semgrep, gitleaks, OSV-Scanner, and dependency audits. Use this when you want CI-parity checks without installing Node or Python locally.
 
 ---
 

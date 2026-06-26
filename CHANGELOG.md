@@ -4,6 +4,41 @@ Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. I
 
 ---
 
+## 2026-06-25
+
+### Live GGG OAuth — characters (UAT and production)
+
+- **Granted scopes:** `account:profile` and `account:characters` are live against real GGG in **UAT** and **production**. **Dev** still uses `mock-ggg/`.
+- **PoE2 character API:** the backend calls `GET /character/poe2` (and per-character detail) using `GGG_API_REALM=poe2`. PoE1-style `/account/characters` paths are not used for PoE2.
+- **Still blocked on GGG:** `account:stashes` (no PoE2 stash scope yet) and `account:leagues` (not granted). Stash tabs in UAT/prod remain unavailable until GGG adds a PoE2 stash scope; **league selection is inferred** from your character list (and `GGG_DEFAULT_LEAGUE` when needed). See [GGG_API.md](GGG_API.md).
+- **OAuth callback:** duplicate browser callbacks (same `state`, new `code`) no longer log you out with `invalid_or_expired_state`; the second request reuses the session from the first.
+
+### App · character gear — doll and table views
+
+- The **Characters** pane offers **Doll** and **Table** layout toggles for equipped gear on the selected character.
+- **Doll** shows a paper-doll grid (weapon, armour, rings, belt, etc.); **passive jewels** and filtered **skill gems** appear in sections below the doll.
+- **Table** lists equipped gear plus jewels, gems, and other character items in one sortable grid (slot, name, base type, ilvl, mods).
+- **Live GGG payloads:** equipment rows often expose slot as numeric `itemSlot` on the wrapper; the backend maps these to standard slot ids (`Helm`, `BodyArmour`, …) so armour and accessories classify correctly (wrapper metadata wins over stale inner `itemData.inventoryId` values such as `SkillSlots`).
+
+### App · Runeforged / Runemastered items
+
+- **Runeforged** league items (light blue in-game outline) use a matching **cyan border and glow** on item cards and in the detail pane, detected from GGG `frameTypeId`, a `runeforged` flag, or a `Runeforged` / `Runemastered` name prefix.
+
+### App · league picker without `account:leagues`
+
+- **`GET /api/leagues`** builds the league list from your **characters snapshot** when no leagues snapshot exists, so the header league dropdown works after login even without the leagues OAuth scope.
+- **Refresh** updates `preferred_league` from character data when the stored value is missing or a permanent league placeholder.
+
+### UAT environment
+
+- **UAT** (`docker-compose.uat.yml`) now uses **live GGG OAuth2** — there is **no `mock-ggg` service** in that stack. Copy [deploy/env/.env.uat.example](deploy/env/.env.uat.example) and set real `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET`. Runbook: [GGG_API.md §6.1](GGG_API.md) and [DEPLOY.md §4.6](DEPLOY.md).
+
+### Testing (operators)
+
+- Optional **live GGG integration tests** (`pytest -m live_ggg`) validate UAT credentials and endpoints; they are **excluded from default CI and `make test`** — run explicitly when the UAT stack is up. See [TESTS.md](TESTS.md).
+
+---
+
 ## 2026-05-21
 
 ### App · weighted upgrade search

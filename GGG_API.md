@@ -124,8 +124,8 @@ All calls are authenticated with `Authorization: Bearer <access_token>` and use 
 |---|---|---|
 | `GET` | `/profile` | Current account profile (name, UUID). |
 | `GET` | `/account/leagues` | Leagues the account has played in, with active flags. |
-| `GET` | `/character/poe2` | List of PoE2 characters with league, class, level. |
-| `GET` | `/character/poe2/{name}` | Full PoE2 character data incl. equipped items and inventory. |
+| `GET` | `/character/{realm}` | PoE2 character list (live GGG; `GGG_API_REALM=poe2`, e.g. `/character/poe2`). |
+| `GET` | `/character/{realm}/{name}` | PoE2 character detail with equipped items (`character.equipment`, skills, etc.). |
 | `GET` | `/account/characters` | PoE1 PC realm (mock-ggg uses this shape in dev). |
 | `GET` | `/account/stashes/{league}` | List of stash tabs for a league. |
 | `GET` | `/account/stashes/{league}/{tab_id}` | Contents of a stash tab. |
@@ -194,4 +194,4 @@ Fixture data lives in `mock-ggg/app/fixtures/` as JSON. Toggle between real GGG 
 - Never log `access_token`, `refresh_token`, `code`, or `code_verifier`.
 - Never return tokens to the SPA; all GGG calls stay server-side.
 - Redirect URI check is strict string equality; do not use wildcards.
-- The callback endpoint must reject responses where `state` or `code` is missing or has been consumed already.
+- The callback endpoint must reject responses where `state` or `code` is missing or has been consumed already. **Duplicate callbacks** (same `state`, different `code` — e.g. browser double-submit) reuse the completed session instead of returning `invalid_or_expired_state`.
