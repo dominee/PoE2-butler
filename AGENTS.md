@@ -140,8 +140,8 @@ Browser
 
 | Topic | Details |
 |-------|--------|
-| **Routing** | Traefik uses the **Docker provider** (socket mounted) + static **`dynamic.prod.yml`** (TLS default cert only; **no** `http.routers` in the file). |
-| **App + `/api`** | Same pattern as UAT: the backend service defines router **`app-api`**: `Host(APP_DOMAIN) && PathPrefix(/api)` with **priority 100**; the **frontend** `app` router has **priority 1** so `https://app…/api/...` hits FastAPI and `https://app…/` hits the static SPA. Router **`api`** still exposes **`API_DOMAIN`** to the same backend. |
+| **Routing** | Traefik **file provider** (`dynamic.prod.yml`): **`app.hideoutbutler.com`** split — `PathPrefix(/api)` → backend, else → static SPA (same as UAT/dev). **Docker provider** only for **`API_DOMAIN`** and **`ADMIN_DOMAIN`**. Requires Traefik **v3.6.1+** (repo pins v3.7.1). |
+| **App + `/api`** | **`dynamic.prod.yml`** routers `prod-app-api` (priority 100) and `prod-app-spa` (priority 1). Do **not** rely on Docker labels for app-host `/api` — misrouting serves nginx `index.html` (200) and OAuth login loops. Frontend nginx returns **404** for `/api/` if misrouted (safety net). |
 | **Host ports** | Traefik must publish **`80:80` and `443:443`**. `docker ps` without **`443->443`** usually means the **dev** stack (which maps `8080` for the dashboard) or an outdated prod compose. Cloudflare **Full (strict)** needs TLS on the origin. |
 | **TLS** | **No ACME in-repo.** `dynamic.prod.yml` sets the default TLS store to PEM + key at **`/certs/cloudflare-origin.pem`** and **`/certs/cloudflare-origin.key`**; host path **`deploy/compose/traefik/certs/`** is mounted read-only. Create certs in **Cloudflare → SSL/TLS → Origin Server**. **Docker** routers set **`traefik…tls=true`** (file-based `tls: {}` is not used for these routes). |
 | **Cloudflare** | **Proxied** A records, SSL mode **Full (strict)**. See `DEPLOY.md` §4.3. |
@@ -397,7 +397,7 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 - **Transaction isolation**: `refresh_user_snapshot` runs in a separate `snap_db` session committed before the main auth session is committed — prevents `InFailedSQLTransactionError` on snapshot write errors.
 - **CORS**: `CORS_ALLOW_ORIGINS` must be a JSON array string, e.g. `["http://app.dev.hideoutbutler.com"]`.
 - **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
-- **Traefik dev / UAT**: only the **file** provider for routes (`dynamic.dev.yml` / `dynamic.uat.yml`) — no Docker socket. **UAT** also loads TLS + HTTPS routes from the same `dynamic.uat.yml`. **Prod** Traefik uses the **Docker** provider for routing and **`dynamic.prod.yml` + `certs/`** (Cloudflare Origin CA) for TLS, not Let’s Encrypt. **Prod requires Traefik v3.6.1+** (repo pins v3.7.1): Docker Engine 29+ rejects the Docker API client in Traefik v3.1 (`client version 1.24 is too old`). UAT is unaffected because it does not mount the Docker socket.
+- **Traefik dev / UAT / prod app host**: **file** provider routes for the SPA host (`dynamic.dev.yml` / `dynamic.uat.yml` / **`dynamic.prod.yml`** for `app.hideoutbutler.com`). **Prod** also uses the **Docker** provider for **`api.`** and **`admin.`** hosts only. **Prod requires Traefik v3.6.1+** (repo pins v3.7.1): Docker Engine 29+ rejects the Docker API client in Traefik v3.1 (`client version 1.24 is too old`). UAT is unaffected because it does not mount the Docker socket.
 - **Admin templates**: for dicts passed to Jinja, avoid a key named `keys` (use e.g. `key_count`); `{{ d.keys }}` prints the method object, not a count.
 - **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`.
 - **Frontend CI cache key**: `actions/cache` uses `frontend/package.json` (no root lockfile in repo for npm).

@@ -311,6 +311,28 @@ Production Traefik discovers routes via the **Docker socket** (`docker-compose.p
 
 - **Temporary workaround (not recommended):** pin Docker Engine to **28.5.x** on the host until Traefik is upgraded.
 
+**OAuth login loops (“Sign in with GGG” returns to the same page)**
+
+Symptoms: `GET https://app.hideoutbutler.com/api/auth/login` returns **200** `text/html` (often **from disk cache**) instead of **302** to GGG. Frontend/nginx access logs show `/api/auth/login` with status 200 and ~672 bytes.
+
+Cause: `/api/*` was routed to the **static SPA** (nginx `try_files` → `index.html`). Browsers cache that HTML for the login URL and keep reloading the landing page.
+
+Fix (in repo): **`dynamic.prod.yml`** defines file routes — `PathPrefix(/api)` → `backend:8000`, everything else on `app.hideoutbutler.com` → `frontend:80` (same pattern as UAT/dev). After `git pull`:
+
+```bash
+docker compose -f deploy/compose/docker-compose.prod.yml --env-file deploy/env/.env.prod \
+  up -d --build traefik frontend backend
+```
+
+Verify from your machine (expect **302**, not 200 HTML):
+
+```bash
+curl -sI -H "Host: app.hideoutbutler.com" https://YOUR_VM_IP/api/auth/login | head -5
+# or, with Cloudflare DNS: curl -sI https://app.hideoutbutler.com/api/auth/login | head -5
+```
+
+Users who hit the bad cache may need a hard refresh or to clear site data for `app.hideoutbutler.com` once routing is fixed.
+
 **Switching from UAT to prod on one VM**
 
 1. Stop UAT so **:80/:443** are free and memory is available:
@@ -511,7 +533,7 @@ Redis data is ephemeral (sessions, cache, rate-limit counters). It does not need
 |---|---|---|
 | Dev | `deploy/compose/traefik/traefik.dev.yml` | Static file (`dynamic.dev.yml`, HTTP) |
 | UAT | `deploy/compose/traefik/traefik.uat.yml` + `dynamic.uat.yml` | Static file, HTTPS + origin cert (no Docker socket) |
-| Prod | `deploy/compose/traefik/traefik.prod.yml` + `dynamic.prod.yml` | Docker labels + file TLS (CF Origin CA); **app** + `PathPrefix(/api)` on backend (see `docker-compose.prod.yml`) |
+| Prod | `deploy/compose/traefik/traefik.prod.yml` + `dynamic.prod.yml` | File routes for **app** host (`PathPrefix(/api)` → backend); Docker labels for **api** + **admin** hosts; TLS from file (CF Origin CA) |
 
 Dev uses a static provider to avoid exposing the Docker socket inside the Traefik container.
 

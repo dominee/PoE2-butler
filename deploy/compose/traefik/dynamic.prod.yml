@@ -1,11 +1,41 @@
-# Production: TLS default certificate only. HTTP routes come from the Docker
-# provider (see docker-compose.prod.yml): api / admin / app, plus
-# app + PathPrefix(/api) on the backend so the SPA (relative /api) hits FastAPI
-# on the same host as APP_DOMAIN (align GGG_REDIRECT_URI with that host; see GGG_API.md).
-# Paths are inside the traefik container; host mount is ./certs → /certs
+# Production TLS + app-host HTTP routes (file provider).
+# UAT/dev route PathPrefix(/api) on the app host via static config; prod must do the
+# same — Docker labels alone are fragile (compose interpolation, provider errors) and
+# when /api hits the SPA nginx, try_files serves index.html (200) so OAuth login loops.
+#
+# api.hideoutbutler.com and admin.hideoutbutler.com stay on Docker labels in
+# docker-compose.prod.yml. Only app.hideoutbutler.com split routing lives here.
 tls:
   stores:
     default:
       defaultCertificate:
         certFile: /certs/cloudflare-origin.pem
         keyFile: /certs/cloudflare-origin.key
+
+http:
+  routers:
+    prod-app-api:
+      rule: Host(`app.hideoutbutler.com`) && PathPrefix(`/api`)
+      entryPoints:
+        - websecure
+      service: prod-app-api
+      priority: 100
+      tls: {}
+
+    prod-app-spa:
+      rule: Host(`app.hideoutbutler.com`)
+      entryPoints:
+        - websecure
+      service: prod-app-frontend
+      priority: 1
+      tls: {}
+
+  services:
+    prod-app-api:
+      loadBalancer:
+        servers:
+          - url: http://backend:8000
+    prod-app-frontend:
+      loadBalancer:
+        servers:
+          - url: http://frontend:80
