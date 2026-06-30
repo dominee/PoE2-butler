@@ -8,9 +8,9 @@ from typing import Any
 import pytest
 
 from app.api.activity import _character_league
-from app.domain.snapshot_diff import diff_payloads, item_changed
 from app.db import base as db_base
 from app.db.models import Snapshot, SnapshotKind
+from app.domain.snapshot_diff import diff_payloads, item_changed
 from app.services.snapshot import upsert_snapshot
 from tests.test_auth_flow import _full_login
 

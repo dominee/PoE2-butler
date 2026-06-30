@@ -19,7 +19,6 @@ from app.domain.character import (
     parse_detail,
     parse_summaries,
 )
-from app.domain.snapshot_diff import CharacterSnapshotChangeLine
 from app.security.crypto import TokenCipher
 from app.services.character_snapshot_history import (
     get_character_snapshot_history,

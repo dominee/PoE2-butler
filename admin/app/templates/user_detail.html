@@ -58,10 +58,12 @@
 
   {% if ops_enabled %}
   <div class="toolbar-row" style="margin:1rem 0">
+    <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
     <form method="post" action="/admin/users/{{ user.id }}/refresh" class="inline-form">
       <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
       <button type="submit">Trigger snapshot refresh</button>
     </form>
+    <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
     <form method="post" action="/admin/users/{{ user.id }}/logout" class="inline-form" onsubmit="return confirm('Force logout — destroy all sessions for this user?');">
       <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
       <button type="submit" class="danger">Force logout</button>
@@ -129,6 +131,7 @@
         <td>{{ sh.revoked_at or "—" }}</td>
         <td>
           {% if not sh.revoked_at and ops_enabled %}
+          <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
           <form method="post" action="/admin/users/{{ user.id }}/shares/{{ sh.id }}/revoke" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
             <button type="submit" class="danger small">Revoke</button>

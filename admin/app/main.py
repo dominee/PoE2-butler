@@ -11,8 +11,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from admin.app.auth import AdminSession, AuthError, SessionManager
 from admin.app.audit import audit_action
+from admin.app.auth import AdminSession, AuthError, SessionManager
 from admin.app.backend_client import post_admin_action
 from admin.app.config import AdminSettings, get_admin_settings
 from admin.app.csrf import csrf_cookie_name, issue_csrf_token, verify_csrf_token
@@ -30,7 +30,6 @@ from admin.app.db import (
     recent_snapshots,
 )
 from admin.app.middleware import AdminSecurityHeaders, IPAllowlistMiddleware
-from admin.app.redis_user import user_redis_state
 from admin.app.redis_stats import (
     backend_health,
     clear_inflight_price_estimate_jobs,
@@ -38,6 +37,7 @@ from admin.app.redis_stats import (
     probe_ok,
     top_queued_price_estimate_jobs,
 )
+from admin.app.redis_user import user_redis_state
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _STATIC_DIR = Path(__file__).parent / "static"
@@ -293,7 +293,7 @@ def _register_routes(app: FastAPI) -> None:
         audit_action(
             actor=session.username,
             action="share_revoke",
-            detail=f"share_id={share_id} user_id={user_id} status={status}",
+            detail=f"share_id={share_id} user_id={user_id} status={status} body={body[:200]}",
         )
         notice = "revoke_ok" if status < 300 else "revoke_failed"
         return RedirectResponse(

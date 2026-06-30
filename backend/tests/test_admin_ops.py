@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 import pytest
 from fakeredis.aioredis import FakeRedis
@@ -11,7 +10,6 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app import deps as app_deps
-from app.config import Settings
 from app.db.base import Base
 from app.db.models import ItemShare, User
 from app.main import create_app

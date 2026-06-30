@@ -10,8 +10,8 @@ from fakeredis.aioredis import FakeRedis
 from app.config import Settings
 from app.services.third_party_ratelimit import (
     KEY_PRICE_ESTIMATE_SLOT_PREFIX,
-    parse_retry_after_header,
     await_price_estimate_slot,
+    parse_retry_after_header,
     release_price_estimate_slot,
 )
 

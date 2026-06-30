@@ -40,7 +40,7 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "SIM", "PL", "RUF"]
 # B008: FastAPI idiomatically uses Depends(...) in defaults.
 # PLR2004 / PLR0913: pragmatic; readable code wins over magic-number lint.
-ignore = ["B008", "PLR2004", "PLR0913"]
+ignore = ["B008", "PLR2004", "PLR0913", "PLR0915"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.base import Base
-from app.db.models import Snapshot, SnapshotKind, User
+from app.db.models import SnapshotKind, User
 from app.services.snapshot import delete_character_snapshots, get_latest_snapshot, upsert_snapshot
 
 

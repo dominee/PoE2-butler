@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from admin.app.config import AdminSettings
 from admin.app.csrf import issue_csrf_token, verify_csrf_token
 
 

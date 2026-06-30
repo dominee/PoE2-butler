@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.domain.capabilities import capabilities_from_settings
 
 

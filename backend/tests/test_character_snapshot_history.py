@@ -116,7 +116,9 @@ async def test_character_upsert_update_archives_new_payload_with_changes(
 
     async with db_factory() as session:
         res = await session.execute(
-            select(CharacterSnapshotHistory).where(CharacterSnapshotHistory.character_name == "Hero")
+            select(CharacterSnapshotHistory).where(
+                CharacterSnapshotHistory.character_name == "Hero"
+            )
         )
         rows = list(res.scalars().all())
         assert len(rows) == 1
