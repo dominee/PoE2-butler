@@ -12,6 +12,7 @@ import {
   shareViewPath,
 } from "@/api/hooks";
 import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
+import { useIsItemPriceInflight } from "@/features/pricing/PriceInflightContext";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
 import {
@@ -80,6 +81,7 @@ export function ItemDetailPane({
 
   const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
   const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
+  const priceInflight = useIsItemPriceInflight(isApp ? item?.id : undefined);
   const currencyRatesQ = useCurrencyRates(isApp ? league : null);
   const currencyChaos = currencyRatesToChaosPair(currencyRatesQ.data);
   const tradeTol = localTolerance ?? prefs?.trade_tolerance_pct ?? 10;
@@ -93,13 +95,17 @@ export function ItemDetailPane({
   );
 
   const refinedPricingInProgress =
-    refinedQ.job?.status === "queued" || refinedQ.job?.status === "running";
+    priceInflight ||
+    refinedQ.job?.status === "queued" ||
+    refinedQ.job?.status === "running";
 
   const pricingBusy =
     priceQ.isFetching || currencyRatesQ.isFetching || refinedQ.isLoading || refinedPricingInProgress;
 
   const refreshPricingTitle = refinedPricingInProgress
-    ? "Pricing is already running or queued for this item"
+    ? priceInflight
+      ? "Price update already queued or running for this item"
+      : "Pricing is already running or queued for this item"
     : pricingBusy
       ? "Refreshing…"
       : "Refresh pricing (quick lookup, rates, and refined estimate)";
@@ -197,6 +203,7 @@ export function ItemDetailPane({
   };
 
   const onRefreshPricing = () => {
+    if (priceInflight || refinedPricingInProgress) return;
     void priceQ.refetch();
     void currencyRatesQ.refetch();
     setPricingRerunState((prev) => ({
@@ -255,7 +262,11 @@ export function ItemDetailPane({
           </div>
           {isApp && league && (
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {price ? (
+              {refinedPricingInProgress ? (
+                <span className="inline-flex items-center rounded border border-amber-500/50 bg-amber-950/50 px-1.5 py-0.5 text-[11px] font-medium text-amber-100/95">
+                  {refinedQ.job?.status === "running" ? "Updating price…" : "Price queued…"}
+                </span>
+              ) : price ? (
                 <PriceBadge
                   price={price}
                   threshold={prefs?.valuable_threshold_chaos}
@@ -287,11 +298,19 @@ export function ItemDetailPane({
               </button>
             </div>
           )}
-          {isApp && league && (
+          {isApp && league && refinedPricingInProgress && (
+            <p
+              className="mt-1.5 rounded border border-amber-500/35 bg-amber-950/35 px-2 py-1.5 text-[11px] leading-snug text-amber-100/90"
+              role="status"
+              aria-live="polite"
+            >
+              A hybrid price check is already queued for this item
+              {refinedQ.job?.status === "running" ? " and is running now" : ""}. The refresh
+              button stays disabled until it finishes.
+            </p>
+          )}
+          {isApp && league && !refinedPricingInProgress && (
             <div className="mt-1 space-y-0.5 text-[11px] text-parchment-100/85">
-              {refinedQ.job?.status === "queued" || refinedQ.job?.status === "running" ? (
-                <span>Refined estimate: working…</span>
-              ) : null}
               {refinedQ.job?.status === "failed" && (
                 <span className="text-amber-300/90">Refined estimate unavailable (try again later)</span>
               )}

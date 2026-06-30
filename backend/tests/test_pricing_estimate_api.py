@@ -165,4 +165,45 @@ async def test_apprise_enqueues_stash_backfill(app_stack) -> None:
         mpool.return_value.enqueue_job.assert_called_once()
         args = mpool.return_value.enqueue_job.call_args[0]
         assert args[0] == "backfill_item_price_estimates"
-        assert args[3] is True
+        assert args[3] is False
+
+
+@pytest.mark.asyncio
+async def test_list_inflight_price_jobs(app_stack) -> None:
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = await client.get("/api/me")
+    assert me.status_code == 200
+    user_id = me.json()["id"]
+    league = me.json().get("preferred_league") or "Fate of the Vaal"
+    item_id = "stash-ring-1"
+
+    from app import deps as app_deps
+    from app.services.pricing.estimate_state import (
+        PriceJobState,
+        bind_job_dedup,
+        save_job_state,
+    )
+
+    job_id = "22222222-2222-2222-2222-222222222222"
+    redis = app_deps._redis_singleton()
+    await save_job_state(
+        redis,
+        job_id,
+        PriceJobState(
+            user_id=user_id,
+            item_id=item_id,
+            item_name="Gold Ring",
+            league=league,
+            status="queued",
+            message="queued (1/3)",
+        ),
+    )
+    await bind_job_dedup(redis, user_id, item_id, league, job_id)
+
+    resp = await client.get(f"/api/pricing/inflight?league={quote(league)}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["league"] == league
+    ids = {row["item_id"] for row in body["items"]}
+    assert item_id in ids

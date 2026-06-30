@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
@@ -20,6 +21,7 @@ from app.services.pricing.estimate_persist import load_persisted_estimate
 from app.services.pricing.estimate_state import (
     PriceJobState,
     get_or_set_dedup,
+    list_inflight_price_jobs_for_user,
     load_job_state,
     load_redis_inflight_estimate_for_item,
     save_job_state,
@@ -186,6 +188,42 @@ class AppriseQueued(BaseModel):
     league: str
 
 
+class InflightPriceJobItem(BaseModel):
+    item_id: str
+    status: Literal["queued", "running"]
+    item_name: str = ""
+    message: str = ""
+
+
+class InflightPriceJobsResponse(BaseModel):
+    league: str
+    items: list[InflightPriceJobItem]
+
+
+@router.get("/inflight", summary="Queued/running hybrid price jobs for the current user")
+async def list_inflight_price_jobs(
+    user: User = Depends(get_current_user),
+    redis=Depends(get_redis),
+    league: str = Query(..., min_length=1),
+) -> InflightPriceJobsResponse:
+    jobs = await list_inflight_price_jobs_for_user(
+        redis, user_id=str(user.id), league=league.strip()
+    )
+    return InflightPriceJobsResponse(
+        league=league.strip(),
+        items=[
+            InflightPriceJobItem(
+                item_id=st.item_id,
+                status=st.status,  # type: ignore[arg-type]
+                item_name=st.item_name,
+                message=st.message,
+            )
+            for st in jobs
+            if st.item_id
+        ],
+    )
+
+
 @router.post(
     "/apprise",
     summary="Queue stash hybrid price estimates (missing DB rows first; capped)",
@@ -198,13 +236,13 @@ async def apprise_stash_prices(
         description="League id; defaults to the signed-in user's preferred league.",
     ),
 ) -> AppriseQueued:
-    """Enqueue ``backfill_item_price_estimates`` for **stash tabs only** in ``league``."""
+    """Enqueue ``backfill_item_price_estimates`` for stash tabs and character gear in ``league``."""
     lg = (league or user.preferred_league or "").strip()
     if not lg:
         raise HTTPException(status_code=400, detail="league_required")
     try:
         pool = await get_arq_pool()
-        await pool.enqueue_job("backfill_item_price_estimates", str(user.id), lg, True)
+        await pool.enqueue_job("backfill_item_price_estimates", str(user.id), lg, False)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail="queue_unavailable") from exc
     return AppriseQueued(league=lg)

@@ -181,6 +181,18 @@ export interface AppriseQueued {
   league: string;
 }
 
+export interface InflightPriceJobItem {
+  item_id: string;
+  status: "queued" | "running";
+  item_name: string;
+  message: string;
+}
+
+export interface InflightPriceJobsResponse {
+  league: string;
+  items: InflightPriceJobItem[];
+}
+
 export interface TradeSearchResponse {
   mode: "exact" | "upgrade" | "weighted_upgrade";
   league: string;

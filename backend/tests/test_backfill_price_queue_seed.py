@@ -11,7 +11,7 @@ import pytest
 from fakeredis.aioredis import FakeRedis
 
 from app.config import Settings
-from app.services.pricing.estimate_state import PriceJobState, save_job_state
+from app.services.pricing.estimate_state import PriceJobState, dedup_key, save_job_state
 
 
 @pytest.mark.asyncio
@@ -92,6 +92,8 @@ async def test_backfill_seeds_all_jobs_queued_before_first_hybrid_starts(
                 statuses.append(json.loads(raw)["status"])
         if not saw_first_hybrid:
             assert statuses == ["queued", "queued", "queued"], statuses
+            for iid in ("id1", "id2", "id3"):
+                assert await fake_redis.get(dedup_key(str(uid), iid, "TestLeague"))
             saw_first_hybrid = True
         st = PriceJobState(
             user_id=user_id,

@@ -70,6 +70,22 @@ describe("PaperDoll", () => {
     expect(screen.getByText("Main hand")).toBeInTheDocument();
     expect(screen.queryByText("Weapon swap")).not.toBeInTheDocument();
   });
+
+  it("stacks main hand and weapon swap in the left column", () => {
+    render(
+      <PaperDoll
+        equipped={[
+          gearItem("Weapon", "Spine Bow"),
+          gearItem("Weapon2", "Iron Staff"),
+          gearItem("Helm", "Iron Hat"),
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /item spine bow/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /item iron staff/i })).toBeInTheDocument();
+    expect(screen.queryByText("Weapon swap")).not.toBeInTheDocument();
+  });
 });
 
 describe("collectPaperDollItems", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -11,6 +11,8 @@ import type {
   CharactersResponse,
   CreateShareResponse,
   CurrencyRatesResponse,
+  InflightPriceJobItem,
+  InflightPriceJobsResponse,
   Item,
   LeaguesResponse,
   Me,
@@ -145,6 +147,23 @@ export function useApprise() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["persisted-price-estimate"] });
       qc.invalidateQueries({ queryKey: ["prices"] });
+      qc.invalidateQueries({ queryKey: ["price-inflight"] });
+    },
+  });
+}
+
+/** Queued/running hybrid price jobs for the signed-in user (Apprise batch + manual). */
+export function useInflightPriceEstimates(league: string | null) {
+  return useQuery<InflightPriceJobsResponse>({
+    queryKey: ["price-inflight", league],
+    queryFn: () =>
+      api.get<InflightPriceJobsResponse>(
+        `/api/pricing/inflight?league=${encodeURIComponent(league ?? "")}`,
+      ),
+    enabled: Boolean(league),
+    refetchInterval: (q) => {
+      const n = q.state.data?.items.length ?? 0;
+      return n > 0 ? 2000 : 8000;
     },
   });
 }
@@ -271,6 +290,20 @@ export function useActivity(league: string | null) {
   });
 }
 
+function inflightRowToJob(row: InflightPriceJobItem, league: string): PriceJobState {
+  return {
+    status: row.status,
+    step: "",
+    message: row.message,
+    result: null,
+    error: null,
+    user_id: "",
+    item_id: row.item_id,
+    item_name: row.item_name,
+    league,
+  };
+}
+
 /**
  * Loads the last persisted hybrid estimate (Postgres); 204 when none / tolerance mismatch.
  */
@@ -279,6 +312,7 @@ export function usePersistedPriceEstimate(
   item: Item | null,
   tolerancePct: number,
   enabled: boolean,
+  pollWhileInflight = false,
 ) {
   return useQuery<PriceJobState | null>({
     queryKey: ["persisted-price-estimate", league, item?.id, tolerancePct] as const,
@@ -296,7 +330,10 @@ export function usePersistedPriceEstimate(
     refetchOnMount: "always",
     refetchInterval: (q) => {
       const d = q.state.data;
-      if (d && (d.status === "queued" || d.status === "running")) {
+      if (
+        pollWhileInflight ||
+        (d && (d.status === "queued" || d.status === "running"))
+      ) {
         return 1000;
       }
       return false;
@@ -320,7 +357,23 @@ export function useRefinedPriceEstimate(
 ) {
   void autoStart;
   const qc = useQueryClient();
-  const persistedQ = usePersistedPriceEstimate(league, item, tolerancePct, enabled && rerunKey < 1);
+  const inflightQ = useInflightPriceEstimates(enabled ? league : null);
+  const inflightMatch = useMemo(
+    () =>
+      item?.id
+        ? (inflightQ.data?.items.find((row) => row.item_id === item.id) ?? null)
+        : null,
+    [inflightQ.data?.items, item?.id],
+  );
+  const inflightJob =
+    inflightMatch && league ? inflightRowToJob(inflightMatch, league) : null;
+  const persistedQ = usePersistedPriceEstimate(
+    league,
+    item,
+    tolerancePct,
+    enabled && rerunKey < 1,
+    Boolean(inflightMatch),
+  );
   const sessionKey = league && item ? `${league}::${item.id}` : "";
   const runKey = `${sessionKey}::${rerunKey}`;
   const [jobId, setJobId] = useState<string | null>(null);
@@ -377,8 +430,18 @@ export function useRefinedPriceEstimate(
     }
   }, [jobQ.data?.status, qc, league, item?.id, tolerancePct]);
 
-  const mergedJob: PriceJobState | null =
-    rerunKey >= 1 ? (jobQ.data ?? null) : (persistedQ.data ?? null);
+  const mergedJob: PriceJobState | null = (() => {
+    const live = rerunKey >= 1 ? (jobQ.data ?? null) : null;
+    const persisted = persistedQ.data ?? null;
+    if (live && (live.status === "completed" || live.status === "failed")) {
+      return live;
+    }
+    if (live) return live;
+    if (persisted && (persisted.status === "completed" || persisted.status === "failed")) {
+      return persisted;
+    }
+    return persisted ?? inflightJob ?? null;
+  })();
 
   const waitingLiveJob =
     rerunKey >= 1 &&

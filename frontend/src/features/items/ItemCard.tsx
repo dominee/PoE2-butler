@@ -1,5 +1,6 @@
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
 
+import { useIsItemPriceInflight } from "@/features/pricing/PriceInflightContext";
 import { PriceBadge } from "./PriceBadge";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
 import { ModText } from "./ItemModPresentation";
@@ -54,6 +55,7 @@ export function ItemCard({
   className,
 }: ItemCardProps) {
   const runeforged = isRuneforgedItem(item);
+  const priceInflight = useIsItemPriceInflight(item.id);
   const rarityClass = runeforged
     ? runeforgedBorderClass
     : (RARITY_CLASSNAME[item.rarity] ?? RARITY_CLASSNAME.Normal);
@@ -86,6 +88,14 @@ export function ItemCard({
           className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ${ACTIVITY_DOT[activityStatus]}`}
           title={activityStatus === "new" ? "New item" : "Changed item"}
         />
+      )}
+      {priceInflight && (
+        <span
+          className="absolute left-1.5 top-1.5 rounded border border-amber-500/40 bg-amber-500/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-200/95"
+          title="Hybrid price estimate queued or running"
+        >
+          Updating
+        </span>
       )}
       <div className="flex items-start justify-between gap-2">
         {/* Icon thumbnail */}

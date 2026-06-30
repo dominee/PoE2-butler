@@ -79,6 +79,62 @@ async def load_redis_inflight_estimate_for_item(
     return st
 
 
+async def bind_job_dedup(
+    redis,
+    user_id: str,
+    item_id: str,
+    league: str,
+    job_id: str,
+    *,
+    ttl_sec: int = 3600,
+) -> None:
+    """Point the item dedup slot at *job_id* (backfill batch or manual enqueue)."""
+    await redis.set(dedup_key(user_id, item_id, league), job_id, ex=ttl_sec)
+
+
+async def list_inflight_price_jobs_for_user(
+    redis,
+    *,
+    user_id: str,
+    league: str,
+    max_scan: int = 4000,
+) -> list[PriceJobState]:
+    """Return queued/running hybrid jobs for *user_id* in *league* (via dedup slots)."""
+    league = league.strip()
+    if not league:
+        return []
+    pattern = f"poe2b:price_dedup:{user_id}:{league}:*"
+    out: list[PriceJobState] = []
+    scanned = 0
+    cursor = 0
+    while True:
+        cursor, keys = await redis.scan(cursor=cursor, match=pattern, count=200)
+        for k in keys:
+            scanned += 1
+            if scanned > max_scan:
+                break
+            raw_job = await redis.get(k)
+            if not raw_job:
+                continue
+            job_id = (
+                raw_job.decode().strip()
+                if isinstance(raw_job, bytes)
+                else str(raw_job).strip()
+            )
+            if not job_id:
+                continue
+            st = await load_job_state(redis, job_id)
+            if st is None:
+                continue
+            if st.status not in ("queued", "running"):
+                continue
+            out.append(st)
+        if scanned > max_scan or cursor == 0:
+            break
+    out.sort(key=lambda s: s.updated_at or "", reverse=True)
+    return out
+
+
 async def get_or_set_dedup(redis, user_id: str, item_id: str, league: str, new_job_id: str) -> str:
     """Return an existing in-flight *job_id* (NX miss), or reserve *new_job_id* and return it."""
     k = dedup_key(user_id, item_id, league)

@@ -44,7 +44,7 @@ from app.services.pricing.estimate_engine import (
     run_hybrid_price_estimate,
 )
 from app.services.pricing.estimate_persist import upsert_price_job_state
-from app.services.pricing.estimate_state import PriceJobState, save_job_state
+from app.services.pricing.estimate_state import PriceJobState, bind_job_dedup, save_job_state
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.static import StaticPriceSource
@@ -285,6 +285,7 @@ async def backfill_item_price_estimates(
                     message=f"queued ({idx + 1}/{n_batch})",
                 )
                 await save_job_state(redis, job_id, q)
+                await bind_job_dedup(redis, str(user_id), iid, league, job_id)
 
             for iid, _raw, job_id, item in todo:
                 await throttle(redis, KEY_POE_NINJA)

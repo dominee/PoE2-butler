@@ -10,6 +10,7 @@ import {
   usePrefs,
   useRefresh,
 } from "@/api/hooks";
+import { ApiError } from "@/api/client";
 import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
 import { AppFooter } from "@/features/app/AppFooter";
@@ -22,6 +23,7 @@ import { CharacterTable } from "@/features/characters/CharacterTable";
 import { filterNotableCharacterGems, isNotableCharacterGem } from "@/features/characters/characterGemFilter";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
+import { PriceInflightProvider } from "@/features/pricing/PriceInflightContext";
 import { ItemCard } from "@/features/items/ItemCard";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
 import { StashBrowser } from "@/features/stashes/StashBrowser";
@@ -44,6 +46,7 @@ export function AppShell() {
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [charLayout, setCharLayout] = useState<"doll" | "table">("doll");
+  const [appriseNotice, setAppriseNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedLeague) {
@@ -169,6 +172,7 @@ export function AppShell() {
   }
 
   return (
+    <PriceInflightProvider league={selectedLeague}>
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-ink-950 bg-ink-950/70 px-4 py-2 backdrop-blur">
         <h1 className="font-display text-lg text-ember-400">Hideout Butler</h1>
@@ -218,17 +222,45 @@ export function AppShell() {
           <button
             type="button"
             className="btn-ghost inline-flex items-center gap-1.5 text-sm"
-            title="Queue hybrid price checks for stash items (no estimate first; capped)"
-            aria-label="Apprise: queue stash price checks"
+            title="Queue hybrid price checks for stash and character gear (missing estimates first; capped)"
+            aria-label="Apprise: queue price checks"
             onClick={() => {
               if (!selectedLeague) return;
-              apprise.mutate({ league: selectedLeague });
+              setAppriseNotice(null);
+              apprise.mutate(
+                { league: selectedLeague },
+                {
+                  onSuccess: (data) => {
+                    setAppriseNotice(`Queued price checks for ${data.league}`);
+                    window.setTimeout(() => setAppriseNotice(null), 5000);
+                  },
+                  onError: (err) => {
+                    const detail =
+                      err instanceof ApiError &&
+                      err.body &&
+                      typeof err.body === "object" &&
+                      "detail" in err.body
+                        ? String((err.body as { detail: unknown }).detail)
+                        : err.message;
+                    setAppriseNotice(`Apprise failed: ${detail}`);
+                  },
+                },
+              );
             }}
             disabled={!selectedLeague || apprise.isPending}
           >
             <HeaderAppriseIcon className="h-4 w-4 shrink-0 opacity-90" />
             {apprise.isPending ? "Apprising\u2026" : "Apprise"}
           </button>
+          {appriseNotice && (
+            <span
+              className="max-w-[14rem] truncate text-[11px] text-parchment-200/85"
+              role="status"
+              aria-live="polite"
+            >
+              {appriseNotice}
+            </span>
+          )}
           <button type="button" className="btn-ghost text-sm" onClick={() => logout.mutate()}>
             Logout
           </button>
@@ -423,6 +455,7 @@ export function AppShell() {
       )}
       <AppFooter className="border-t border-ink-800 bg-ink-900/60 py-2" />
     </div>
+    </PriceInflightProvider>
   );
 }
 
