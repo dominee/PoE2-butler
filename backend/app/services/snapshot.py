@@ -27,7 +27,7 @@ from app.domain.league import (
 )
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
-from app.services.character_snapshot_history import archive_character_snapshot
+from app.services.character_snapshot_history import archive_character_snapshot_if_changed
 from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_access
 
 log = get_logger("app.services.snapshot")
@@ -59,6 +59,7 @@ async def upsert_snapshot(
     kind: SnapshotKind,
     key: str,
     payload: dict,
+    previous_payload: dict | None = None,
 ) -> None:
     """Insert or update a snapshot identified by (user_id, kind, key).
 
@@ -68,6 +69,21 @@ async def upsert_snapshot(
     """
     existing = await get_latest_snapshot(session, user_id, kind, key)
     now = _utc_now()
+    if kind == SnapshotKind.CHARACTER:
+        old_payload = (
+            previous_payload
+            if previous_payload is not None
+            else (existing.payload if existing is not None else None)
+        )
+        if old_payload is not None:
+            await archive_character_snapshot_if_changed(
+                session,
+                user_id=user_id,
+                character_name=key,
+                old_payload=old_payload,
+                new_payload=payload,
+                fetched_at=now,
+            )
     if existing is None:
         # Baseline copy so GET /api/activity can treat the tab as tracked immediately;
         # the first refresh then shifts payload → prev_payload and surfaces real diffs.
@@ -82,14 +98,6 @@ async def upsert_snapshot(
             )
         )
     else:
-        if kind == SnapshotKind.CHARACTER:
-            await archive_character_snapshot(
-                session,
-                user_id=user_id,
-                character_name=key,
-                payload=existing.payload,
-                fetched_at=_as_utc(existing.fetched_at),
-            )
         # Preserve current payload as previous before overwriting — this is the
         # basis for the activity log diff on the next refresh.
         existing.prev_payload = existing.payload
@@ -110,27 +118,23 @@ async def get_latest_snapshot(
     return res.scalar_one_or_none()
 
 
-async def delete_character_snapshots(session: AsyncSession, user_id: uuid.UUID) -> None:
-    """Remove cached per-character payloads so the next read refetches from GGG (or mock)."""
+async def delete_character_snapshots(
+    session: AsyncSession, user_id: uuid.UUID
+) -> dict[str, dict]:
+    """Remove cached per-character payloads; return previous payloads keyed by name."""
     stmt = select(Snapshot).where(
         Snapshot.user_id == user_id,
         Snapshot.kind == SnapshotKind.CHARACTER,
     )
     res = await session.execute(stmt)
-    for snap in res.scalars().all():
-        await archive_character_snapshot(
-            session,
-            user_id=user_id,
-            character_name=snap.key,
-            payload=snap.payload,
-            fetched_at=_as_utc(snap.fetched_at),
-        )
+    captured = {snap.key: snap.payload for snap in res.scalars().all()}
     await session.execute(
         delete(Snapshot).where(
             Snapshot.user_id == user_id,
             Snapshot.kind == SnapshotKind.CHARACTER,
         )
     )
+    return captured
 
 
 async def refresh_character_gear_snapshots(
@@ -140,6 +144,7 @@ async def refresh_character_gear_snapshots(
     ggg: GGGClient,
     cipher: TokenCipher,
     league: str,
+    previous_payloads: dict[str, dict] | None = None,
 ) -> None:
     """Re-fetch and persist CHARACTER rows for every account toon in ``league``.
 
@@ -160,7 +165,12 @@ async def refresh_character_gear_snapshots(
             continue
         try:
             await ensure_character_detail(
-                session=session, user=user, ggg=ggg, cipher=cipher, name=name
+                session=session,
+                user=user,
+                ggg=ggg,
+                cipher=cipher,
+                name=name,
+                previous_payload=(previous_payloads or {}).get(name),
             )
         except Exception as exc:  # noqa: BLE001
             log.warning(
@@ -333,6 +343,7 @@ async def ensure_character_detail(
     ggg: GGGClient,
     cipher: TokenCipher,
     name: str,
+    previous_payload: dict | None = None,
 ) -> dict:
     """Fetch character detail on demand and cache it in snapshots."""
     existing = await get_latest_snapshot(session, user.id, SnapshotKind.CHARACTER, key=name)
@@ -352,6 +363,11 @@ async def ensure_character_detail(
         else:
             raise
     await upsert_snapshot(
-        session, user_id=user.id, kind=SnapshotKind.CHARACTER, key=name, payload=payload
+        session,
+        user_id=user.id,
+        kind=SnapshotKind.CHARACTER,
+        key=name,
+        payload=payload,
+        previous_payload=previous_payload,
     )
     return payload

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ from app.domain.character import (
     parse_detail,
     parse_summaries,
 )
+from app.domain.snapshot_diff import CharacterSnapshotChangeLine
 from app.security.crypto import TokenCipher
 from app.services.character_snapshot_history import (
     get_character_snapshot_history,
@@ -33,10 +35,16 @@ class CharactersResponse(BaseModel):
     characters: list[CharacterSummary]
 
 
+class CharacterSnapshotChange(BaseModel):
+    kind: Literal["new", "changed", "removed"]
+    label: str
+
+
 class CharacterSnapshotMeta(BaseModel):
     id: int | None
     fetched_at: datetime
     is_current: bool
+    changes: list[CharacterSnapshotChange]
 
 
 class CharacterSnapshotsResponse(BaseModel):
@@ -73,6 +81,9 @@ async def list_character_snapshot_timeline(
                 id=m.id,
                 fetched_at=m.fetched_at,
                 is_current=m.is_current,
+                changes=[
+                    CharacterSnapshotChange(kind=c.kind, label=c.label) for c in m.changes
+                ],
             )
             for m in meta
         ],

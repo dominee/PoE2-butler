@@ -9,7 +9,7 @@ import pytest
 
 from app.db import base as db_base
 from app.db.models import Snapshot, SnapshotKind
-from app.services.character_snapshot_history import archive_character_snapshot
+from app.services.character_snapshot_history import archive_character_snapshot_if_changed
 from tests.test_auth_flow import _full_login
 
 
@@ -37,7 +37,7 @@ async def test_character_snapshots_requires_auth(app_stack) -> None:  # type: ig
 
 
 @pytest.mark.asyncio
-async def test_character_snapshots_list_order_and_current(app_stack) -> None:  # type: ignore[no-untyped-def]
+async def test_character_snapshots_list_includes_changes(app_stack) -> None:  # type: ignore[no-untyped-def]
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)
     me = (await client.get("/api/me")).json()
@@ -46,11 +46,12 @@ async def test_character_snapshots_list_order_and_current(app_stack) -> None:  #
     t1 = datetime(2026, 6, 3, 12, 0, tzinfo=UTC)
     fac = db_base._session_factory()
     async with fac() as session:
-        await archive_character_snapshot(
+        await archive_character_snapshot_if_changed(
             session,
             user_id=user_id,
             character_name="Hero",
-            payload=_char_payload("Hero", life="+10 life"),
+            old_payload=_char_payload("Hero", life="+10 life"),
+            new_payload=_char_payload("Hero", life="+30 life"),
             fetched_at=t0,
         )
         session.add(
@@ -68,10 +69,11 @@ async def test_character_snapshots_list_order_and_current(app_stack) -> None:  #
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["character_name"] == "Hero"
-    assert len(body["snapshots"]) == 2
-    assert body["snapshots"][0]["is_current"] is False
-    assert body["snapshots"][1]["is_current"] is True
-    assert body["snapshots"][1]["id"] is None
+    assert len(body["snapshots"]) == 1
+    snap = body["snapshots"][0]
+    assert snap["is_current"] is True
+    assert snap["changes"] == [{"kind": "changed", "label": "Test Chest"}]
+    assert "2026-06-01" in snap["fetched_at"]
 
 
 @pytest.mark.asyncio
@@ -82,11 +84,12 @@ async def test_historic_character_detail(app_stack) -> None:  # type: ignore[no-
     user_id = uuid.UUID(me["id"])
     fac = db_base._session_factory()
     async with fac() as session:
-        await archive_character_snapshot(
+        await archive_character_snapshot_if_changed(
             session,
             user_id=user_id,
             character_name="Hero",
-            payload=_char_payload("Hero", life="+55 life"),
+            old_payload=_char_payload("Hero", life="+10 life"),
+            new_payload=_char_payload("Hero", life="+55 life"),
             fetched_at=datetime(2026, 6, 1, tzinfo=UTC),
         )
         await session.commit()
@@ -122,11 +125,12 @@ async def test_historic_character_wrong_character_name(app_stack) -> None:  # ty
     user_id = uuid.UUID(me["id"])
     fac = db_base._session_factory()
     async with fac() as session:
-        await archive_character_snapshot(
+        await archive_character_snapshot_if_changed(
             session,
             user_id=user_id,
             character_name="Hero",
-            payload=_char_payload("Hero"),
+            old_payload=_char_payload("Hero", life="+1 life"),
+            new_payload=_char_payload("Hero", life="+2 life"),
             fetched_at=datetime.now(UTC),
         )
         await session.commit()

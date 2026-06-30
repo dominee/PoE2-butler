@@ -12,34 +12,46 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db.models import CharacterSnapshotHistory, Snapshot, SnapshotKind
+from app.domain.snapshot_diff import (
+    CharacterSnapshotChangeLine,
+    character_gear_changed,
+    summarize_character_changes,
+)
 
 
 @dataclass(frozen=True)
 class CharacterSnapshotMeta:
     id: int | None
     fetched_at: datetime
+    changes: list[CharacterSnapshotChangeLine]
     is_current: bool
 
 
-async def archive_character_snapshot(
+async def archive_character_snapshot_if_changed(
     session: AsyncSession,
     *,
     user_id: uuid.UUID,
     character_name: str,
-    payload: dict,
+    old_payload: dict,
+    new_payload: dict,
     fetched_at: datetime,
-) -> None:
-    """Persist a past CHARACTER payload and prune to the configured retention cap."""
+) -> bool:
+    """Persist gear state after a detected change; return True when archived."""
+    if not character_gear_changed(old_payload, new_payload):
+        return False
+    changes = summarize_character_changes(old_payload, new_payload)
     session.add(
         CharacterSnapshotHistory(
             user_id=user_id,
             character_name=character_name,
-            payload=copy.deepcopy(payload),
+            payload=copy.deepcopy(new_payload),
             fetched_at=fetched_at,
+            changes=[c.model_dump() for c in changes],
         )
     )
     await session.flush()
     await _prune_character_history(session, user_id=user_id, character_name=character_name)
+    return True
 
 
 async def _prune_character_history(
@@ -65,13 +77,23 @@ async def _prune_character_history(
     )
 
 
+def _parse_changes(raw: list | None) -> list[CharacterSnapshotChangeLine]:
+    if not raw:
+        return []
+    out: list[CharacterSnapshotChangeLine] = []
+    for entry in raw:
+        if isinstance(entry, dict):
+            out.append(CharacterSnapshotChangeLine.model_validate(entry))
+    return out
+
+
 async def list_character_snapshots(
     session: AsyncSession,
     *,
     user_id: uuid.UUID,
     character_name: str,
 ) -> list[CharacterSnapshotMeta]:
-    """Return timeline metadata oldest → newest, with the live snapshot last when present."""
+    """Return timeline oldest → newest; always includes live gear when cached."""
     hist_stmt = (
         select(CharacterSnapshotHistory)
         .where(CharacterSnapshotHistory.user_id == user_id)
@@ -81,11 +103,6 @@ async def list_character_snapshots(
     hist_res = await session.execute(hist_stmt)
     history_rows = list(hist_res.scalars().all())
 
-    out: list[CharacterSnapshotMeta] = [
-        CharacterSnapshotMeta(id=row.id, fetched_at=row.fetched_at, is_current=False)
-        for row in history_rows
-    ]
-
     current_stmt = (
         select(Snapshot)
         .where(Snapshot.user_id == user_id)
@@ -94,11 +111,31 @@ async def list_character_snapshots(
     )
     current_res = await session.execute(current_stmt)
     current = current_res.scalar_one_or_none()
-    if current is not None:
+
+    out: list[CharacterSnapshotMeta] = []
+    for i, row in enumerate(history_rows):
+        is_last = i == len(history_rows) - 1
+        is_current = (
+            is_last
+            and current is not None
+            and not character_gear_changed(row.payload, current.payload)
+        )
+        out.append(
+            CharacterSnapshotMeta(
+                id=row.id,
+                fetched_at=row.fetched_at,
+                changes=_parse_changes(row.changes),
+                is_current=is_current,
+            )
+        )
+
+    has_current_marker = bool(out) and out[-1].is_current
+    if current is not None and not has_current_marker:
         out.append(
             CharacterSnapshotMeta(
                 id=None,
                 fetched_at=current.fetched_at,
+                changes=[],
                 is_current=True,
             )
         )

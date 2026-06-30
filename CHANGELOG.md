@@ -8,7 +8,8 @@ Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. I
 
 ### App · character gear snapshot timeline
 
-- A **horizontal dot timeline** above the stat summary on the character view lists up to **20** past gear snapshots per character (plus the current live snapshot).
+- A **horizontal dot timeline** above the stat summary lists gear **change events** (up to **20** per character): dots appear only when items are added, removed, or modified — unchanged refreshes are not stored or shown.
+- Each dot shows the **date and time** of the change plus a short **diff list** (+ new, ~ changed, − removed).
 - Click a dot to browse **historic equipped gear**, stat summary, doll/table layouts, and item detail (including share links from that point in time).
 - An amber banner marks historic view with **Back to current**; manual **Refresh** archives the previous snapshot before fetching new data.
 

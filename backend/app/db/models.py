@@ -136,6 +136,7 @@ class CharacterSnapshotHistory(Base):
     character_name: Mapped[str] = mapped_column(String(200))
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    changes: Mapped[list] = mapped_column(JSONType, default=list)
 
 
 class ItemShare(Base):

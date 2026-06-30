@@ -7,7 +7,8 @@ from typing import Any
 
 import pytest
 
-from app.api.activity import _character_league, _diff_tab, _item_changed
+from app.api.activity import _character_league
+from app.domain.snapshot_diff import diff_payloads, item_changed
 from app.db import base as db_base
 from app.db.models import Snapshot, SnapshotKind
 from app.services.snapshot import upsert_snapshot
@@ -41,9 +42,9 @@ def _tab_payload(
 def test_item_changed_detects_explicit_mod() -> None:
     a = {**_MIN, "id": "x", "name": "A", "explicitMods": ["+1 to life"]}
     b = {**_MIN, "id": "x", "name": "A", "explicitMods": ["+2 to life"]}
-    assert _item_changed(a, b) is True
+    assert item_changed(a, b) is True
     c = {**_MIN, "id": "x", "name": "A", "explicitMods": ["+1 to life"]}
-    assert _item_changed(a, c) is False
+    assert item_changed(a, c) is False
 
 
 def test_diff_tab_new_changed_removed() -> None:
@@ -61,7 +62,7 @@ def test_diff_tab_new_changed_removed() -> None:
             _raw_item("add", "N", "+1 to life"),
         ],
     )
-    new_i, chg, rem = _diff_tab(prev, new)
+    new_i, chg, rem = diff_payloads(prev, new)
     assert [x.id for x in new_i] == ["add"]
     assert [c.old.id for c in chg] == [c.new.id for c in chg] == ["keep"]
     assert [x.id for x in rem] == ["gone"]

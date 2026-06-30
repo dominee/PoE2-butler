@@ -195,6 +195,8 @@ async def price_cache_summary() -> dict:
 # Throttle "next" keys for third_party_ratelimit (vendor + ":next") and GGG global trade lock.
 _THROTTLE_TOKENS: tuple[tuple[str, str], ...] = (
     ("ggg_trade2_lock", "tp3:ggg_trade:lock"),
+    ("price_estimate_slot_0", "tp3:price_estimate:slot:0"),
+    ("price_estimate_slot_1", "tp3:price_estimate:slot:1"),
     ("poe_ninja", "tp3:poe_ninja:next"),
     ("ggg_trade_data", "tp3:ggg_trade_data:next"),
     ("ggg_trade_fetch", "tp3:ggg_trade_fetch:next"),

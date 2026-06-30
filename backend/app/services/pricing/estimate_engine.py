@@ -11,6 +11,10 @@ from app.services.pricing.poe2_scout import Poe2ScoutSource
 from app.services.pricing.poe_ninja import PoeNinjaSource
 from app.services.pricing.service import PricingService
 from app.services.pricing.source import PriceEstimate, PriceUnit
+from app.services.third_party_ratelimit import (
+    await_price_estimate_slot,
+    release_price_estimate_slot,
+)
 from app.services.trade_listings import (
     sample_median_listing_chaos,
     trade_currency_chaos_fallback,
@@ -79,48 +83,88 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
     if not league.strip() or not job_id:
         return None
 
-    st = PriceJobState(
+    waiting = PriceJobState(
         user_id=user_id,
         item_id=str(item.id),
         item_name=_item_display_name(item),
         league=league,
-        status="running",
-        message="starting",
+        status="queued",
+        message="Waiting for price estimate slot",
     )
-    await save_job_state(redis, job_id, st)
-    key = match_item(item)
-    st.status = "running"
-    st.step = "aggregators"
-    st.message = "Checking economy sources"
-    await save_job_state(redis, job_id, st)
+    await save_job_state(redis, job_id, waiting)
 
-    ag = await price_svc.price_for(league, item)
-    if ag is not None and key.category not in ("rare", "magic"):
-        st.status = "completed"
-        st.result = _enrich_aggregator(ag, "aggregator")
-        st.message = st.result.source
+    slot_token = await await_price_estimate_slot(redis, settings)
+    try:
+        st = PriceJobState(
+            user_id=user_id,
+            item_id=str(item.id),
+            item_name=_item_display_name(item),
+            league=league,
+            status="running",
+            message="starting",
+        )
         await save_job_state(redis, job_id, st)
-        return st.result
+        key = match_item(item)
+        st.status = "running"
+        st.step = "aggregators"
+        st.message = "Checking economy sources"
+        await save_job_state(redis, job_id, st)
 
-    scout: Poe2ScoutSource | None = None
-    if settings.pricing_scout_base_url:
-        scout = Poe2ScoutSource(settings.pricing_scout_base_url)
-        s_est = await scout.lookup(league, key)
-        await scout.aclose()
-        if s_est is not None:
+        ag = await price_svc.price_for(league, item)
+        if ag is not None and key.category not in ("rare", "magic"):
             st.status = "completed"
-            st.result = s_est.model_copy(update={"estimate_method": "poe2scout"})
-            st.message = "poe2scout"
+            st.result = _enrich_aggregator(ag, "aggregator")
+            st.message = st.result.source
             await save_job_state(redis, job_id, st)
             return st.result
 
-    if not settings.pricing_trade_estimate_enabled:
-        st.status = "completed"
-        st.message = "Trade listing estimate disabled"
-        st.result = _enrich_aggregator(ag, "aggregator") if ag is not None else None
-        await save_job_state(redis, job_id, st)
-        return st.result
+        scout: Poe2ScoutSource | None = None
+        if settings.pricing_scout_base_url:
+            scout = Poe2ScoutSource(settings.pricing_scout_base_url)
+            s_est = await scout.lookup(league, key)
+            await scout.aclose()
+            if s_est is not None:
+                st.status = "completed"
+                st.result = s_est.model_copy(update={"estimate_method": "poe2scout"})
+                st.message = "poe2scout"
+                await save_job_state(redis, job_id, st)
+                return st.result
 
+        if not settings.pricing_trade_estimate_enabled:
+            st.status = "completed"
+            st.message = "Trade listing estimate disabled"
+            st.result = _enrich_aggregator(ag, "aggregator") if ag is not None else None
+            await save_job_state(redis, job_id, st)
+            return st.result
+
+        return await _run_trade_hybrid_tail(
+            settings,
+            redis,
+            st,
+            job_id,
+            item,
+            league,
+            tolerance_pct,
+            ag,
+            key,
+            price_svc,
+        )
+    finally:
+        await release_price_estimate_slot(redis, slot_token)
+
+
+async def _run_trade_hybrid_tail(  # noqa: PLR0912,PLR0915
+    settings: Settings,
+    redis,
+    st: PriceJobState,
+    job_id: str,
+    item: Item,
+    league: str,
+    tolerance_pct: float,
+    ag: PriceEstimate | None,
+    key,
+    price_svc: PricingService,
+) -> PriceEstimate | None:
     st.step = "ggg_trade"
     st.message = "Resolving trade stats and sampling listings"
     await save_job_state(redis, job_id, st)

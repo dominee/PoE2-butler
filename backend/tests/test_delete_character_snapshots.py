@@ -44,8 +44,9 @@ async def test_delete_character_snapshots_removes_rows() -> None:
     async with factory() as session:
         snap = await get_latest_snapshot(session, uid, SnapshotKind.CHARACTER, "Hero")
         assert snap is not None
-        await delete_character_snapshots(session, uid)
+        captured = await delete_character_snapshots(session, uid)
         await session.commit()
+        assert "Hero" in captured
 
     async with factory() as session:
         res = await session.execute(
@@ -60,8 +61,6 @@ async def test_delete_character_snapshots_removes_rows() -> None:
         hist = await session.execute(
             select(CharacterSnapshotHistory).where(CharacterSnapshotHistory.user_id == uid)
         )
-        rows = list(hist.scalars().all())
-        assert len(rows) == 1
-        assert rows[0].character_name == "Hero"
+        assert hist.scalars().all() == []
 
     await engine.dispose()

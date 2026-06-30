@@ -23,6 +23,10 @@ KEY_GGG_TRADE_META = "tp3:ggg_trade_data"
 KEY_GGG_TRADE_FETCH = "tp3:ggg_trade_fetch"
 KEY_GGG_TRADE_LOCK = "tp3:ggg_trade:lock"
 KEY_GENERIC = "tp3:generic"
+KEY_PRICE_ESTIMATE_SLOT_PREFIX = "tp3:price_estimate:slot:"
+
+# TTL for a held estimate slot if a worker dies mid-job (seconds).
+_PRICE_ESTIMATE_SLOT_TTL_SEC = 900
 
 # Default minimum spacing between calls for hot loops (seconds).
 _DEFAULT_INTERVAL = 0.35
@@ -114,3 +118,26 @@ async def ggg_trade_register_429(
     total = min(cap, w0 + buf)
     await redis.set(KEY_GGG_TRADE_LOCK, "429", ex=max(1, total))
     return total
+
+
+async def await_price_estimate_slot(redis: Redis, settings: Settings) -> str:
+    """Block until one of the global hybrid price-estimate slots is free.
+
+    Serializes GGG trade2 work across all ``price_estimate_item`` arq jobs and
+    ``backfill_item_price_estimates`` inner loops so admin never shows many
+    parallel ``running`` estimates exhausting rate limits.
+    """
+    limit = max(1, min(int(settings.pricing_max_concurrent_estimates), 8))
+    poll = 0.35
+    for _ in range(7200):
+        for idx in range(limit):
+            token = f"{KEY_PRICE_ESTIMATE_SLOT_PREFIX}{idx}"
+            if await redis.set(token, "1", nx=True, ex=_PRICE_ESTIMATE_SLOT_TTL_SEC):
+                return token
+        await asyncio.sleep(poll)
+    msg = "price_estimate_slot_timeout"
+    raise TimeoutError(msg)
+
+
+async def release_price_estimate_slot(redis: Redis, token: str) -> None:
+    await redis.delete(token)

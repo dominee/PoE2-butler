@@ -146,10 +146,16 @@ export interface CharacterDetail {
   is_historical?: boolean;
 }
 
+export interface CharacterSnapshotChange {
+  kind: "new" | "changed" | "removed";
+  label: string;
+}
+
 export interface CharacterSnapshotMeta {
   id: number | null;
   fetched_at: string;
   is_current: boolean;
+  changes: CharacterSnapshotChange[];
 }
 
 export interface CharacterSnapshotsResponse {

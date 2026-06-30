@@ -19,18 +19,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.base import get_session
 from app.db.models import Snapshot, SnapshotKind, User
 from app.deps import get_current_user
-from app.domain.character import collect_character_items
-from app.domain.item import Item, _unwrap_ggg_item_dict, parse_item
+from app.domain.item import Item
+from app.domain.snapshot_diff import ChangedItem, diff_payloads
 
 router = APIRouter(prefix="/api/activity", tags=["activity"])
 
 
 # ── response models ────────────────────────────────────────────────────────────
-
-
-class ChangedItem(BaseModel):
-    old: Item
-    new: Item
 
 
 class ActivityEntry(BaseModel):
@@ -49,55 +44,6 @@ class ActivityResponse(BaseModel):
     entries: list[ActivityEntry]
     # Character gear diffs (one entry per character with equipped item changes).
     gear_entries: list[ActivityEntry] = []
-
-
-# ── diff helpers ───────────────────────────────────────────────────────────────
-
-
-def _items_by_id(payload: dict[str, Any], *, character: bool = False) -> dict[str, dict[str, Any]]:
-    raw_items = (
-        collect_character_items(payload) if character else payload.get("items") or []
-    )
-    out: dict[str, dict[str, Any]] = {}
-    for raw in raw_items:
-        if not isinstance(raw, dict):
-            continue
-        normalized = _unwrap_ggg_item_dict(raw) if character else raw
-        iid = normalized.get("id")
-        if iid:
-            out[str(iid)] = normalized
-    return out
-
-
-_CHANGE_KEYS = ("explicitMods", "implicitMods", "craftedMods", "enchantMods", "runeMods")
-
-
-def _item_changed(old: dict[str, Any], new: dict[str, Any]) -> bool:
-    for k in _CHANGE_KEYS:
-        if old.get(k) != new.get(k):
-            return True
-    old_props = [(p.get("name"), p.get("values")) for p in (old.get("properties") or [])]
-    new_props = [(p.get("name"), p.get("values")) for p in (new.get("properties") or [])]
-    return old_props != new_props
-
-
-def _diff_tab(
-    old_p: dict[str, Any],
-    new_p: dict[str, Any],
-    *,
-    character: bool = False,
-) -> tuple[list[Item], list[ChangedItem], list[Item]]:
-    old_map = _items_by_id(old_p, character=character)
-    new_map = _items_by_id(new_p, character=character)
-
-    new_items = [parse_item(v) for k, v in new_map.items() if k not in old_map]
-    removed = [parse_item(v) for k, v in old_map.items() if k not in new_map]
-    changed = [
-        ChangedItem(old=parse_item(old_map[k]), new=parse_item(v))
-        for k, v in new_map.items()
-        if k in old_map and _item_changed(old_map[k], v)
-    ]
-    return new_items, changed, removed
 
 
 # ── endpoint ───────────────────────────────────────────────────────────────────
@@ -132,7 +78,7 @@ async def get_activity(
             continue
 
         any_prev = True
-        new_items, changed, removed = _diff_tab(snap.prev_payload, snap.payload)
+        new_items, changed, removed = diff_payloads(snap.prev_payload, snap.payload)
 
         if new_items or changed or removed:
             entries.append(
@@ -166,7 +112,7 @@ async def get_activity(
 
         any_prev = True
         char_name = snap.key  # key is the character name
-        new_items, changed, removed = _diff_tab(
+        new_items, changed, removed = diff_payloads(
             snap.prev_payload, snap.payload, character=True
         )
 
@@ -198,10 +144,12 @@ async def get_activity(
     )
 
 
-def _tab_name(payload: dict[str, Any], fallback: str) -> str:
-    return str(payload.get("tab", {}).get("name") or fallback)
+def _tab_name(payload: dict[str, Any], tab_id: str) -> str:
+    tab = payload.get("tab") or {}
+    return str(tab.get("name") or tab_id)
 
 
 def _character_league(payload: dict[str, Any]) -> str:
-    """Extract the league field from a raw CHARACTER snapshot payload."""
-    return str(payload.get("character", {}).get("league") or "")
+    char = payload.get("character") or {}
+    league = char.get("league")
+    return str(league) if league else ""

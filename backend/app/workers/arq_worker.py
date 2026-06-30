@@ -430,5 +430,5 @@ class WorkerSettings:
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    max_jobs = 4
+    max_jobs = get_settings().arq_max_jobs
     job_timeout = get_settings().arq_job_timeout_seconds

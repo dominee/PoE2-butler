@@ -85,6 +85,10 @@ class Settings(BaseSettings):
     pricing_min_trade_listings: int = 5
     # Cap for ``POST /api/pricing/apprise`` stash backfill (missing DB rows first, then oldest).
     pricing_backfill_max_items: int = 40
+    # Max concurrent hybrid price estimates (GGG trade2) across all arq workers.
+    pricing_max_concurrent_estimates: int = 1
+    # Arq worker: max jobs running at once (keep low; price estimates also gated by slot semaphore).
+    arq_max_jobs: int = 2
     # Arq default job timeout is 300s; most jobs should finish well under this cap.
     arq_job_timeout_seconds: int = 7200
     # ``backfill_item_price_estimates`` runs many hybrid estimates; GGG 429 backoff (minutes) per

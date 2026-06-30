@@ -42,6 +42,7 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 - The client **polls** `GET /api/pricing/estimate/{job_id}` after `POST /api/pricing/estimate`. Duplicate POSTs for the same user + item + league de-duplicate to one job id via `poe2b:price_dedup:*`.
 - **UI:** on opening the detail pane, the SPA **GETs** `/api/pricing/estimate/item` first (TanStack `persisted-price-estimate`); **POST** runs only after **Refresh pricing** (increments `rerunKey` in `useRefinedPriceEstimate`).
 - **Apprise** (`POST /api/pricing/apprise`) enqueues **`backfill_item_price_estimates`** for **stash tabs only** in the chosen league: up to **`PRICING_BACKFILL_MAX_ITEMS`** (default 40) hybrid runs, **items with no DB row first**, then **oldest `computed_at`**. Before each hybrid run starts, the worker writes that batch to Redis with **`status: queued`** so the admin **Price queue** lists the full backlog (not only the single **running** item). Header **Refresh** (`POST /api/refresh`) updates snapshots only and **does not** queue pricing.
+- **Concurrency:** at most **`PRICING_MAX_CONCURRENT_ESTIMATES`** (default **1**) hybrid runs execute trade work at once, via Redis slots `tp3:price_estimate:slot:*`. Additional jobs stay **`queued`** with message “Waiting for price estimate slot”. The arq worker **`ARQ_MAX_JOBS`** default is **2** (was 4) so unrelated jobs can still progress without spawning many parallel `price_estimate_item` workers.
 
 ## GGG trade2 rate limiting (critical)
 

@@ -227,9 +227,8 @@ class Snapshot(Base):
 
 **Character snapshot history** (`CharacterSnapshotHistory` in `models.py`, service `character_snapshot_history.py`):
 
-- Append-only archive of past `CHARACTER` payloads for the gear **timeline** UI (retention default **20** per character via `CHARACTER_SNAPSHOT_HISTORY_MAX`).
-- Archived before `upsert_snapshot` overwrites a CHARACTER row and before `delete_character_snapshots` (manual refresh path).
-- `GET /api/characters/{name}/snapshots` — timeline metadata (oldest → newest; last dot is current).
+- Append-only archive when character gear **changes** (new / modified / removed items); identical refreshes are skipped.
+- `GET /api/characters/{name}/snapshots` — change events with `changes[]` diff labels (oldest → newest).
 - `GET /api/characters/{name}/snapshots/{history_id}` — historic `CharacterDetail` with `is_historical=true`.
 
 **Item parsing** (`backend/app/domain/item.py`):
@@ -327,6 +326,8 @@ border-rarity-*  (same names)
 | `GGG_REDIRECT_URI` | **Dev:** `http://app.dev…/api/auth/callback` (Vite). **UAT:** `https://app.uat…/api/auth/callback` (Traefik file routes). **Prod (recommended):** `https://app.hideoutbutler.com/api/auth/callback` so OAuth sets cookies on the **app** origin used by the SPA; requires GGG to allow that redirect URI. |
 | `CORS_ALLOW_ORIGINS` | JSON array string, e.g. `["https://app.hideoutbutler.com"]` or dev equivalent |
 | `PRICING_SOURCE` | `static` (dev) or `poe_ninja` |
+| `PRICING_MAX_CONCURRENT_ESTIMATES` | Global cap on parallel hybrid price jobs (default 1; Redis slot semaphore) |
+| `ARQ_MAX_JOBS` | arq worker max concurrent jobs (default 2) |
 | `DEFAULT_VALUABLE_THRESHOLD_CHAOS` | Starting threshold for valuable item highlights |
 | `GGG_TRADE_MIN_INTERVAL_SEC` | Base seconds in the global trade2 lock after each **successful** GGG response (alias: `GGG_TRADE_FETCH_MIN_INTERVAL_SEC`) |
 | `GGG_TRADE_EXTRA_SPACING_SEC` | Extra seconds added to that lock TTL (default 5; total ≈ min + extra) |
@@ -358,6 +359,7 @@ Current migrations:
 - `0004_item_shares` — public item share links
 - `0005_item_price_estimates` — hybrid price estimate rows
 - `0006_character_snapshot_history` — gear timeline archive table
+- `0007_character_snapshot_changes` — `changes` JSON on history rows (timeline diff labels)
 
 ---
 
