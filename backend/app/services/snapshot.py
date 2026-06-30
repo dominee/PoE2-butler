@@ -32,6 +32,17 @@ from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_acces
 log = get_logger("app.services.snapshot")
 
 
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """SQLite test DB may return naive timestamps for TIMESTAMPTZ columns."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
 @dataclass
 class SnapshotOutcome:
     profile: bool = False
@@ -55,7 +66,7 @@ async def upsert_snapshot(
     Redis cooldown, so the race window here is negligible.
     """
     existing = await get_latest_snapshot(session, user_id, kind, key)
-    now = datetime.now(UTC)
+    now = _utc_now()
     if existing is None:
         # Baseline copy so GET /api/activity can treat the tab as tracked immediately;
         # the first refresh then shifts payload → prev_payload and surfaces real diffs.
@@ -304,7 +315,7 @@ async def ensure_character_detail(
     """Fetch character detail on demand and cache it in snapshots."""
     existing = await get_latest_snapshot(session, user.id, SnapshotKind.CHARACTER, key=name)
     if existing is not None:
-        age = datetime.now(UTC) - existing.fetched_at
+        age = _utc_now() - _as_utc(existing.fetched_at)
         ttl = _character_detail_snapshot_ttl_seconds(existing.payload)
         if age.total_seconds() < ttl:
             return existing.payload

@@ -199,7 +199,7 @@ def test_pick_league_from_characters_prefers_challenge_league() -> None:
 
 @pytest.mark.asyncio
 async def test_leagues_prefers_challenge_over_standard_preferred(app_stack) -> None:  # type: ignore[no-untyped-def]
-    """When preferred_league is Standard but characters play a challenge league, current follows inference."""
+    """Challenge league wins over Standard when inferring current from characters."""
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)
     me = (await client.get("/api/me")).json()

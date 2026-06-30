@@ -33,7 +33,11 @@ from app.security.sessions import (
     PendingAuthStore,
     SessionStore,
 )
-from app.services.snapshot import refresh_character_gear_snapshots, refresh_stashes, refresh_user_snapshot
+from app.services.snapshot import (
+    refresh_character_gear_snapshots,
+    refresh_stashes,
+    refresh_user_snapshot,
+)
 
 log = get_logger("app.api.auth")
 

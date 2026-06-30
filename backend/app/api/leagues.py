@@ -11,7 +11,12 @@ from app.db.base import get_session
 from app.db.models import SnapshotKind, User
 from app.deps import get_current_user
 from app.domain.character import parse_summaries
-from app.domain.league import League, parse_leagues, pick_league_from_characters, resolve_leagues_current
+from app.domain.league import (
+    League,
+    parse_leagues,
+    pick_league_from_characters,
+    resolve_leagues_current,
+)
 from app.services.snapshot import get_latest_snapshot
 
 router = APIRouter(prefix="/api/leagues", tags=["leagues"])
@@ -38,26 +43,25 @@ async def leagues(
     parsed: list[League] = []
     if snap is not None:
         parsed = parse_leagues(snap.payload)
-    if not parsed:
-        if chars_snap is not None:
-            summaries = parse_summaries(chars_snap.payload)
-            inferred_from_characters = pick_league_from_characters(summaries)
-            display_current = resolve_leagues_current(
-                [],
-                effective_preferred,
-                inferred_from_characters=inferred_from_characters,
-                default_league=settings.ggg_default_league or None,
-            )
-            seen: set[str] = set()
-            for c in summaries:
-                if c.league and c.league not in seen:
-                    seen.add(c.league)
-                    parsed.append(
-                        League(
-                            id=c.league,
-                            current=(c.league == display_current),
-                        )
+    if not parsed and chars_snap is not None:
+        summaries = parse_summaries(chars_snap.payload)
+        inferred_from_characters = pick_league_from_characters(summaries)
+        display_current = resolve_leagues_current(
+            [],
+            effective_preferred,
+            inferred_from_characters=inferred_from_characters,
+            default_league=settings.ggg_default_league or None,
+        )
+        seen: set[str] = set()
+        for c in summaries:
+            if c.league and c.league not in seen:
+                seen.add(c.league)
+                parsed.append(
+                    League(
+                        id=c.league,
+                        current=(c.league == display_current),
                     )
+                )
     if not parsed and settings.ggg_default_league:
         parsed.append(
             League(
