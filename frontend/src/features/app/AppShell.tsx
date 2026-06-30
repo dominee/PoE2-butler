@@ -62,7 +62,7 @@ export function AppShell() {
       ? selectedCharacter
       : null;
   }, [selectedCharacter, charactersQ.data, charactersQ.isError]);
-  const characterQ = useCharacter(characterNameForDetail);
+  const characterQ = useCharacter(characterNameForDetail, selectedLeague);
 
   const gearLoadStatus = useMemo(() => {
     if (!selectedCharacter) return null;
@@ -316,6 +316,12 @@ export function AppShell() {
                 {encodeURIComponent(selectedCharacter)}. Try another character or Refresh.
               </p>
             )}
+            {characterNameForDetail &&
+              (characterQ.isLoading || (characterQ.isFetching && !characterQ.data)) && (
+                <p className="text-ui-muted" aria-live="polite">
+                  Loading gear&hellip;
+                </p>
+              )}
             {characterQ.data && charLayout === "doll" && (
               <>
                 <PaperDoll

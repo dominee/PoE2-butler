@@ -33,7 +33,7 @@ export const queryKeys = {
   me: ["me"] as const,
   leagues: ["leagues"] as const,
   characters: (league: string | null) => ["characters", league] as const,
-  character: (name: string) => ["character", name] as const,
+  character: (name: string, league: string | null) => ["character", name, league] as const,
   stashes: (league: string | null) => ["stashes", league] as const,
   stashTab: (league: string | null, tabId: string | null) =>
     ["stash-tab", league, tabId] as const,
@@ -95,13 +95,14 @@ export function useCharacters(league: string | null) {
   });
 }
 
-export function useCharacter(name: string | null) {
+export function useCharacter(name: string | null, league: string | null = null) {
   return useQuery<CharacterDetail>({
-    queryKey: queryKeys.character(name ?? ""),
+    queryKey: queryKeys.character(name ?? "", league),
     queryFn: () => api.get<CharacterDetail>(`/api/characters/${encodeURIComponent(name ?? "")}`),
     enabled: Boolean(name),
     // Detail can take minutes against the Poe.ninja mock; retries multiply painful waits.
     retry: false,
+    refetchOnMount: "always",
     select: (data) => ({
       ...data,
       gems: data.gems ?? [],
@@ -121,8 +122,8 @@ export function useRefresh() {
       return api.post<RefreshResponse>(`/api/refresh${suffix}`);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["characters"] });
-      qc.invalidateQueries({ queryKey: ["character"] });
+      void qc.removeQueries({ queryKey: ["characters"] });
+      void qc.removeQueries({ queryKey: ["character"] });
       qc.invalidateQueries({ queryKey: queryKeys.leagues });
       qc.invalidateQueries({ queryKey: queryKeys.me });
       qc.invalidateQueries({ queryKey: ["activity"] });

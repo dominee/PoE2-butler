@@ -198,6 +198,50 @@ def test_pick_league_from_characters_prefers_challenge_league() -> None:
 
 
 @pytest.mark.asyncio
+async def test_leagues_prefers_challenge_over_standard_preferred(app_stack) -> None:  # type: ignore[no-untyped-def]
+    """When preferred_league is Standard but characters play a challenge league, current follows inference."""
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = (await client.get("/api/me")).json()
+    user_id = uuid.UUID(me["id"])
+    fac = db_base._session_factory()
+
+    chars_payload = _characters_payload(
+        ("BringTheRainz", RUNES_OF_ALDUR),
+        ("StandardGuy", STANDARD),
+    )
+
+    async with fac() as session:
+        await session.execute(
+            delete(Snapshot).where(
+                Snapshot.user_id == user_id,
+                Snapshot.kind.in_([SnapshotKind.LEAGUES, SnapshotKind.CHARACTERS]),
+            )
+        )
+        session.add(
+            Snapshot(
+                user_id=user_id,
+                kind=SnapshotKind.CHARACTERS,
+                key="",
+                payload=chars_payload,
+            )
+        )
+        await session.execute(
+            update(User).where(User.id == user_id).values(preferred_league=STANDARD)
+        )
+        await session.commit()
+
+    r = await client.get("/api/leagues")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["current"] == RUNES_OF_ALDUR
+    runes = next(lg for lg in body["leagues"] if lg["id"] == RUNES_OF_ALDUR)
+    assert runes["current"] is True
+    standard = next(lg for lg in body["leagues"] if lg["id"] == STANDARD)
+    assert standard["current"] is False
+
+
+@pytest.mark.asyncio
 async def test_leagues_default_league_when_no_snapshots(app_stack, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """When no league/character snapshots exist, GGG_DEFAULT_LEAGUE fills the dropdown."""
     from pydantic import SecretStr

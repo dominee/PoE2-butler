@@ -33,7 +33,7 @@ from app.security.sessions import (
     PendingAuthStore,
     SessionStore,
 )
-from app.services.snapshot import refresh_stashes, refresh_user_snapshot
+from app.services.snapshot import refresh_character_gear_snapshots, refresh_stashes, refresh_user_snapshot
 
 log = get_logger("app.api.auth")
 
@@ -197,6 +197,20 @@ async def callback(
         )
         league_for_stash = (snap_user.preferred_league or "").strip()
         if league_for_stash:
+            try:
+                await refresh_character_gear_snapshots(
+                    session=snap_db,
+                    user=snap_user,
+                    ggg=ggg,
+                    cipher=cipher,
+                    league=league_for_stash,
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "auth.initial_character_gear_failed",
+                    league=league_for_stash,
+                    error=str(exc),
+                )
             try:
                 await refresh_stashes(
                     session=snap_db,

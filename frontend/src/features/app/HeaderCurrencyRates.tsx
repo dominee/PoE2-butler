@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import { useCurrencyRates } from "@/api/hooks";
 
+import { formatExChaosRate } from "./currencyRateDisplay";
+
 function formatAgo(dataUpdatedAt: number, now: number): string {
   if (!dataUpdatedAt) return "";
   const s = Math.max(0, Math.floor((now - dataUpdatedAt) / 1000));
@@ -59,7 +61,7 @@ export function HeaderCurrencyRates({ league }: HeaderCurrencyRatesProps) {
   const cdiv = r.chaos_per_divine;
   const cex = r.chaos_per_exalted;
   const exPerDiv = r.exalted_per_divine ?? (cdiv > 0 && cex > 0 ? cdiv / cex : null);
-  const chaosPerEx = cex;
+  const exChaos = formatExChaosRate(cex);
 
   const line = (
     <>
@@ -70,10 +72,11 @@ export function HeaderCurrencyRates({ league }: HeaderCurrencyRatesProps) {
       </span>
       <span className="text-white/86"> ex</span>
       <span className="text-white/55"> · </span>
-      <span className="text-white/86">1 ex</span>
+      <span className="font-mono tabular-nums text-white/95">{exChaos.leftAmount}</span>
+      <span className="text-white/86"> {exChaos.leftUnit}</span>
       <span className="text-white/86"> ≈ </span>
-      <span className="font-mono tabular-nums text-white/95">{Math.ceil(chaosPerEx)}</span>
-      <span className="text-white/86"> chaos</span>
+      <span className="font-mono tabular-nums text-white/95">{exChaos.rightAmount}</span>
+      <span className="text-white/86"> {exChaos.rightUnit}</span>
     </>
   );
 

@@ -49,17 +49,40 @@ def pick_current_league(leagues: list[League]) -> str | None:
     return leagues[0].id if leagues else None
 
 
-def resolve_leagues_current(leagues: list[League], preferred: str | None) -> str | None:
+def resolve_leagues_current(
+    leagues: list[League],
+    preferred: str | None,
+    *,
+    inferred_from_characters: str | None = None,
+    default_league: str | None = None,
+) -> str | None:
     """Pick the league id exposed as ``current`` in GET /api/leagues.
 
     When at least one league carries ``current=True`` (GGG snapshot or synthesized
     from ``preferred``), use :func:`pick_current_league`. Otherwise fall back to
     ``preferred``, then the first league in the list.
+
+    Challenge leagues from character inference (or ``default_league``) win over a
+    permanent stored preference such as Standard.
     """
+    pref_is_perm = (preferred or "").lower() in _PERMANENT_LEAGUES
+    if pref_is_perm and inferred_from_characters:
+        return inferred_from_characters
+    if pref_is_perm and default_league and any(lg.id == default_league for lg in leagues):
+        return default_league
     if any(lg.current for lg in leagues):
-        return pick_current_league(leagues)
-    if preferred:
+        picked = pick_current_league(leagues)
+        if picked and picked.lower() not in _PERMANENT_LEAGUES:
+            return picked
+        if inferred_from_characters:
+            return inferred_from_characters
+        return picked
+    if preferred and not pref_is_perm:
         return preferred
+    if inferred_from_characters:
+        return inferred_from_characters
+    if default_league and any(lg.id == default_league for lg in leagues):
+        return default_league
     return pick_current_league(leagues)
 
 

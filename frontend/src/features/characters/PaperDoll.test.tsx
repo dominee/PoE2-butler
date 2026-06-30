@@ -56,6 +56,20 @@ describe("PaperDoll", () => {
     expect(screen.getByRole("button", { name: /item gold ring/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /item spine bow/i })).toBeInTheDocument();
   });
+
+  it("shows a single main-hand placeholder when no weapon is equipped", () => {
+    render(
+      <PaperDoll
+        equipped={[
+          gearItem("Helm", "Iron Hat"),
+          gearItem("BodyArmour", "Leather Vest"),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Main hand")).toBeInTheDocument();
+    expect(screen.queryByText("Weapon swap")).not.toBeInTheDocument();
+  });
 });
 
 describe("collectPaperDollItems", () => {

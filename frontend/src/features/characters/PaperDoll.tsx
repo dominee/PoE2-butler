@@ -20,12 +20,16 @@ function buildSlots(bySlot: Map<string, Item>): { slots: SlotDef[]; gridTemplate
   const offMain = bySlot.get("Offhand");
   const offSwap = bySlot.get("Offhand2");
 
-  const singleMainSide = Boolean(weaponMain) !== Boolean(weaponSwap);
-  const singleOffSide = Boolean(offMain) !== Boolean(offSwap);
+  const hasAnyWeapon = Boolean(weaponMain) || Boolean(weaponSwap);
+  const hasAnyOffhand = Boolean(offMain) || Boolean(offSwap);
+  const singleMainSide = hasAnyWeapon && Boolean(weaponMain) !== Boolean(weaponSwap);
+  const singleOffSide = hasAnyOffhand && Boolean(offMain) !== Boolean(offSwap);
 
   const slots: SlotDef[] = [];
 
-  if (singleMainSide) {
+  if (!hasAnyWeapon) {
+    slots.push({ id: "Weapon", label: "Main hand", gridArea: "weapon" });
+  } else if (singleMainSide) {
     slots.push({
       id: "Weapon",
       label: weaponMain ? "Main hand" : "Weapon swap",
@@ -43,7 +47,9 @@ function buildSlots(bySlot: Map<string, Item>): { slots: SlotDef[]; gridTemplate
     slots.push({ ...slot, item: bySlot.get(slot.id) });
   }
 
-  if (singleOffSide) {
+  if (!hasAnyOffhand) {
+    slots.push({ id: "Offhand", label: "Off hand", gridArea: "offhand" });
+  } else if (singleOffSide) {
     slots.push({
       id: "Offhand",
       label: offMain ? "Off hand" : "Off hand swap",
@@ -61,15 +67,27 @@ function buildSlots(bySlot: Map<string, Item>): { slots: SlotDef[]; gridTemplate
     slots.push({ ...slot, item: bySlot.get(slot.id) });
   }
 
-  const gridTemplateAreas = singleMainSide
-    ? `
+  const compactMain = !hasAnyWeapon || singleMainSide;
+  const compactOff = !hasAnyOffhand || singleOffSide;
+
+  const gridTemplateAreas =
+    compactMain && compactOff
+      ? `
           "weapon helm offhand"
           "weapon amulet offhand"
           "weapon body offhand2"
           "gloves body ring"
           "belt boots ring2"
         `
-    : `
+      : compactMain
+        ? `
+          "weapon helm offhand"
+          "weapon amulet offhand"
+          "weapon body offhand2"
+          "gloves body ring"
+          "belt boots ring2"
+        `
+        : `
           "weapon helm offhand"
           "weapon2 helm offhand"
           "weapon amulet offhand2"
