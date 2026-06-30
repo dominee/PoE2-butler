@@ -8,8 +8,9 @@ name: poe2b-prod
 
 networks:
   edge:
-    name: poe2b_edge
+    name: poe2b_prod_edge
   internal:
+    name: poe2b_prod_internal
     internal: true
 
 volumes:
@@ -122,7 +123,7 @@ services:
       - internal
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=poe2b_edge"
+      - "traefik.docker.network=poe2b_prod_edge"
       # API on dedicated host (e.g. api.hideoutbutler.com)
       - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api.entrypoints=websecure"
@@ -208,7 +209,7 @@ services:
       - internal
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=poe2b_edge"
+      - "traefik.docker.network=poe2b_prod_edge"
       - "traefik.http.routers.admin.rule=Host(`${ADMIN_DOMAIN}`)"
       - "traefik.http.routers.admin.entrypoints=websecure"
       - "traefik.http.routers.admin.tls=true"

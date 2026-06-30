@@ -17,7 +17,7 @@ entryPoints:
 providers:
   docker:
     exposedByDefault: false
-    network: poe2b_edge
+    network: poe2b_prod_edge
   file:
     filename: /etc/traefik/dynamic.prod.yml
     watch: true

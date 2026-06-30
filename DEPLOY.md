@@ -317,18 +317,28 @@ Symptoms: `GET https://app.hideoutbutler.com/api/auth/login` returns **200** `te
 
 Cause: `/api/*` was routed to the **static SPA** (nginx `try_files` → `index.html`). Browsers cache that HTML for the login URL and keep reloading the landing page.
 
-Fix (in repo): **`dynamic.prod.yml`** defines file routes — `PathPrefix(/api)` → `backend:8000`, everything else on `app.hideoutbutler.com` → `frontend:80` (same pattern as UAT/dev). After `git pull`:
+**Network warning:** `a network with name poe2b_edge exists but was not created for project "poe2b-prod"`. Prod uses **`poe2b_prod_edge`** (dev uses **`poe2b_dev_edge`**, UAT uses **`poe2b_uat_edge`**) so stacks on one VM do not share Docker DNS for `backend` / `frontend`. Stop other stacks before prod:
+
+```bash
+docker compose -f deploy/compose/docker-compose.dev.yml down 2>/dev/null || true
+docker compose -f deploy/compose/docker-compose.uat.yml --env-file deploy/env/.env.uat down 2>/dev/null || true
+```
+
+Fix (in repo): **`dynamic.prod.yml`** file routes + isolated prod edge network. After `git pull`:
 
 ```bash
 docker compose -f deploy/compose/docker-compose.prod.yml --env-file deploy/env/.env.prod \
-  up -d --build traefik frontend backend
+  down
+docker compose -f deploy/compose/docker-compose.prod.yml --env-file deploy/env/.env.prod \
+  up -d --build
 ```
 
-Verify from your machine (expect **302**, not 200 HTML):
+Verify with **GET** (not `curl -I`, which sends **HEAD** and FastAPI correctly returns **405**):
 
 ```bash
-curl -sI -H "Host: app.hideoutbutler.com" https://YOUR_VM_IP/api/auth/login | head -5
-# or, with Cloudflare DNS: curl -sI https://app.hideoutbutler.com/api/auth/login | head -5
+curl -s -o /dev/null -w 'HTTP %{http_code} → %{redirect_url}\n' \
+  https://app.hideoutbutler.com/api/auth/login
+# Expect: HTTP 302 → https://www.pathofexile.com/oauth/authorize?...
 ```
 
 Users who hit the bad cache may need a hard refresh or to clear site data for `app.hideoutbutler.com` once routing is fixed.

@@ -34,8 +34,9 @@ http:
     prod-app-api:
       loadBalancer:
         servers:
-          - url: http://backend:8000
+          # Container names — avoids DNS clashes if a stale poe2b_edge network exists.
+          - url: http://poe2b-backend:8000
     prod-app-frontend:
       loadBalancer:
         servers:
-          - url: http://frontend:80
+          - url: http://poe2b-frontend:80

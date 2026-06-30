@@ -2,8 +2,9 @@ name: poe2b-dev
 
 networks:
   edge:
-    name: poe2b_edge
+    name: poe2b_dev_edge
   internal:
+    name: poe2b_dev_internal
     internal: true
 
 volumes:

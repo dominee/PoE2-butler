@@ -96,7 +96,10 @@ async def login(
         PendingAuth(verifier=verifier, redirect_after=f"{settings.app_base_url}/app"),
     )
     url = ggg.authorize_url(state=state, code_challenge=code_challenge_s256(verifier))
-    return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @router.get("/callback", summary="OAuth2 callback")
