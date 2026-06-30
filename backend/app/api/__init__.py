@@ -1,6 +1,7 @@
 """API routers."""
 
 from app.api.activity import router as activity_router
+from app.api.admin_ops import router as admin_ops_router
 from app.api.auth import router as auth_router
 from app.api.cdn_proxy import router as cdn_proxy_router
 from app.api.characters import router as characters_router
@@ -18,6 +19,7 @@ from app.api.trade import router as trade_router
 
 __all__ = [
     "activity_router",
+    "admin_ops_router",
     "auth_router",
     "cdn_proxy_router",
     "characters_router",

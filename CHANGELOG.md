@@ -6,6 +6,16 @@ Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. I
 
 ## 2026-06-30
 
+### App · production honesty (GGG scope limits)
+
+- **`GET /api/me`** includes **`capabilities`**: `stash_available` and `leagues_inferred` derived from granted OAuth scopes.
+- When PoE2 stash OAuth is unavailable, the **Stash** nav tab is hidden; the league dropdown shows a short “Leagues from characters” hint when the leagues API scope is not granted.
+
+### Admin · user support (Phase 1 + 2)
+
+- **Users** page: search by GGG account or UUID; **user detail** with OAuth token expiry, Redis session/cooldown state, snapshot counts, price estimate rows, and share links.
+- **Operator actions** (when `ADMIN_INTERNAL_SECRET` is set on admin + backend): trigger snapshot refresh, force logout, revoke share; CSRF on admin POST forms; audit log lines for mutations.
+
 ### App · character gear snapshot timeline
 
 - A **horizontal dot timeline** above the stat summary lists gear **change events** (up to **20** per character): dots appear only when items are added, removed, or modified — unchanged refreshes are not stored or shown.

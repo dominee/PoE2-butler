@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}User · Admin{% endblock %}
+{% block content %}
+<section>
+  <p><a href="/admin/users">&larr; Users</a></p>
+  <h2>{{ user.ggg_account_name }}</h2>
+  <p class="muted"><code>{{ user.id }}</code> · realm {{ user.realm }}</p>
+
+  {% if notice == "refresh_ok" %}
+  <p class="notice-banner notice-ok">Snapshot refresh completed.</p>
+  {% elif notice == "refresh_failed" %}
+  <p class="notice-banner error-banner">Snapshot refresh failed (check backend logs).</p>
+  {% elif notice == "logout_ok" %}
+  <p class="notice-banner notice-ok">User sessions cleared.</p>
+  {% elif notice == "logout_failed" %}
+  <p class="notice-banner error-banner">Could not clear sessions.</p>
+  {% elif notice == "revoke_ok" %}
+  <p class="notice-banner notice-ok">Share revoked.</p>
+  {% elif notice == "revoke_failed" %}
+  <p class="notice-banner error-banner">Share revoke failed.</p>
+  {% endif %}
+
+  <div class="cards-grid">
+    <div class="card">
+      <h3>Account</h3>
+      <dl class="kv">
+        <dt>Preferred league</dt><dd>{{ user.preferred_league or "—" }}</dd>
+        <dt>Trade tolerance</dt><dd>{{ user.trade_tolerance_pct }}%</dd>
+        <dt>Valuable threshold</dt><dd>{{ user.valuable_threshold_chaos }} chaos</dd>
+        <dt>Created</dt><dd>{{ user.created_at }}</dd>
+        <dt>Last login</dt><dd>{{ user.last_login_at or "—" }}</dd>
+        <dt>Last refresh</dt><dd>{{ user.last_refreshed_at or "—" }}</dd>
+        <dt>Gear history rows</dt><dd>{{ history_count }}</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h3>OAuth token</h3>
+      {% if token %}
+      <dl class="kv">
+        <dt>Scope</dt><dd><code>{{ token.scope or "—" }}</code></dd>
+        <dt>Expires</dt><dd>{{ token.expires_at or "—" }}</dd>
+        <dt>Updated</dt><dd>{{ token.updated_at }}</dd>
+      </dl>
+      {% else %}
+      <p class="muted">No token row (user may need to log in again).</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h3>Redis state</h3>
+      <dl class="kv">
+        <dt>Active sessions</dt><dd>{{ redis_state.session_count }}</dd>
+        <dt>Refresh cooldown (sec)</dt><dd>{{ redis_state.refresh_cooldown_ttl_sec }}</dd>
+        <dt>Share rate limit (sec)</dt><dd>{{ redis_state.share_rate_limit_ttl_sec }}</dd>
+        <dt>OAuth pending keys (scan)</dt><dd>{{ redis_state.oauth_pending_keys_scanned }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  {% if ops_enabled %}
+  <div class="toolbar-row" style="margin:1rem 0">
+    <form method="post" action="/admin/users/{{ user.id }}/refresh" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+      <button type="submit">Trigger snapshot refresh</button>
+    </form>
+    <form method="post" action="/admin/users/{{ user.id }}/logout" class="inline-form" onsubmit="return confirm('Force logout — destroy all sessions for this user?');">
+      <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+      <button type="submit" class="danger">Force logout</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="muted">Operator actions disabled — set <code>ADMIN_INTERNAL_SECRET</code> on admin and backend.</p>
+  {% endif %}
+
+  <h3>Snapshots by kind</h3>
+  <table class="data compact">
+    <thead><tr><th>Kind</th><th>Count</th></tr></thead>
+    <tbody>
+      {% for row in snapshot_counts %}
+      <tr><td>{{ row.kind }}</td><td>{{ row.n }}</td></tr>
+      {% else %}
+      <tr><td colspan="2">No snapshots.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Recent snapshots</h3>
+  <table class="data">
+    <thead><tr><th>Kind</th><th>Key</th><th>Fetched</th></tr></thead>
+    <tbody>
+      {% for s in snapshots %}
+      <tr>
+        <td>{{ s.kind }}</td>
+        <td><code>{{ s.key or "—" }}</code></td>
+        <td>{{ s.fetched_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">None.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Price estimates (DB)</h3>
+  <table class="data">
+    <thead><tr><th>League</th><th>Item</th><th>Status</th><th>Computed</th><th>Error</th></tr></thead>
+    <tbody>
+      {% for e in estimates %}
+      <tr>
+        <td>{{ e.league }}</td>
+        <td><code>{{ e.item_id }}</code> {{ e.item_name }}</td>
+        <td>{{ e.status }}</td>
+        <td>{{ e.computed_at }}</td>
+        <td>{{ e.error or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">None.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Share links</h3>
+  <table class="data">
+    <thead><tr><th>Share id</th><th>League</th><th>Created</th><th>Revoked</th><th></th></tr></thead>
+    <tbody>
+      {% for sh in shares %}
+      <tr>
+        <td><code>{{ sh.id }}</code></td>
+        <td>{{ sh.league }}</td>
+        <td>{{ sh.created_at }}</td>
+        <td>{{ sh.revoked_at or "—" }}</td>
+        <td>
+          {% if not sh.revoked_at and ops_enabled %}
+          <form method="post" action="/admin/users/{{ user.id }}/shares/{{ sh.id }}/revoke" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+            <button type="submit" class="danger small">Revoke</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">None.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

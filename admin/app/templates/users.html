@@ -1,11 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 <section>
-  <h2>Users · most recent {{ users|length }}</h2>
+  <h2>Users</h2>
+  <form method="get" action="/admin/users" class="toolbar-row" style="margin-bottom:1rem">
+    <label class="inline-form">
+      Search
+      <input name="q" value="{{ q }}" placeholder="GGG account or user UUID" />
+    </label>
+    <button type="submit">Search</button>
+    {% if q %}<a href="/admin/users">Clear</a>{% endif %}
+  </form>
+  <p class="muted">Showing up to 100 matches{% if q %} for “{{ q }}”{% endif %}.</p>
   <table class="data">
     <thead>
       <tr>
-        <th>Account</th><th>Realm</th><th>Preferred league</th>
+        <th>Account</th><th>User id</th><th>Realm</th><th>Preferred league</th>
         <th>Tolerance</th><th>Threshold</th>
         <th>Last login</th><th>Last refresh</th>
       </tr>
@@ -13,7 +22,8 @@
     <tbody>
       {% for u in users %}
       <tr>
-        <td><code>{{ u.ggg_account_name }}</code></td>
+        <td><a href="/admin/users/{{ u.id }}"><code>{{ u.ggg_account_name }}</code></a></td>
+        <td><code class="small">{{ u.id }}</code></td>
         <td>{{ u.realm }}</td>
         <td>{{ u.preferred_league or "—" }}</td>
         <td>{{ u.trade_tolerance_pct }}%</td>
@@ -21,6 +31,8 @@
         <td>{{ u.last_login_at or "—" }}</td>
         <td>{{ u.last_refreshed_at or "—" }}</td>
       </tr>
+      {% else %}
+      <tr><td colspan="8">No users found.</td></tr>
       {% endfor %}
     </tbody>
   </table>

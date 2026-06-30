@@ -83,6 +83,15 @@ export function AppShell() {
     setSelectedSnapshotId("current");
   }, [characterNameForDetail]);
 
+  const stashAvailable = Boolean(me?.capabilities?.stash_available);
+  const leaguesInferred = Boolean(me?.capabilities?.leagues_inferred);
+
+  useEffect(() => {
+    if (me && !me.capabilities.stash_available && view === "stashes") {
+      setView("characters");
+    }
+  }, [me, view, setView]);
+
   const gearLoadStatus = useMemo(() => {
     if (!selectedCharacter) return null;
     if (charactersQ.isError) {
@@ -202,17 +211,27 @@ export function AppShell() {
           >
             Characters
           </button>
-          <button
-            type="button"
-            className={viewBtn(view === "stashes")}
-            onClick={() => setView("stashes")}
-            aria-current={view === "stashes" ? "page" : undefined}
-          >
-            Stash
-          </button>
+          {stashAvailable && (
+            <button
+              type="button"
+              className={viewBtn(view === "stashes")}
+              onClick={() => setView("stashes")}
+              aria-current={view === "stashes" ? "page" : undefined}
+            >
+              Stash
+            </button>
+          )}
         </nav>
         <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           <HeaderCurrencyRates league={selectedLeague} />
+          {leaguesInferred && (
+            <span
+              className="hidden max-w-[11rem] truncate text-[10px] text-parchment-200/70 sm:inline"
+              title="League list is inferred from your characters; GGG leagues API is not available for this app."
+            >
+              Leagues from characters
+            </span>
+          )}
           <select
             value={selectedLeague ?? ""}
             onChange={(event) => setLeague(event.target.value || null)}
@@ -238,7 +257,11 @@ export function AppShell() {
           <button
             type="button"
             className="btn-ghost inline-flex items-center gap-1.5 text-sm"
-            title="Queue hybrid price checks for stash and character gear (missing estimates first; capped)"
+            title={
+              stashAvailable
+                ? "Queue hybrid price checks for stash and character gear (missing estimates first; capped)"
+                : "Queue hybrid price checks for character gear (missing estimates first; capped)"
+            }
             aria-label="Apprise: queue price checks"
             onClick={() => {
               if (!selectedLeague) return;

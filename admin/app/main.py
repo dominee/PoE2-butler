@@ -12,10 +12,25 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from admin.app.auth import AdminSession, AuthError, SessionManager
+from admin.app.audit import audit_action
+from admin.app.backend_client import post_admin_action
 from admin.app.config import AdminSettings, get_admin_settings
+from admin.app.csrf import csrf_cookie_name, issue_csrf_token, verify_csrf_token
 from admin.app.dashboard_data import bundle_for_json, load_dashboard_bundle
-from admin.app.db import enrich_price_queue_rows, list_users, recent_snapshots
+from admin.app.db import (
+    count_character_history,
+    count_user_snapshots_by_kind,
+    enrich_price_queue_rows,
+    get_user_by_id,
+    get_user_token_meta,
+    list_user_price_estimates,
+    list_user_shares,
+    list_user_snapshots,
+    list_users,
+    recent_snapshots,
+)
 from admin.app.middleware import AdminSecurityHeaders, IPAllowlistMiddleware
+from admin.app.redis_user import user_redis_state
 from admin.app.redis_stats import (
     backend_health,
     clear_inflight_price_estimate_jobs,
@@ -67,6 +82,32 @@ def create_app() -> FastAPI:
     return app
 
 
+def _csrf_token_for_request(request: Request) -> str:
+    return request.cookies.get(csrf_cookie_name(), "")
+
+
+def _verify_csrf(request: Request, form_token: str | None) -> None:
+    settings = get_admin_settings()
+    cookie = _csrf_token_for_request(request)
+    secret = settings.session_secret.get_secret_value()
+    if not form_token or not cookie or form_token != cookie:
+        raise HTTPException(status_code=403, detail="csrf_mismatch")
+    if not verify_csrf_token(secret, form_token):
+        raise HTTPException(status_code=403, detail="csrf_invalid")
+
+
+def _attach_csrf_cookie(response: Response, settings: AdminSettings) -> None:
+    token = issue_csrf_token(settings.session_secret.get_secret_value())
+    response.set_cookie(
+        csrf_cookie_name(),
+        token,
+        httponly=True,
+        samesite="strict",
+        secure=settings.environment in ("prod", "uat"),
+        max_age=settings.session_ttl_seconds,
+    )
+
+
 def _register_routes(app: FastAPI) -> None:
 
     @app.get("/")
@@ -109,6 +150,7 @@ def _register_routes(app: FastAPI) -> None:
             )
         token = mgr.issue(username)
         response = RedirectResponse(url="/admin/", status_code=303)
+        settings = get_admin_settings()
         response.set_cookie(
             get_admin_settings().session_cookie,
             token,
@@ -117,6 +159,7 @@ def _register_routes(app: FastAPI) -> None:
             secure=get_admin_settings().environment in ("prod", "uat"),
             max_age=get_admin_settings().session_ttl_seconds,
         )
+        _attach_csrf_cookie(response, settings)
         return response
 
     @app.get("/admin/logout")
@@ -153,11 +196,108 @@ def _register_routes(app: FastAPI) -> None:
     async def users(
         request: Request,
         session: AdminSession = Depends(_require_session),
+        q: str | None = None,
     ) -> HTMLResponse:
         return TEMPLATES.TemplateResponse(
             request,
             "users.html",
-            {"session": session, "active": "users", "users": await list_users()},
+            {
+                "session": session,
+                "active": "users",
+                "users": await list_users(query=q),
+                "q": q or "",
+            },
+        )
+
+    @app.get("/admin/users/{user_id}", response_class=HTMLResponse)
+    async def user_detail(
+        request: Request,
+        user_id: str,
+        session: AdminSession = Depends(_require_session),
+    ) -> HTMLResponse:
+        user = await get_user_by_id(user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail="user_not_found")
+        notice = request.query_params.get("notice")
+        token_meta = await get_user_token_meta(user_id)
+        redis_state = await user_redis_state(user_id)
+        return TEMPLATES.TemplateResponse(
+            request,
+            "user_detail.html",
+            {
+                "session": session,
+                "active": "users",
+                "user": user,
+                "token": token_meta,
+                "redis_state": redis_state,
+                "snapshot_counts": await count_user_snapshots_by_kind(user_id),
+                "snapshots": await list_user_snapshots(user_id),
+                "estimates": await list_user_price_estimates(user_id),
+                "shares": await list_user_shares(user_id),
+                "history_count": await count_character_history(user_id),
+                "ops_enabled": bool(
+                    get_admin_settings().internal_secret.get_secret_value().strip()
+                ),
+                "notice": notice,
+            },
+        )
+
+    @app.post("/admin/users/{user_id}/refresh")
+    async def user_refresh_action(
+        request: Request,
+        user_id: str,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        status, body = await post_admin_action(f"/api/admin/users/{user_id}/refresh")
+        audit_action(
+            actor=session.username,
+            action="user_refresh",
+            detail=f"user_id={user_id} status={status} body={body[:200]}",
+        )
+        notice = "refresh_ok" if status < 300 else "refresh_failed"
+        return RedirectResponse(
+            url=f"/admin/users/{user_id}?notice={notice}", status_code=303
+        )
+
+    @app.post("/admin/users/{user_id}/logout")
+    async def user_logout_action(
+        request: Request,
+        user_id: str,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        status, body = await post_admin_action(f"/api/admin/users/{user_id}/logout")
+        audit_action(
+            actor=session.username,
+            action="user_logout",
+            detail=f"user_id={user_id} status={status} body={body[:200]}",
+        )
+        notice = "logout_ok" if status < 300 else "logout_failed"
+        return RedirectResponse(
+            url=f"/admin/users/{user_id}?notice={notice}", status_code=303
+        )
+
+    @app.post("/admin/users/{user_id}/shares/{share_id}/revoke")
+    async def user_share_revoke_action(
+        request: Request,
+        user_id: str,
+        share_id: str,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        status, body = await post_admin_action(f"/api/admin/shares/{share_id}/revoke")
+        audit_action(
+            actor=session.username,
+            action="share_revoke",
+            detail=f"share_id={share_id} user_id={user_id} status={status}",
+        )
+        notice = "revoke_ok" if status < 300 else "revoke_failed"
+        return RedirectResponse(
+            url=f"/admin/users/{user_id}?notice={notice}", status_code=303
         )
 
     @app.get("/admin/snapshots", response_class=HTMLResponse)
@@ -222,10 +362,18 @@ def _register_routes(app: FastAPI) -> None:
 
     @app.post("/admin/price-queue/remove")
     async def price_queue_remove(
+        request: Request,
         job_id: Annotated[str, Form()],
-        _session: AdminSession = Depends(_require_session),
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
     ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
         ok, outcome = await delete_price_job_key(job_id)
+        audit_action(
+            actor=session.username,
+            action="price_queue_remove",
+            detail=f"job_id={job_id} outcome={outcome}",
+        )
         if not ok:
             return RedirectResponse(url="/admin/price-queue?notice=invalid_job", status_code=303)
         if outcome == "deleted":
@@ -234,9 +382,17 @@ def _register_routes(app: FastAPI) -> None:
 
     @app.post("/admin/price-queue/clear")
     async def price_queue_clear(
-        _session: AdminSession = Depends(_require_session),
+        request: Request,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
     ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
         n = await clear_inflight_price_estimate_jobs()
+        audit_action(
+            actor=session.username,
+            action="price_queue_clear",
+            detail=f"cleared={n}",
+        )
         return RedirectResponse(url=f"/admin/price-queue?notice=cleared&n={n}", status_code=303)
 
     @app.get("/admin/upstream", response_class=HTMLResponse)

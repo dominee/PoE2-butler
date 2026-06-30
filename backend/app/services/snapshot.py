@@ -60,6 +60,7 @@ async def upsert_snapshot(
     key: str,
     payload: dict,
     previous_payload: dict | None = None,
+    insert_prev_payload: dict | None = None,
 ) -> None:
     """Insert or update a snapshot identified by (user_id, kind, key).
 
@@ -85,15 +86,20 @@ async def upsert_snapshot(
                 fetched_at=now,
             )
     if existing is None:
-        # Baseline copy so GET /api/activity can treat the tab as tracked immediately;
-        # the first refresh then shifts payload → prev_payload and surfaces real diffs.
+        # Baseline for activity diff: after manual refresh re-insert, use the gear state
+        # before refresh (insert_prev_payload) instead of duplicating the new payload.
+        baseline = (
+            copy.deepcopy(insert_prev_payload)
+            if insert_prev_payload is not None
+            else copy.deepcopy(payload)
+        )
         session.add(
             Snapshot(
                 user_id=user_id,
                 kind=kind,
                 key=key,
                 payload=payload,
-                prev_payload=copy.deepcopy(payload),
+                prev_payload=baseline,
                 fetched_at=now,
             )
         )
@@ -118,16 +124,27 @@ async def get_latest_snapshot(
     return res.scalar_one_or_none()
 
 
+@dataclass
+class CapturedCharacterSnapshot:
+    """Payload captured before manual refresh clears CHARACTER rows."""
+
+    payload: dict
+    prev_payload: dict | None
+
+
 async def delete_character_snapshots(
     session: AsyncSession, user_id: uuid.UUID
-) -> dict[str, dict]:
-    """Remove cached per-character payloads; return previous payloads keyed by name."""
+) -> dict[str, CapturedCharacterSnapshot]:
+    """Remove cached per-character payloads; return captured gear for re-insert."""
     stmt = select(Snapshot).where(
         Snapshot.user_id == user_id,
         Snapshot.kind == SnapshotKind.CHARACTER,
     )
     res = await session.execute(stmt)
-    captured = {snap.key: snap.payload for snap in res.scalars().all()}
+    captured = {
+        snap.key: CapturedCharacterSnapshot(payload=snap.payload, prev_payload=snap.prev_payload)
+        for snap in res.scalars().all()
+    }
     await session.execute(
         delete(Snapshot).where(
             Snapshot.user_id == user_id,
@@ -144,7 +161,7 @@ async def refresh_character_gear_snapshots(
     ggg: GGGClient,
     cipher: TokenCipher,
     league: str,
-    previous_payloads: dict[str, dict] | None = None,
+    captured_characters: dict[str, CapturedCharacterSnapshot] | None = None,
 ) -> None:
     """Re-fetch and persist CHARACTER rows for every account toon in ``league``.
 
@@ -164,13 +181,15 @@ async def refresh_character_gear_snapshots(
         if not name:
             continue
         try:
+            cap = (captured_characters or {}).get(name)
             await ensure_character_detail(
                 session=session,
                 user=user,
                 ggg=ggg,
                 cipher=cipher,
                 name=name,
-                previous_payload=(previous_payloads or {}).get(name),
+                previous_payload=cap.payload if cap is not None else None,
+                insert_prev_payload=cap.payload if cap is not None else None,
             )
         except Exception as exc:  # noqa: BLE001
             log.warning(
@@ -344,6 +363,7 @@ async def ensure_character_detail(
     cipher: TokenCipher,
     name: str,
     previous_payload: dict | None = None,
+    insert_prev_payload: dict | None = None,
 ) -> dict:
     """Fetch character detail on demand and cache it in snapshots."""
     existing = await get_latest_snapshot(session, user.id, SnapshotKind.CHARACTER, key=name)
@@ -369,5 +389,6 @@ async def ensure_character_detail(
         key=name,
         payload=payload,
         previous_payload=previous_payload,
+        insert_prev_payload=insert_prev_payload,
     )
     return payload

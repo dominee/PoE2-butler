@@ -73,6 +73,24 @@ class SessionStore:
     async def destroy(self, sid: str) -> None:
         await self._redis.delete(_session_key(sid))
 
+    async def destroy_all_for_user(self, user_id: str) -> int:
+        """Delete every Redis session belonging to ``user_id``."""
+        destroyed = 0
+        async for key in self._redis.scan_iter(match=f"{_SESSION_KEY_PREFIX}*", count=200):
+            blob = await self._redis.get(key)
+            if blob is None:
+                continue
+            if isinstance(blob, bytes):
+                blob = blob.decode("utf-8")
+            try:
+                data = SessionData.from_json(blob)
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+            if data.user_id == user_id:
+                await self._redis.delete(key)
+                destroyed += 1
+        return destroyed
+
 
 @dataclass
 class PendingAuth:

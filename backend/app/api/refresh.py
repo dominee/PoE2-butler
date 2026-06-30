@@ -81,7 +81,7 @@ async def refresh(
         include_stashes_for_league=stash_league or None,
         revalidate_character_list=revalidate_list,
     )
-    previous_payloads = await delete_character_snapshots(db, user.id)
+    captured = await delete_character_snapshots(db, user.id)
     if stash_league:
         await refresh_character_gear_snapshots(
             session=db,
@@ -89,7 +89,7 @@ async def refresh(
             ggg=ggg,
             cipher=cipher,
             league=stash_league,
-            previous_payloads=previous_payloads,
+            captured_characters=captured,
         )
     await db.commit()
     return RefreshResponse(

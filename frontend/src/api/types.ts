@@ -181,12 +181,18 @@ export interface CharactersResponse {
   characters: CharacterSummary[];
 }
 
+export interface MeCapabilities {
+  stash_available: boolean;
+  leagues_inferred: boolean;
+}
+
 export interface Me {
   id: string;
   account_name: string;
   realm: string;
   preferred_league: string | null;
   trade_tolerance_pct: number;
+  capabilities: MeCapabilities;
 }
 
 export interface RefreshResponse {

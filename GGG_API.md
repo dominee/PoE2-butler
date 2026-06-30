@@ -70,9 +70,11 @@ Use these when emailing **developer@grindinggear.com** or filling an application
 | `account:profile` | Identify the user (GGG account name is our primary key). | ✅ Granted |
 | `account:characters` | List characters and their equipped items. | ✅ Granted |
 | `account:stashes` | List and read stash tabs (includes currency/special tabs). | ⏳ PoE1 only; pending PoE2 equivalent from GGG |
-| `account:leagues` | Enumerate leagues the user participates in. | ⏳ Not yet granted — preferred league is inferred from the character list |
+| `account:leagues` | Enumerate leagues the user participates in. | ⏳ Not granted — **not re-requesting**; set `GGG_DEFAULT_LEAGUE` on each new league launch (see `DEPLOY.md`) |
 
 **Scope handling:** `GGG_SCOPES` in `.env.uat` / prod must only list granted scopes. Requesting an undeclared scope causes the entire authorization to fail. The backend gracefully falls back to character-derived league detection when `account:leagues` is absent (see `snapshot.py` → `pick_league_from_characters`).
+
+**PoE2 stash follow-up:** Monitor GGG developer docs/changelog for a PoE2 stash scope. When available, add it to `GGG_SCOPES`, run `pytest -m live_ggg` against UAT, and verify stash refresh + UI (`GET /api/me` → `capabilities.stash_available`).
 
 Ask for the minimum set only; do **not** request any write scopes. The app never mutates GGG-side state.
 

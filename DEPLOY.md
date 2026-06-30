@@ -395,12 +395,28 @@ docker compose \
   --env-file deploy/env/.env.prod \
   up -d --build
 
-# Apply any new migrations
+# Apply any new migrations (required after timeline migrations 0006/0007, etc.)
 docker compose \
   -f deploy/compose/docker-compose.prod.yml \
   --env-file deploy/env/.env.prod \
   exec backend alembic upgrade head
+
+# After deploy: restart worker if pricing concurrency env changed
+docker compose \
+  -f deploy/compose/docker-compose.prod.yml \
+  --env-file deploy/env/.env.prod \
+  restart worker
 ```
+
+**Pre-cutover checklist (UAT and prod):**
+
+1. `alembic upgrade head` through latest migration.
+2. Set `PRICING_MAX_CONCURRENT_ESTIMATES=1`, `ARQ_MAX_JOBS=2` in env; restart **worker**.
+3. Set matching `ADMIN_INTERNAL_SECRET` on **backend** and **admin** for operator actions.
+4. Install daily backup cron — [`deploy/scripts/postgres-backup.sh`](scripts/postgres-backup.sh).
+5. Add 1 GB swap on 1 GB droplets if needed — [`deploy/scripts/setup-swap.sh`](scripts/setup-swap.sh).
+6. On **new league launch**, update `GGG_DEFAULT_LEAGUE` in env and redeploy (no `account:leagues` scope request planned).
+7. Schedule first Postgres restore drill; log result in [`docs/RESTORE_DRILL_LOG.md`](../docs/RESTORE_DRILL_LOG.md).
 
 **After a PoE2 game patch (~quarterly):** if the patch added or changed modifiers, update the mod tier DB before redeploying (see §2.4). The updated `mod_ranges.json` is committed to the repo and baked into the image during `up --build`. No extra command is needed on the server beyond `git pull` + rebuild.
 
@@ -514,6 +530,16 @@ On a 1 GB VM, keep the OS footprint low and avoid running other services. **Admi
 ## 7. Backup & restore
 
 ### Postgres backup
+
+Use the bundled script (adjust `POE2B_COMPOSE_FILE` / `POE2B_ENV_FILE` for UAT):
+
+```bash
+chmod +x deploy/scripts/postgres-backup.sh
+# Cron example: 15 2 * * * /opt/poe2-butler/deploy/scripts/postgres-backup.sh
+./deploy/scripts/postgres-backup.sh
+```
+
+Manual one-off:
 
 ```bash
 docker compose ... exec postgres \

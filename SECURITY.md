@@ -74,7 +74,10 @@ to the code that enforces it so regressions can be caught by reviewers.
   ([`admin/app/auth.py`](admin/app/auth.py)).
 - [x] IP allowlist middleware
   ([`admin/app/middleware.py`](admin/app/middleware.py)).
-- [x] Read-only DB access; no mutations exposed over HTTP.
+- [x] Read-only DB access for observability views.
+- [x] Guarded operator mutations: price-queue remove/clear (Redis), user refresh /
+  force logout / share revoke via backend `/api/admin/*` when `ADMIN_INTERNAL_SECRET`
+  is set; CSRF on admin POST forms; structured audit log (`admin.audit`).
 
 ## Supply chain
 

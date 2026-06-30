@@ -121,6 +121,26 @@ class Settings(BaseSettings):
 
     cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://app.localhost"])
 
+    # Shared secret for operator actions from the admin console (``X-Admin-Internal-Secret``).
+    # Empty disables ``/api/admin/*`` routes.
+    admin_internal_secret: SecretStr = SecretStr("")
+
+    @property
+    def ggg_scope_set(self) -> frozenset[str]:
+        return frozenset(s.strip() for s in self.ggg_scopes.split() if s.strip())
+
+    @property
+    def stash_oauth_available(self) -> bool:
+        return "account:stashes" in self.ggg_scope_set
+
+    @property
+    def leagues_oauth_available(self) -> bool:
+        return "account:leagues" in self.ggg_scope_set
+
+    @property
+    def admin_ops_enabled(self) -> bool:
+        return bool(self.admin_internal_secret.get_secret_value().strip())
+
     @property
     def is_prod(self) -> bool:
         return self.environment == "prod"

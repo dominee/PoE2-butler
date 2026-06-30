@@ -334,6 +334,7 @@ border-rarity-*  (same names)
 | `GGG_TRADE_429_BUFFER_SEC` / `GGG_TRADE_429_FALLBACK_SEC` / `GGG_TRADE_429_MAX_WAIT_SEC` | On HTTP 429: add buffer to parsed wait, fallback if unparseable, cap |
 | `SECURITY_CONTACT_EMAIL` | Optional ops / security contact (e.g. disclosure; not read by app code) |
 | `ADMIN_DASHBOARD_REFRESH_SEC` | `0` = no JS polling; `>0` enables **Refresh now** / **Start auto-refresh** on the Overview (operators choose when to poll) |
+| `ADMIN_INTERNAL_SECRET` | Shared secret for admin → backend `/api/admin/*` operator actions (refresh, logout, share revoke) |
 | `CHARACTER_SNAPSHOT_HISTORY_MAX` | Max historic character gear snapshots retained per character for the timeline UI (default 20) |
 
 ---
@@ -386,20 +387,18 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 
 ---
 
-## 10. Pending work (as of 2026-05-19)
+## 10. Pending work (as of 2026-06-30)
 
 | # | Task | Notes |
 |---|---|---|
-| 1 | Image-first icon grid view for stash | Display `item.icon` from PoE CDN with stat overlay |
-| 2 | Cross-tab stash search | Query all loaded tab snapshots, not just current |
-| 3 | Character items table view | Mirror stash table view for equipped gear |
-| 4 | Currency stash tab renderer | Fixed-grid layout matching in-game currency tab |
-| 5 | ~~Real GGG API approval~~ | **DONE** (2026-06) — `account:profile` + `account:characters` granted. `account:stashes` (PoE2) and `account:leagues` pending. |
-| 6 | DigitalOcean VM provisioning | See `DEPLOY.md` |
-| 7 | ~~Backend tests: update Item fixtures~~ | ~~Add `explicit_mod_details`, `socketed_items` fields~~ — **DONE** |
-| 8 | ~~Frontend tests: ActivityLog, PercentBar~~ | ~~Unit tests missing~~ — **DONE** |
-| 9 | `AGENTS.md` subagent skills | Create skills for domain-specific contexts if needed |
-| 10 | Weighted upgrade search — GGG weight group | Falls back to min-floor upgrade when GGG rejects weight group (anonymous complexity limit). Future: pass user's GGG OAuth token in request headers so authenticated callers get the higher complexity budget. |
+| 1 | DigitalOcean VM provisioning | See `DEPLOY.md` |
+| 2 | Weighted upgrade search — GGG weight group | Falls back to min-floor upgrade when GGG rejects weight group. Future: pass user's GGG OAuth token in trade requests. |
+| 3 | Authenticated trade2 for weighted upgrade | P2 quality improvement |
+| 4 | PoE2 stash OAuth scope | **Watch GGG** — enable in `GGG_SCOPES` when announced; backend/UI stash-ready |
+| 5 | League rollover | Manual `GGG_DEFAULT_LEAGUE` env update each launch (no `account:leagues` request) |
+| 6 | `AGENTS.md` subagent skills | Process/tooling |
+
+**Recently completed:** icon grid, cross-tab search, character table, currency tab, character gear timeline, prod capabilities UX, admin user detail + operator actions, activity diff across refresh.
 
 ---
 

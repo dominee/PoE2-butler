@@ -53,6 +53,7 @@ class AdminSettings(BaseSettings):
     database_url: str = "postgresql+asyncpg://poe2b:poe2b@postgres:5432/poe2b"
     redis_url: str = "redis://redis:6379/0"
     backend_base_url: str = "http://backend:8000"
+    internal_secret: SecretStr = SecretStr("")
 
     # 0 = disabled. When > 0, Overview polls ``GET /admin/api/summary`` every N seconds.
     dashboard_refresh_sec: int = 0

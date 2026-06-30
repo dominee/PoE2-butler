@@ -6,3 +6,5 @@ actions. The full procedure is in [`DEPLOY.md`](../DEPLOY.md).
 | Date (UTC) | Operator | Backup date restored | Outcome | Notes |
 |---|---|---|---|---|
 | _pending_ | | | | first drill scheduled after PROD cutover |
+
+**Runbook:** [`DEPLOY.md`](../DEPLOY.md) §7 · **Script:** [`deploy/scripts/postgres-backup.sh`](../deploy/scripts/postgres-backup.sh)

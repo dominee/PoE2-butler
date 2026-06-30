@@ -64,9 +64,15 @@ in quotes**—quoted values often leave `$$` unexpanded so bcrypt sees garbage.
 | `GET /admin/login` · `POST /admin/login` | Form-based sign in (bcrypt + optional TOTP) |
 | `GET /admin/` | **Dashboard:** totals, activity metrics, snapshot mix, Redis summary, backend probes |
 | `GET /admin/api/summary` | JSON bundle for the same dashboard (session cookie required); used for optional auto-refresh |
-| `GET /admin/users` | Recent users and their prefs |
+| `GET /admin/users` | Recent users (search via `?q=`) |
+| `GET /admin/users/{uuid}` | User detail: token meta, Redis state, snapshots, estimates, shares |
+| `POST /admin/users/{uuid}/refresh` | Trigger snapshot refresh (requires `ADMIN_INTERNAL_SECRET`) |
+| `POST /admin/users/{uuid}/logout` | Force logout (destroy Redis sessions) |
+| `POST /admin/users/{uuid}/shares/{id}/revoke` | Revoke public share |
 | `GET /admin/snapshots` | Most recent snapshots across all users |
 | `GET /admin/cache` | Redis (memory, clients, evicted/expired keys), price cache, arq queue |
+| `GET /admin/price-queue` | Top 50 in-flight hybrid jobs; **Remove** / **Clear** (CSRF) |
+| `POST /admin/price-queue/remove` · `POST /admin/price-queue/clear` | Redis price-job triage |
 | `GET /admin/upstream` | Backend `/healthz` and `/readyz` with latency, HTTP status, parsed `version` |
 | `GET /admin/healthz` | Cheap liveness probe for Traefik |
 | `GET /admin/logout` | Clear session cookie |

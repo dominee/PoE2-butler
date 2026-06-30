@@ -41,18 +41,32 @@ async def count_totals() -> dict[str, int]:
         return {"users": int(m["users"] or 0), "snapshots": int(m["snapshots"] or 0)}
 
 
-async def list_users(limit: int = 100) -> list[dict]:
+async def list_users(limit: int = 100, query: str | None = None) -> list[dict]:
     engine = get_engine()
+    q = (query or "").strip()
     async with engine.connect() as conn:
-        rows = await conn.execute(
-            text(
-                "SELECT id, ggg_account_name, realm, preferred_league, "
-                "trade_tolerance_pct, valuable_threshold_chaos, "
-                "created_at, last_login_at, last_refreshed_at "
-                "FROM users ORDER BY created_at DESC LIMIT :limit"
-            ),
-            {"limit": limit},
-        )
+        if q:
+            rows = await conn.execute(
+                text(
+                    "SELECT id, ggg_account_name, realm, preferred_league, "
+                    "trade_tolerance_pct, valuable_threshold_chaos, "
+                    "created_at, last_login_at, last_refreshed_at "
+                    "FROM users "
+                    "WHERE ggg_account_name ILIKE :pat OR CAST(id AS text) = :exact "
+                    "ORDER BY created_at DESC LIMIT :limit"
+                ),
+                {"pat": f"%{q}%", "exact": q, "limit": limit},
+            )
+        else:
+            rows = await conn.execute(
+                text(
+                    "SELECT id, ggg_account_name, realm, preferred_league, "
+                    "trade_tolerance_pct, valuable_threshold_chaos, "
+                    "created_at, last_login_at, last_refreshed_at "
+                    "FROM users ORDER BY created_at DESC LIMIT :limit"
+                ),
+                {"limit": limit},
+            )
         return [dict(row._mapping) for row in rows]
 
 
@@ -238,3 +252,108 @@ async def enrich_price_queue_rows(rows: list[dict]) -> None:
                 prof = _character_profile_label(payload, _key)
                 break
         r["character_profile"] = prof if prof else "— (stash or unknown)"
+
+
+async def get_user_by_id(user_id: str) -> dict | None:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT id, ggg_account_name, ggg_uuid, realm, preferred_league, "
+                    "trade_tolerance_pct, valuable_threshold_chaos, "
+                    "created_at, last_login_at, last_refreshed_at "
+                    "FROM users WHERE id = CAST(:id AS uuid)"
+                ),
+                {"id": user_id},
+            )
+        ).first()
+        return dict(row._mapping) if row else None
+
+
+async def get_user_token_meta(user_id: str) -> dict | None:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT scope, expires_at, updated_at "
+                    "FROM user_tokens WHERE user_id = CAST(:id AS uuid)"
+                ),
+                {"id": user_id},
+            )
+        ).first()
+        return dict(row._mapping) if row else None
+
+
+async def count_user_snapshots_by_kind(user_id: str) -> list[dict]:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT kind, COUNT(*) AS n FROM snapshots "
+                "WHERE user_id = CAST(:id AS uuid) GROUP BY kind ORDER BY kind"
+            ),
+            {"id": user_id},
+        )
+        return [dict(row._mapping) for row in rows]
+
+
+async def list_user_snapshots(user_id: str, limit: int = 30) -> list[dict]:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT id, kind, key, fetched_at FROM snapshots "
+                "WHERE user_id = CAST(:id AS uuid) "
+                "ORDER BY fetched_at DESC LIMIT :limit"
+            ),
+            {"id": user_id, "limit": limit},
+        )
+        return [dict(row._mapping) for row in rows]
+
+
+async def list_user_price_estimates(user_id: str, limit: int = 20) -> list[dict]:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT league, item_id, item_name, status, error, computed_at "
+                "FROM item_price_estimates "
+                "WHERE user_id = CAST(:id AS uuid) "
+                "ORDER BY computed_at DESC NULLS LAST LIMIT :limit"
+            ),
+            {"id": user_id, "limit": limit},
+        )
+        return [dict(row._mapping) for row in rows]
+
+
+async def list_user_shares(user_id: str, limit: int = 20) -> list[dict]:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT id, league, created_at, revoked_at "
+                "FROM item_shares "
+                "WHERE user_id = CAST(:id AS uuid) "
+                "ORDER BY created_at DESC LIMIT :limit"
+            ),
+            {"id": user_id, "limit": limit},
+        )
+        return [dict(row._mapping) for row in rows]
+
+
+async def count_character_history(user_id: str) -> int:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT COUNT(*) AS n FROM character_snapshot_history "
+                    "WHERE user_id = CAST(:id AS uuid)"
+                ),
+                {"id": user_id},
+            )
+        ).first()
+        return int(row._mapping["n"]) if row else 0
+

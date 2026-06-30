@@ -146,9 +146,10 @@ async def test_price_queue_remove_redirects_when_authenticated(
             follow_redirects=False,
         )
         assert login.status_code == 303
+        csrf = client.cookies.get("poe2b_admin_csrf", "")
         rem = await client.post(
             "/admin/price-queue/remove",
-            data={"job_id": jid},
+            data={"job_id": jid, "csrf_token": csrf},
             follow_redirects=False,
         )
     assert rem.status_code == 303

@@ -202,7 +202,8 @@ async def test_refresh_simulation_delete_then_insert_with_change(
             kind=SnapshotKind.CHARACTER,
             key="Hero",
             payload=new,
-            previous_payload=captured["Hero"],
+            previous_payload=captured["Hero"].payload,
+            insert_prev_payload=captured["Hero"].payload,
         )
         await session.commit()
 
@@ -232,7 +233,8 @@ async def test_refresh_simulation_no_archive_when_gear_unchanged(
             kind=SnapshotKind.CHARACTER,
             key="Hero",
             payload=payload,
-            previous_payload=captured["Hero"],
+            previous_payload=captured["Hero"].payload,
+            insert_prev_payload=captured["Hero"].payload,
         )
         await session.commit()
 
