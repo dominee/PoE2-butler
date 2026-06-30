@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     ggg_http_timeout_seconds: float = 15.0
 
     refresh_cooldown_seconds: int = 60
+    # Max historic character gear snapshots retained per character (timeline UI).
+    character_snapshot_history_max: int = 20
     default_trade_tolerance_pct: int = 10
 
     pricing_source: Literal["static", "poe_ninja"] = "static"

@@ -27,6 +27,7 @@ from app.domain.league import (
 )
 from app.logging import get_logger
 from app.security.crypto import TokenCipher
+from app.services.character_snapshot_history import archive_character_snapshot
 from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_access
 
 log = get_logger("app.services.snapshot")
@@ -81,6 +82,14 @@ async def upsert_snapshot(
             )
         )
     else:
+        if kind == SnapshotKind.CHARACTER:
+            await archive_character_snapshot(
+                session,
+                user_id=user_id,
+                character_name=key,
+                payload=existing.payload,
+                fetched_at=_as_utc(existing.fetched_at),
+            )
         # Preserve current payload as previous before overwriting — this is the
         # basis for the activity log diff on the next refresh.
         existing.prev_payload = existing.payload
@@ -103,6 +112,19 @@ async def get_latest_snapshot(
 
 async def delete_character_snapshots(session: AsyncSession, user_id: uuid.UUID) -> None:
     """Remove cached per-character payloads so the next read refetches from GGG (or mock)."""
+    stmt = select(Snapshot).where(
+        Snapshot.user_id == user_id,
+        Snapshot.kind == SnapshotKind.CHARACTER,
+    )
+    res = await session.execute(stmt)
+    for snap in res.scalars().all():
+        await archive_character_snapshot(
+            session,
+            user_id=user_id,
+            character_name=snap.key,
+            payload=snap.payload,
+            fetched_at=_as_utc(snap.fetched_at),
+        )
     await session.execute(
         delete(Snapshot).where(
             Snapshot.user_id == user_id,

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   useApprise,
   useCharacter,
+  useCharacterSnapshot,
   useCharacters,
   useLeagues,
   useLogout,
@@ -17,6 +18,10 @@ import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
 import { CharacterGrid } from "@/features/characters/CharacterGrid";
 import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
+import {
+  CharacterSnapshotTimeline,
+  type SnapshotSelection,
+} from "@/features/characters/CharacterSnapshotTimeline";
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { CharacterTable } from "@/features/characters/CharacterTable";
@@ -46,6 +51,7 @@ export function AppShell() {
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [charLayout, setCharLayout] = useState<"doll" | "table">("doll");
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<SnapshotSelection>("current");
   const [appriseNotice, setAppriseNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -66,6 +72,16 @@ export function AppShell() {
       : null;
   }, [selectedCharacter, charactersQ.data, charactersQ.isError]);
   const characterQ = useCharacter(characterNameForDetail, selectedLeague);
+  const historicCharacterQ = useCharacterSnapshot(
+    characterNameForDetail,
+    selectedSnapshotId === "current" ? null : selectedSnapshotId,
+  );
+  const gearDetail =
+    selectedSnapshotId === "current" ? characterQ.data : historicCharacterQ.data;
+
+  useEffect(() => {
+    setSelectedSnapshotId("current");
+  }, [characterNameForDetail]);
 
   const gearLoadStatus = useMemo(() => {
     if (!selectedCharacter) return null;
@@ -336,7 +352,37 @@ export function AppShell() {
                 </div>
               )}
             </div>
-            {characterQ.data && <CharacterStatSummary detail={characterQ.data} />}
+            {characterNameForDetail && (
+              <CharacterSnapshotTimeline
+                characterName={characterNameForDetail}
+                selectedId={selectedSnapshotId}
+                onSelect={setSelectedSnapshotId}
+              />
+            )}
+            {gearDetail?.is_historical && gearDetail.snapshot_fetched_at && (
+              <div
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-700/40 bg-amber-950/25 px-3 py-2 text-xs text-amber-100/90"
+                role="status"
+              >
+                <span>
+                  Viewing gear from{" "}
+                  {new Date(gearDetail.snapshot_fetched_at).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <button
+                  type="button"
+                  className="rounded border border-amber-600/50 px-2 py-0.5 text-amber-100/95 hover:bg-amber-900/30"
+                  onClick={() => setSelectedSnapshotId("current")}
+                >
+                  Back to current
+                </button>
+              </div>
+            )}
+            {gearDetail && <CharacterStatSummary detail={gearDetail} />}
             {gearLoadStatus && (
               <p className="text-ui-muted" aria-live="polite">
                 {gearLoadStatus}
@@ -349,23 +395,31 @@ export function AppShell() {
               </p>
             )}
             {characterNameForDetail &&
+              selectedSnapshotId === "current" &&
               (characterQ.isLoading || (characterQ.isFetching && !characterQ.data)) && (
                 <p className="text-ui-muted" aria-live="polite">
                   Loading gear&hellip;
                 </p>
               )}
-            {characterQ.data && charLayout === "doll" && (
+            {characterNameForDetail &&
+              selectedSnapshotId !== "current" &&
+              historicCharacterQ.isLoading && (
+                <p className="text-ui-muted" aria-live="polite">
+                  Loading historic gear&hellip;
+                </p>
+              )}
+            {gearDetail && charLayout === "doll" && (
               <>
                 <PaperDoll
-                  equipped={collectPaperDollItems(characterQ.data)}
+                  equipped={collectPaperDollItems(gearDetail)}
                   selectedItemId={selectedItem?.id ?? null}
                   onSelectItem={setSelectedItem}
                 />
-                {characterQ.data.jewels?.length > 0 && (
+                {gearDetail.jewels?.length > 0 && (
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Jewels</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {characterQ.data.jewels.map((jewel) => (
+                      {gearDetail.jewels.map((jewel) => (
                         <ItemCard
                           key={jewel.id}
                           item={jewel}
@@ -376,11 +430,11 @@ export function AppShell() {
                     </div>
                   </div>
                 )}
-                {filterNotableCharacterGems(characterQ.data.gems ?? []).length > 0 && (
+                {filterNotableCharacterGems(gearDetail.gems ?? []).length > 0 && (
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {filterNotableCharacterGems(characterQ.data.gems ?? []).map((gem) => (
+                      {filterNotableCharacterGems(gearDetail.gems ?? []).map((gem) => (
                         <ItemCard
                           key={gem.id}
                           item={gem}
@@ -391,13 +445,13 @@ export function AppShell() {
                     </div>
                   </div>
                 )}
-                {(characterQ.data.inventory ?? []).filter(
+                {(gearDetail.inventory ?? []).filter(
                   (i) => i.rarity !== "Gem" || isNotableCharacterGem(i),
                 ).length > 0 && (
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Other</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {(characterQ.data.inventory ?? [])
+                      {(gearDetail.inventory ?? [])
                         .filter((i) => i.rarity !== "Gem" || isNotableCharacterGem(i))
                         .map((item) => (
                         <ItemCard
@@ -412,12 +466,12 @@ export function AppShell() {
                 )}
               </>
             )}
-            {characterQ.data && charLayout === "table" && (
+            {gearDetail && charLayout === "table" && (
               <CharacterTable
-                equipped={characterQ.data.equipped}
-                gems={characterQ.data.gems}
-                jewels={characterQ.data.jewels}
-                other={characterQ.data.inventory}
+                equipped={gearDetail.equipped}
+                gems={gearDetail.gems}
+                jewels={gearDetail.jewels}
+                other={gearDetail.inventory}
                 selectedItemId={selectedItem?.id ?? null}
                 onSelect={setSelectedItem}
               />

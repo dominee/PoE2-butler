@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -30,6 +31,8 @@ class CharacterDetail(BaseModel):
     inventory: list[Item] = Field(default_factory=list)
     # Cumulative mod rollups; see :mod:`app.domain.stat_summary`.
     stat_summary: EquipmentStatSummary = Field(default_factory=EquipmentStatSummary)
+    snapshot_fetched_at: datetime | None = None
+    is_historical: bool = False
 
 
 _EQUIPPED_SLOTS = {

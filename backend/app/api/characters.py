@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +19,10 @@ from app.domain.character import (
     parse_summaries,
 )
 from app.security.crypto import TokenCipher
+from app.services.character_snapshot_history import (
+    get_character_snapshot_history,
+    list_character_snapshots,
+)
 from app.services.snapshot import ensure_character_detail, get_latest_snapshot
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
@@ -25,6 +31,17 @@ router = APIRouter(prefix="/api/characters", tags=["characters"])
 class CharactersResponse(BaseModel):
     league: str | None
     characters: list[CharacterSummary]
+
+
+class CharacterSnapshotMeta(BaseModel):
+    id: int | None
+    fetched_at: datetime
+    is_current: bool
+
+
+class CharacterSnapshotsResponse(BaseModel):
+    character_name: str
+    snapshots: list[CharacterSnapshotMeta]
 
 
 @router.get("", summary="List characters for a league")
@@ -40,6 +57,50 @@ async def list_characters(
     if league:
         summaries = [c for c in summaries if c.league == league]
     return CharactersResponse(league=league, characters=summaries)
+
+
+@router.get("/{name}/snapshots", summary="Timeline metadata for character gear snapshots")
+async def list_character_snapshot_timeline(
+    name: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+) -> CharacterSnapshotsResponse:
+    meta = await list_character_snapshots(db, user_id=user.id, character_name=name)
+    return CharacterSnapshotsResponse(
+        character_name=name,
+        snapshots=[
+            CharacterSnapshotMeta(
+                id=m.id,
+                fetched_at=m.fetched_at,
+                is_current=m.is_current,
+            )
+            for m in meta
+        ],
+    )
+
+
+@router.get(
+    "/{name}/snapshots/{history_id}",
+    summary="Historic character detail from an archived snapshot",
+)
+async def get_historic_character(
+    name: str,
+    history_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+) -> CharacterDetail:
+    row = await get_character_snapshot_history(
+        db, user_id=user.id, character_name=name, history_id=history_id
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="snapshot_not_found")
+    detail = parse_detail(row.payload)
+    return detail.model_copy(
+        update={
+            "snapshot_fetched_at": row.fetched_at,
+            "is_historical": True,
+        }
+    )
 
 
 @router.get("/{name}", summary="Character detail with equipped items")

@@ -141,6 +141,20 @@ export interface CharacterDetail {
   inventory: Item[];
   /** Templated mod rollups (all numeric mod lines, grouped by section heuristics). */
   stat_summary?: EquipmentStatSummary;
+  /** Set when loaded from GET /api/characters/{name}/snapshots/{id}. */
+  snapshot_fetched_at?: string | null;
+  is_historical?: boolean;
+}
+
+export interface CharacterSnapshotMeta {
+  id: number | null;
+  fetched_at: string;
+  is_current: boolean;
+}
+
+export interface CharacterSnapshotsResponse {
+  character_name: string;
+  snapshots: CharacterSnapshotMeta[];
 }
 
 export interface League {

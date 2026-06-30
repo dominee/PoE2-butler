@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.base import Base
-from app.db.models import Snapshot, SnapshotKind, User
+from app.db.models import CharacterSnapshotHistory, Snapshot, SnapshotKind, User
 from app.services.snapshot import delete_character_snapshots, get_latest_snapshot
 
 
@@ -55,5 +55,13 @@ async def test_delete_character_snapshots_removes_rows() -> None:
             )
         )
         assert res.scalars().all() == []
+
+    async with factory() as session:
+        hist = await session.execute(
+            select(CharacterSnapshotHistory).where(CharacterSnapshotHistory.user_id == uid)
+        )
+        rows = list(hist.scalars().all())
+        assert len(rows) == 1
+        assert rows[0].character_name == "Hero"
 
     await engine.dispose()

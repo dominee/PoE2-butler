@@ -8,6 +8,7 @@ import type {
   ActivityResponse,
   AppriseQueued,
   CharacterDetail,
+  CharacterSnapshotsResponse,
   CharactersResponse,
   CreateShareResponse,
   CurrencyRatesResponse,
@@ -36,6 +37,9 @@ export const queryKeys = {
   leagues: ["leagues"] as const,
   characters: (league: string | null) => ["characters", league] as const,
   character: (name: string, league: string | null) => ["character", name, league] as const,
+  characterSnapshots: (name: string) => ["characterSnapshots", name] as const,
+  characterSnapshot: (name: string, historyId: number) =>
+    ["characterSnapshot", name, historyId] as const,
   stashes: (league: string | null) => ["stashes", league] as const,
   stashTab: (league: string | null, tabId: string | null) =>
     ["stash-tab", league, tabId] as const,
@@ -114,6 +118,36 @@ export function useCharacter(name: string | null, league: string | null = null) 
   });
 }
 
+export function useCharacterSnapshots(name: string | null) {
+  return useQuery<CharacterSnapshotsResponse>({
+    queryKey: queryKeys.characterSnapshots(name ?? ""),
+    queryFn: () =>
+      api.get<CharacterSnapshotsResponse>(
+        `/api/characters/${encodeURIComponent(name ?? "")}/snapshots`,
+      ),
+    enabled: Boolean(name),
+    staleTime: 30_000,
+  });
+}
+
+export function useCharacterSnapshot(name: string | null, historyId: number | null) {
+  return useQuery<CharacterDetail>({
+    queryKey: queryKeys.characterSnapshot(name ?? "", historyId ?? 0),
+    queryFn: () =>
+      api.get<CharacterDetail>(
+        `/api/characters/${encodeURIComponent(name ?? "")}/snapshots/${historyId}`,
+      ),
+    enabled: Boolean(name) && historyId != null,
+    retry: false,
+    select: (data) => ({
+      ...data,
+      gems: data.gems ?? [],
+      jewels: data.jewels ?? [],
+      inventory: data.inventory ?? [],
+    }),
+  });
+}
+
 export function useRefresh() {
   const qc = useQueryClient();
   return useMutation<RefreshResponse, Error, { league?: string | null } | void>({
@@ -126,6 +160,8 @@ export function useRefresh() {
     onSuccess: () => {
       void qc.removeQueries({ queryKey: ["characters"] });
       void qc.removeQueries({ queryKey: ["character"] });
+      void qc.removeQueries({ queryKey: ["characterSnapshots"] });
+      void qc.removeQueries({ queryKey: ["characterSnapshot"] });
       qc.invalidateQueries({ queryKey: queryKeys.leagues });
       qc.invalidateQueries({ queryKey: queryKeys.me });
       qc.invalidateQueries({ queryKey: ["activity"] });

@@ -225,6 +225,13 @@ class Snapshot(Base):
 
 `upsert_snapshot` in `backend/app/services/snapshot.py` shifts `payload → prev_payload` on update; **first insert** also stores a baseline copy in `prev_payload` so `GET /api/activity` can report `has_prev` immediately. OAuth callback runs `refresh_stashes` after leagues resolve `preferred_league` so stash tabs exist before the first manual refresh.
 
+**Character snapshot history** (`CharacterSnapshotHistory` in `models.py`, service `character_snapshot_history.py`):
+
+- Append-only archive of past `CHARACTER` payloads for the gear **timeline** UI (retention default **20** per character via `CHARACTER_SNAPSHOT_HISTORY_MAX`).
+- Archived before `upsert_snapshot` overwrites a CHARACTER row and before `delete_character_snapshots` (manual refresh path).
+- `GET /api/characters/{name}/snapshots` — timeline metadata (oldest → newest; last dot is current).
+- `GET /api/characters/{name}/snapshots/{history_id}` — historic `CharacterDetail` with `is_historical=true`.
+
 **Item parsing** (`backend/app/domain/item.py`):
 
 - `_strip_tags(text)` removes `[Label|Short]` or `[Plain]` GGG markdown tags.
@@ -326,6 +333,7 @@ border-rarity-*  (same names)
 | `GGG_TRADE_429_BUFFER_SEC` / `GGG_TRADE_429_FALLBACK_SEC` / `GGG_TRADE_429_MAX_WAIT_SEC` | On HTTP 429: add buffer to parsed wait, fallback if unparseable, cap |
 | `SECURITY_CONTACT_EMAIL` | Optional ops / security contact (e.g. disclosure; not read by app code) |
 | `ADMIN_DASHBOARD_REFRESH_SEC` | `0` = no JS polling; `>0` enables **Refresh now** / **Start auto-refresh** on the Overview (operators choose when to poll) |
+| `CHARACTER_SNAPSHOT_HISTORY_MAX` | Max historic character gear snapshots retained per character for the timeline UI (default 20) |
 
 ---
 
@@ -347,6 +355,9 @@ Current migrations:
 - `0001_init` — users, user_tokens, snapshots, snapshot_kind enum
 - `0002_valuable_threshold` — adds `valuable_threshold_chaos` to users
 - `0003_prev_payload` — adds `prev_payload JSONB` to snapshots
+- `0004_item_shares` — public item share links
+- `0005_item_price_estimates` — hybrid price estimate rows
+- `0006_character_snapshot_history` — gear timeline archive table
 
 ---
 

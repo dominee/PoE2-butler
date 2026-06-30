@@ -4,6 +4,16 @@ Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. I
 
 ---
 
+## 2026-06-30
+
+### App · character gear snapshot timeline
+
+- A **horizontal dot timeline** above the stat summary on the character view lists up to **20** past gear snapshots per character (plus the current live snapshot).
+- Click a dot to browse **historic equipped gear**, stat summary, doll/table layouts, and item detail (including share links from that point in time).
+- An amber banner marks historic view with **Back to current**; manual **Refresh** archives the previous snapshot before fetching new data.
+
+---
+
 ## 2026-06-25
 
 ### Live GGG OAuth — characters (UAT and production)

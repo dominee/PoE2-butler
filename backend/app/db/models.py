@@ -18,6 +18,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     String,
@@ -34,6 +35,7 @@ JSONType = JSON().with_variant(JSONB(), "postgresql")
 UUIDType = Uuid(as_uuid=True)
 SnapshotIdType = BigInteger().with_variant(Integer(), "sqlite")
 ItemPriceEstimateIdType = BigInteger().with_variant(Integer(), "sqlite")
+CharacterSnapshotHistoryIdType = BigInteger().with_variant(Integer(), "sqlite")
 
 
 class SnapshotKind(enum.StrEnum):
@@ -115,6 +117,25 @@ class Snapshot(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="snapshots")
+
+
+class CharacterSnapshotHistory(Base):
+    """Append-only archive of past CHARACTER snapshot payloads for the gear timeline."""
+
+    __tablename__ = "character_snapshot_history"
+    __table_args__ = (
+        Index("ix_char_snap_hist_user_name_fetched", "user_id", "character_name", "fetched_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        CharacterSnapshotHistoryIdType, primary_key=True, autoincrement=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    character_name: Mapped[str] = mapped_column(String(200))
+    payload: Mapped[dict] = mapped_column(JSONType, default=dict)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ItemShare(Base):
