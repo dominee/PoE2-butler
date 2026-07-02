@@ -102,11 +102,24 @@ async def app_stack(monkeypatch, tmp_path):
     app = create_app()
     app.dependency_overrides[app_deps.get_ggg_client] = _ggg_client_override
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport, base_url="http://testserver", follow_redirects=False
-    ) as client:
-        yield app, client, mock_app
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport, base_url="http://testserver", follow_redirects=False
+        ) as client:
+            yield app, client, mock_app
+    finally:
+        await engine.dispose()
+        if hasattr(db_base.get_engine, "cache_clear"):
+            db_base.get_engine.cache_clear()
+        if hasattr(db_base._session_factory, "cache_clear"):
+            db_base._session_factory.cache_clear()
+        if hasattr(app_config.get_settings, "cache_clear"):
+            app_config.get_settings.cache_clear()
+        if hasattr(app_deps._cipher_singleton, "cache_clear"):
+            app_deps._cipher_singleton.cache_clear()
+        if hasattr(app_deps._redis_singleton, "cache_clear"):
+            app_deps._redis_singleton.cache_clear()
 
 
 async def _full_login(client: AsyncClient, mock_app) -> str:

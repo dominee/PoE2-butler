@@ -11,6 +11,7 @@ import pytest
 from fakeredis.aioredis import FakeRedis
 
 from app.config import Settings
+from app.db import base as db_base
 from app.services.pricing.estimate_state import PriceJobState, dedup_key, save_job_state
 
 
@@ -55,8 +56,9 @@ async def test_backfill_seeds_all_jobs_queued_before_first_hybrid_starts(
         async def __aexit__(self, *_a: object) -> None:
             return None
 
-    def _fake_session_factory() -> Any:
-        return lambda: FakeCM()
+    class FakeSessionMaker:
+        def __call__(self) -> FakeCM:
+            return FakeCM()
 
     raws = [
         ("id1", {"id": "id1", "frameType": 5, "typeLine": "Divine Orb"}),
@@ -66,6 +68,9 @@ async def test_backfill_seeds_all_jobs_queued_before_first_hybrid_starts(
 
     async def fake_list_meta(*_a: Any, **_k: Any) -> dict[str, Any]:
         return {}
+
+    async def noop_upsert(*_a: Any, **_k: Any) -> None:
+        return None
 
     async def fake_collect_stash(*_a: Any, **_k: Any) -> list[tuple[str, dict]]:
         return list(raws)
@@ -109,7 +114,10 @@ async def test_backfill_seeds_all_jobs_queued_before_first_hybrid_starts(
     async def noop_throttle(*_a: Any, **_k: Any) -> None:
         return None
 
-    monkeypatch.setattr(w, "_session_factory", _fake_session_factory)
+    maker = FakeSessionMaker()
+    monkeypatch.setattr(db_base, "_session_factory", lambda: maker)
+    monkeypatch.setattr(w, "_session_factory", lambda: maker)
+    monkeypatch.setattr(w, "upsert_price_job_state", noop_upsert)
     monkeypatch.setattr(
         "app.services.pricing.estimate_persist.list_estimate_meta_for_league",
         fake_list_meta,
@@ -132,7 +140,11 @@ async def test_backfill_seeds_all_jobs_queued_before_first_hybrid_starts(
         lambda: Settings(redis_url="redis://fake", pricing_source="static"),
     )
 
-    out = await w.backfill_item_price_estimates({}, str(uid), "TestLeague", stash_only=True)
+    try:
+        out = await w.backfill_item_price_estimates({}, str(uid), "TestLeague", stash_only=True)
+    finally:
+        await fake_redis.aclose()
+
     assert out["ok"] is True
     assert out["estimated"] == 3
     assert saw_first_hybrid is True
