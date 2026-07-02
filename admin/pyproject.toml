@@ -50,3 +50,4 @@ pythonpath = [".."]
 
 [tool.uv]
 package = false
+exclude-newer = "7 days"

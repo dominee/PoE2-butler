@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from app.domain.character import collect_character_items, normalize_character_class, parse_detail, parse_summaries
+from app.domain.character import (
+    collect_character_items,
+    normalize_character_class,
+    parse_detail,
+    parse_summaries,
+)
 from app.domain.item import parse_item
 from app.domain.league import parse_leagues, pick_current_league
 
