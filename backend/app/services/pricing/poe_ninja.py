@@ -35,6 +35,12 @@ UNIQUE_BUCKETS = [
     "UniqueMap",
 ]
 CURRENCY_BUCKETS = ["Currency", "Fragment"]
+POE2_ECONOMY_BUCKETS = [
+    "LineageSupportGems",
+    "UncutGems",
+    "UniqueCharms",
+    "UniqueFlasks",
+]
 
 # PoE2 ``type`` query value for the exchange overview (differs from bucket name for fragments).
 POE2_OVERVIEW_TYPE = {"Currency": "Currency", "Fragment": "Fragments"}
@@ -128,8 +134,18 @@ class PoeNinjaSource:
         buckets: list[str]
         if key.category == "currency":
             buckets = CURRENCY_BUCKETS
+        elif key.category == "lineage_gem":
+            buckets = ["LineageSupportGems"]
+        elif key.category == "skill_gem":
+            buckets = ["UncutGems"]
+        elif key.category == "unique_charm":
+            buckets = ["UniqueCharms"]
+        elif key.category == "unique_flask":
+            buckets = ["UniqueFlasks"]
         elif key.category == "unique":
             buckets = UNIQUE_BUCKETS
+        elif key.category == "gem_trade":
+            return None
         else:
             return None
 
@@ -139,9 +155,29 @@ class PoeNinjaSource:
                 return entry
         return None
 
+    def _uncut_skill_gem_label(self, level: int) -> str:
+        return f"uncut skill gem (level {level})"
+
     async def _find(self, league: str, bucket: str, key: ItemKey) -> PriceEstimate | None:
         data = await self._fetch_bucket(league, bucket)
         lines = data.get("lines", []) if isinstance(data, dict) else []
+        if key.category == "skill_gem" and key.gem_level is not None:
+            target_name = self._uncut_skill_gem_label(key.gem_level)
+            for line in lines:
+                name = str(line.get("currencyTypeName") or line.get("name") or "").lower()
+                if name == target_name:
+                    value = line.get("chaosValue") or line.get("chaosEquivalent")
+                    if value is None:
+                        continue
+                    return PriceEstimate(
+                        value=float(value),
+                        unit=PriceUnit.CHAOS,
+                        chaos_equiv=float(value),
+                        source=self.name,
+                        confidence=0.85,
+                    )
+            return None
+
         target_name = key.name.lower() if key.name else key.base_type.lower()
         for line in lines:
             name = str(line.get("currencyTypeName") or line.get("name") or "").lower()
@@ -229,10 +265,11 @@ class PoeNinjaSource:
                 log.warning("pricing.fetch_failed", bucket=bucket, error=str(exc))
                 data = {}
             lines = data.get("lines") if isinstance(data.get("lines"), list) else []
-            if bucket in CURRENCY_BUCKETS and not lines:
+            if not lines and bucket in (CURRENCY_BUCKETS + POE2_ECONOMY_BUCKETS):
                 poe2 = await self._fetch_poe2_overview(league, bucket)
                 if poe2.get("lines"):
-                    log.info("pricing.poe2_fallback_after_poe1", bucket=bucket)
+                    if bucket in CURRENCY_BUCKETS:
+                        log.info("pricing.poe2_fallback_after_poe1", bucket=bucket)
                     data = poe2
         else:
             data = await self._fetch_poe2_overview(league, bucket)

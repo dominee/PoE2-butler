@@ -7,7 +7,7 @@ import pytest
 from fakeredis.aioredis import FakeRedis
 
 from app.config import Settings
-from app.domain.item import Item
+from app.domain.item import Item, ItemProperty
 from app.services.pricing.cache import PriceCache
 from app.services.pricing.currency_rates import resolve_currency_rates
 from app.services.pricing.matcher import match_item
@@ -182,6 +182,115 @@ def test_match_item_unique_uses_name() -> None:
     key = match_item(_item(rarity="Unique", name="Headhunter", base_type="Leather Belt"))
     assert key.category == "unique"
     assert key.name == "Headhunter"
+
+
+def test_match_item_lineage_gem() -> None:
+    key = match_item(
+        _item(
+            rarity="Gem",
+            type_line="Rakiata's Flow",
+            base_type="Rakiata's Flow",
+            properties=[{"name": "[SupportGem|Support], [LineageSupports|Lineage]", "value": None}],
+        )
+    )
+    assert key.category == "lineage_gem"
+    assert key.name == "Rakiata's Flow"
+
+
+def test_match_item_skill_gem_uses_uncut_level() -> None:
+    key = match_item(
+        _item(
+            rarity="Gem",
+            type_line="Malice",
+            base_type="Malice",
+            properties=[ItemProperty(name="Level", value="18")],
+        )
+    )
+    assert key.category == "skill_gem"
+    assert key.gem_level == 18
+
+
+def test_match_item_corrupted_gem_uses_trade() -> None:
+    key = match_item(
+        _item(
+            rarity="Gem",
+            type_line="Ice Nova",
+            corrupted=True,
+            properties=[ItemProperty(name="Level", value="21")],
+        )
+    )
+    assert key.category == "gem_trade"
+    assert key.gem_level == 21
+
+
+def test_match_item_unique_charm_and_flask() -> None:
+    charm = match_item(
+        _item(
+            rarity="Unique",
+            name="Arakaali's Gift",
+            base_type="Antidote Charm",
+        )
+    )
+    assert charm.category == "unique_charm"
+    flask = match_item(
+        _item(
+            rarity="Unique",
+            name="Olroth's Resolve",
+            type_line="Olroth's Resolve",
+            base_type="Ultimate Life Flask",
+        )
+    )
+    assert flask.category == "unique_flask"
+
+
+@pytest.mark.asyncio
+async def test_poe_ninja_lineage_and_uncut_gem_lookup() -> None:
+    overview_lineage = {
+        "core": {"rates": {"chaos": 8.0}},
+        "items": [{"id": "rakiatas-flow", "name": "Rakiata's Flow"}],
+        "lines": [{"id": "rakiatas-flow", "primaryValue": 10.0}],
+    }
+    overview_uncut = {
+        "core": {"rates": {"chaos": 8.0}},
+        "items": [{"id": "uncut-skill-gem-18", "name": "Uncut Skill Gem (Level 18)"}],
+        "lines": [{"id": "uncut-skill-gem-18", "primaryValue": 0.5}],
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/poe2/api/data/index-state"):
+            return httpx.Response(
+                200,
+                json={"economyLeagues": [{"name": "Runes of Aldur", "url": "runesofaldur"}]},
+            )
+        if path.endswith("/poe2/api/economy/exchange/current/overview"):
+            t = request.url.params.get("type")
+            if t == "LineageSupportGems":
+                return httpx.Response(200, json=overview_lineage)
+            if t == "UncutGems":
+                return httpx.Response(200, json=overview_uncut)
+        return httpx.Response(404, json={})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        src = PoeNinjaSource("https://poe.ninja", client=client)
+        try:
+            from app.services.pricing.matcher import ItemKey
+
+            lineage = await src.lookup(
+                "Runes of Aldur",
+                ItemKey(category="lineage_gem", base_type="Rakiata's Flow", name="Rakiata's Flow"),
+            )
+            uncut = await src.lookup(
+                "Runes of Aldur",
+                ItemKey(category="skill_gem", base_type="Malice", gem_level=18),
+            )
+        finally:
+            await src.aclose()
+    assert lineage is not None
+    assert abs(lineage.chaos_equiv - 80.0) < 1e-9
+    assert uncut is not None
+    assert abs(uncut.chaos_equiv - 4.0) < 1e-9
 
 
 @pytest.mark.asyncio
