@@ -9,6 +9,7 @@ import {
   useLogout,
   useMe,
   usePrefs,
+  usePriceLookup,
   useRefresh,
 } from "@/api/hooks";
 import { ApiError } from "@/api/client";
@@ -25,8 +26,13 @@ import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { CharacterTable } from "@/features/characters/CharacterTable";
 import { filterNotableCharacterGems, isNotableCharacterGem } from "@/features/characters/characterGemFilter";
+import {
+  collectCharacterGearPricingItems,
+  computeGearEstimate,
+} from "@/features/characters/characterGearItems";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
+import { formatChaos } from "@/features/items/itemMetrics";
 import { PriceInflightProvider } from "@/features/pricing/PriceInflightContext";
 import { ItemCard } from "@/features/items/ItemCard";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
@@ -77,6 +83,16 @@ export function AppShell() {
   );
   const gearDetail =
     selectedSnapshotId === "current" ? characterQ.data : historicCharacterQ.data;
+
+  const gearPricingItems = useMemo(
+    () => (gearDetail ? collectCharacterGearPricingItems(gearDetail) : []),
+    [gearDetail],
+  );
+  const gearPriceQ = usePriceLookup(selectedLeague, gearPricingItems);
+  const gearEstimate = useMemo(
+    () => computeGearEstimate(gearPricingItems, gearPriceQ.data?.prices),
+    [gearPricingItems, gearPriceQ.data?.prices],
+  );
 
   useEffect(() => {
     setSelectedSnapshotId("current");
@@ -325,7 +341,14 @@ export function AppShell() {
                       <span className="font-semibold tracking-wide text-amber-100/95 [text-shadow:0_0_14px_rgba(251,191,36,0.22)]">
                         {selectedCharacter}
                       </span>
-                      <span className="font-normal text-parchment-200/70"> — equipped</span>
+                      <span className="font-normal text-parchment-200/70">
+                        {" — "}
+                        {gearEstimate.totalChaos > 0
+                          ? `${formatChaos(gearEstimate.totalChaos)}c`
+                          : "—"}
+                        {gearEstimate.totalCount > 0 &&
+                          ` (${gearEstimate.pricedCount}/${gearEstimate.totalCount} items)`}
+                      </span>
                     </>
                   ) : (
                     "Select a character"
