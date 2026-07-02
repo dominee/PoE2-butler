@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useCharacterSnapshots } from "@/api/hooks";
 import type { CharacterSnapshotChange, CharacterSnapshotMeta } from "@/api/types";
@@ -58,6 +58,9 @@ export function CharacterSnapshotTimeline({
     }
     return snapshots.find((s) => s.id === selectedId) ?? null;
   }, [selectedId, snapshots]);
+
+  const changeCount = selectedSnap?.changes.length ?? 0;
+  const [changesExpanded, setChangesExpanded] = useState(false);
 
   return (
     <div
@@ -121,26 +124,44 @@ export function CharacterSnapshotTimeline({
           </ul>
         </div>
       )}
-      {selectedSnap && selectedSnap.changes.length > 0 && (
-        <ul
-          className="rounded-md border border-ink-700/80 bg-ink-900/40 px-3 py-2 text-xs text-parchment-100/90"
-          data-testid="snapshot-change-list"
-        >
-          {selectedSnap.changes.map((change, idx) => (
-            <li
-              key={`${change.kind}-${change.label}-${idx}`}
-              className={
-                change.kind === "new"
-                  ? "text-emerald-300/90"
-                  : change.kind === "removed"
-                    ? "text-parchment-400 line-through"
-                    : "text-amber-200/90"
-              }
+      {selectedSnap && changeCount > 0 && (
+        <>
+          <button
+            type="button"
+            aria-expanded={changesExpanded}
+            aria-controls="snapshot-change-list"
+            onClick={() => setChangesExpanded((e) => !e)}
+            className="flex w-full items-center justify-between rounded-md border border-ink-700/60 bg-ink-900/30 px-2 py-1 text-left text-xs text-parchment-200/80 transition hover:bg-ink-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70"
+            data-testid="snapshot-changes-toggle"
+          >
+            <span>
+              {changeCount} change{changeCount === 1 ? "" : "s"}
+            </span>
+            <span aria-hidden>{changesExpanded ? "▾" : "▸"}</span>
+          </button>
+          {changesExpanded && (
+            <ul
+              id="snapshot-change-list"
+              className="rounded-md border border-ink-700/80 bg-ink-900/40 px-3 py-2 text-xs text-parchment-100/90"
+              data-testid="snapshot-change-list"
             >
-              {changePrefix(change.kind)} {change.label}
-            </li>
-          ))}
-        </ul>
+              {selectedSnap.changes.map((change, idx) => (
+                <li
+                  key={`${change.kind}-${change.label}-${idx}`}
+                  className={
+                    change.kind === "new"
+                      ? "text-emerald-300/90"
+                      : change.kind === "removed"
+                        ? "text-parchment-400 line-through"
+                        : "text-amber-200/90"
+                  }
+                >
+                  {changePrefix(change.kind)} {change.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
       {selectedSnap?.is_current && selectedSnap.changes.length === 0 && (
         <p className="text-xs text-ui-muted" data-testid="snapshot-current-hint">

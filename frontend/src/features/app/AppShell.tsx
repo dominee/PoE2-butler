@@ -16,8 +16,7 @@ import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
 import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
-import { CharacterGrid } from "@/features/characters/CharacterGrid";
-import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
+import { CharacterListPanel } from "@/features/characters/CharacterListPanel";
 import {
   CharacterSnapshotTimeline,
   type SnapshotSelection,
@@ -309,28 +308,13 @@ export function AppShell() {
       {view === "characters" ? (
         <main className="flex min-h-0 flex-1 overflow-hidden">
         <ActivityLog league={selectedLeague} onSelectItem={setSelectedItem} />
-        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[280px,1fr,360px]">
-          <section
-            aria-label="Characters"
-            className="relative flex min-h-0 flex-col gap-2 overflow-y-auto rounded-sm border border-ink-800/70 bg-ink-950/40 p-3 shadow-[inset_0_1px_0_rgba(200,170,120,0.04)]"
-          >
-            <CharacterPaneGothicBackdrop />
-            <h2 className="relative z-10 shrink-0 font-display text-parchment-100/85 tracking-wide">
-              Characters
-            </h2>
-            {charactersQ.isLoading && (
-              <p className="relative z-10 text-ui-muted">Loading characters&hellip;</p>
-            )}
-            {charactersQ.data && (
-              <div className="relative z-10 min-h-0 flex-1">
-                <CharacterGrid
-                  characters={charactersQ.data.characters}
-                  selected={selectedCharacter}
-                  onSelect={setCharacter}
-                />
-              </div>
-            )}
-          </section>
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(2.25rem,280px),1fr,360px]">
+          <CharacterListPanel
+            characters={charactersQ.data?.characters}
+            isLoading={charactersQ.isLoading}
+            selected={selectedCharacter}
+            onSelect={setCharacter}
+          />
 
           <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">
             <div className="flex flex-wrap items-start justify-between gap-2">
