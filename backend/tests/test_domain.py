@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.character import collect_character_items, parse_detail, parse_summaries
+from app.domain.character import collect_character_items, normalize_character_class, parse_detail, parse_summaries
 from app.domain.item import parse_item
 from app.domain.league import parse_leagues, pick_current_league
 
@@ -302,18 +302,26 @@ def test_mod_detail_all_tiers_field_accepts_full_structure() -> None:
     assert detail.magnitudes[0].t1_max == 2.0
 
 
+def test_normalize_character_class() -> None:
+    assert normalize_character_class("Mercenary1") == "Mercenary"
+    assert normalize_character_class("Druid1") == "Druid"
+    assert normalize_character_class("Chronomancer") == "Chronomancer"
+
+
 def test_parse_summaries_and_detail() -> None:
     list_payload = {
         "characters": [
             {"id": "c1", "name": "A", "class": "Ranger", "level": 90, "league": "L"},
+            {"id": "c2", "name": "B", "class": "Mercenary1", "level": 85, "league": "L"},
         ]
     }
     summaries = parse_summaries(list_payload)
     assert summaries[0].name == "A"
     assert summaries[0].character_class == "Ranger"
+    assert summaries[1].character_class == "Mercenary"
 
     detail_payload = {
-        "character": {"id": "c1", "name": "A", "class": "Ranger", "level": 90, "league": "L"},
+        "character": {"id": "c1", "name": "A", "class": "Druid1", "level": 90, "league": "L"},
         "items": [
             {
                 "id": "i1",
@@ -327,6 +335,7 @@ def test_parse_summaries_and_detail() -> None:
     }
     detail = parse_detail(detail_payload)
     assert detail.summary.name == "A"
+    assert detail.summary.character_class == "Druid"
     assert len(detail.equipped) == 1
     assert detail.equipped[0].type_line == "Bow"
     assert len(detail.inventory) == 1

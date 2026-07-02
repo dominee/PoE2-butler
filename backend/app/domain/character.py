@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -9,6 +10,16 @@ from pydantic import BaseModel, Field
 
 from app.domain.item import Item, parse_item, resolve_item_inventory_id
 from app.domain.stat_summary import EquipmentStatSummary, summarize_equipment
+
+_CLASS_SUFFIX_RE = re.compile(r"\d+$")
+
+
+def normalize_character_class(raw: str) -> str:
+    """Strip GGG instance suffix (``Mercenary1`` → ``Mercenary``)."""
+    s = raw.strip()
+    if not s:
+        return s
+    return _CLASS_SUFFIX_RE.sub("", s)
 
 
 class CharacterSummary(BaseModel):
@@ -118,7 +129,7 @@ def parse_summaries(payload: dict[str, Any]) -> list[CharacterSummary]:
                 id=str(entry.get("id") or entry.get("name") or ""),
                 name=str(entry.get("name", "")),
                 realm=str(entry.get("realm", "pc")),
-                **{"class": str(entry.get("class", ""))},
+                **{"class": normalize_character_class(str(entry.get("class", "")))},
                 level=int(entry.get("level", 0)),
                 league=entry.get("league"),
                 experience=entry.get("experience"),
@@ -133,7 +144,7 @@ def parse_detail(payload: dict[str, Any]) -> CharacterDetail:
         id=str(char.get("id") or char.get("name") or ""),
         name=str(char.get("name", "")),
         realm=str(char.get("realm", "pc")),
-        **{"class": str(char.get("class", ""))},
+        **{"class": normalize_character_class(str(char.get("class", "")))},
         level=int(char.get("level", 0)),
         league=char.get("league"),
         experience=char.get("experience"),
