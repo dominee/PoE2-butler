@@ -34,6 +34,7 @@ from app.config import get_settings
 from app.db.base import _session_factory
 from app.db.models import SnapshotKind, User
 from app.domain.character import collect_character_items
+from app.domain.character_gem_filter import should_include_character_item_in_apprise
 from app.domain.item import Item, parse_item
 from app.logging import configure_logging, get_logger
 from app.security.crypto import TokenCipher
@@ -414,7 +415,16 @@ async def _collect_character_gear_raws(
         seen.add(iid)
         out.append((iid, raw))
 
+    log = get_logger("app.workers.backfill_item_price_estimates")
     for raw in collect_character_items(snap.payload):
+        try:
+            item = parse_item(raw)
+        except Exception as exc:  # noqa: BLE001
+            iid = str(raw.get("id") or "") if isinstance(raw, dict) else ""
+            log.info("backfill_item.parse_skip", item_id=iid, error=str(exc)[:80])
+            continue
+        if not should_include_character_item_in_apprise(item):
+            continue
         push(raw)
     return out
 
