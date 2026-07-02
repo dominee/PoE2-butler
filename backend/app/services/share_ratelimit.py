@@ -11,10 +11,18 @@ from redis.asyncio import Redis
 SHARE_CREATE_LIMIT_PER_HOUR = 10
 SHARE_LIMIT_WINDOW_SECONDS = 3600
 SHARE_REDIS_KEY = "ratelimit:item_share:{user_id}"
+CHARACTER_SHARE_REDIS_KEY = "ratelimit:character_share:{user_id}"
 
 
 async def enforce_share_create_limit(redis: Redis, user_id: uuid.UUID) -> None:
-    key = SHARE_REDIS_KEY.format(user_id=user_id)
+    await _enforce_limit(redis, SHARE_REDIS_KEY.format(user_id=user_id))
+
+
+async def enforce_character_share_create_limit(redis: Redis, user_id: uuid.UUID) -> None:
+    await _enforce_limit(redis, CHARACTER_SHARE_REDIS_KEY.format(user_id=user_id))
+
+
+async def _enforce_limit(redis: Redis, key: str) -> None:
     n = await redis.incr(key)
     if n == 1:
         await redis.expire(key, SHARE_LIMIT_WINDOW_SECONDS)

@@ -13,6 +13,7 @@ from app.api import (
     admin_ops_router,
     auth_router,
     cdn_proxy_router,
+    character_shares_router,
     characters_router,
     health_router,
     items_router,
@@ -20,6 +21,7 @@ from app.api import (
     me_router,
     prefs_router,
     pricing_router,
+    public_character_router,
     public_item_router,
     refresh_router,
     shares_router,
@@ -64,8 +66,10 @@ def create_app() -> FastAPI:
     app.include_router(admin_ops_router)
     app.include_router(cdn_proxy_router)
     app.include_router(public_item_router)
+    app.include_router(public_character_router)
     app.include_router(auth_router)
     app.include_router(shares_router)
+    app.include_router(character_shares_router)
     app.include_router(activity_router)
     app.include_router(me_router)
     app.include_router(leagues_router)

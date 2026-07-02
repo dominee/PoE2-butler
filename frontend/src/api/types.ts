@@ -242,6 +242,19 @@ export interface PublicItemResponse {
   item: Item;
 }
 
+export interface CreateCharacterShareResponse {
+  share_id: string;
+  public_path: string;
+}
+
+/** Response from `GET /api/public/characters/{share_id}` (unauthenticated). */
+export interface PublicCharacterResponse {
+  league: string;
+  character_name: string;
+  view_mode: "simple" | "detailed";
+  character: CharacterDetail;
+}
+
 export interface Prefs {
   trade_tolerance_pct: number;
   preferred_league: string | null;

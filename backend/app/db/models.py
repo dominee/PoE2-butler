@@ -72,6 +72,9 @@ class User(Base):
     item_shares: Mapped[list[ItemShare]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    character_shares: Mapped[list[CharacterShare]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     item_price_estimates: Mapped[list[ItemPriceEstimate]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -156,6 +159,40 @@ class ItemShare(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="item_shares")
+
+
+class CharacterShareViewMode(enum.StrEnum):
+    SIMPLE = "simple"
+    DETAILED = "detailed"
+
+
+class CharacterShare(Base):
+    """World-readable public link to a frozen character gear snapshot."""
+
+    __tablename__ = "character_shares"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    league: Mapped[str] = mapped_column(String(200), default="")
+    character_name: Mapped[str] = mapped_column(String(200), default="")
+    character_raw: Mapped[dict] = mapped_column(JSONType, default=dict)
+    view_mode: Mapped[CharacterShareViewMode] = mapped_column(
+        Enum(
+            CharacterShareViewMode,
+            values_callable=lambda e: [m.value for m in e],
+            native_enum=False,
+            create_constraint=False,
+        ),
+        default=CharacterShareViewMode.SIMPLE,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+
+    user: Mapped[User] = relationship(back_populates="character_shares")
 
 
 class ItemPriceEstimate(Base):

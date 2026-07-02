@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient
 from app.config import Settings, get_settings
 from app.db.base import get_session
-from app.db.models import ItemShare, User
+from app.db.models import CharacterShare, ItemShare, User
 from app.deps import get_cipher, get_ggg_client, get_session_store
 from app.security.crypto import TokenCipher
 from app.security.sessions import SessionStore
@@ -113,6 +113,28 @@ async def admin_revoke_share(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="invalid_share_id") from exc
     row = await db.get(ItemShare, sid)
+    if row is None:
+        raise HTTPException(status_code=404, detail="share_not_found")
+    if row.revoked_at is None:
+        row.revoked_at = datetime.now(UTC)
+        await db.commit()
+    return AdminActionResponse(ok=True, detail="revoked")
+
+
+@router.post(
+    "/character-shares/{share_id}/revoke",
+    summary="Revoke a public character share (operator)",
+    dependencies=[Depends(require_admin_secret)],
+)
+async def admin_revoke_character_share(
+    share_id: str,
+    db: AsyncSession = Depends(get_session),
+) -> AdminActionResponse:
+    try:
+        sid = uuid.UUID(share_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid_share_id") from exc
+    row = await db.get(CharacterShare, sid)
     if row is None:
         raise HTTPException(status_code=404, detail="share_not_found")
     if row.revoked_at is None:

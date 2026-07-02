@@ -11,6 +11,7 @@ import type {
   CharacterSnapshotsResponse,
   CharactersResponse,
   CreateShareResponse,
+  CreateCharacterShareResponse,
   CurrencyRatesResponse,
   InflightPriceJobItem,
   InflightPriceJobsResponse,
@@ -20,6 +21,7 @@ import type {
   Prefs,
   PriceJobState,
   PricingResponse,
+  PublicCharacterResponse,
   PublicItemResponse,
   RefreshResponse,
   StashListResponse,
@@ -30,6 +32,8 @@ import type {
 } from "./types";
 
 export const shareViewPath = (shareId: string) => `/i/${encodeURIComponent(shareId)}`;
+export const characterShareViewPath = (shareId: string) =>
+  `/c/${encodeURIComponent(shareId)}`;
 
 export const queryKeys = {
   activity: (league: string | null) => ["activity", league] as const,
@@ -45,6 +49,7 @@ export const queryKeys = {
     ["stash-tab", league, tabId] as const,
   stashSearch: (league: string | null, q: string) => ["stash-search", league, q] as const,
   publicItem: (shareId: string) => ["public-item", shareId] as const,
+  publicCharacter: (shareId: string) => ["public-character", shareId] as const,
 };
 
 export function usePublicItem(shareId: string | null | undefined) {
@@ -69,6 +74,42 @@ export function useRevokeShare() {
   return useMutation<void, Error, { shareId: string }>({
     mutationFn: (args) =>
       api.request<void>(`/api/shares/${encodeURIComponent(args.shareId)}`, {
+        method: "DELETE",
+      }),
+  });
+}
+
+export function usePublicCharacter(shareId: string | null | undefined) {
+  return useQuery<PublicCharacterResponse>({
+    queryKey: queryKeys.publicCharacter(shareId ?? ""),
+    queryFn: () =>
+      api.get<PublicCharacterResponse>(
+        `/api/public/characters/${encodeURIComponent(shareId ?? "")}`,
+      ),
+    enabled: Boolean(shareId),
+    retry: false,
+  });
+}
+
+export function useCreateCharacterShare() {
+  return useMutation<
+    CreateCharacterShareResponse,
+    Error,
+    {
+      league: string;
+      character_name: string;
+      history_id?: number | null;
+      view_mode: "simple" | "detailed";
+    }
+  >({
+    mutationFn: (args) => api.post<CreateCharacterShareResponse>("/api/character-shares", args),
+  });
+}
+
+export function useRevokeCharacterShare() {
+  return useMutation<void, Error, { shareId: string }>({
+    mutationFn: (args) =>
+      api.request<void>(`/api/character-shares/${encodeURIComponent(args.shareId)}`, {
         method: "DELETE",
       }),
   });

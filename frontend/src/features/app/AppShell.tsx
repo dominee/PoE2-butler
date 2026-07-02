@@ -18,6 +18,7 @@ import { ActivityLog } from "@/features/activity/ActivityLog";
 import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
 import { CharacterListPanel } from "@/features/characters/CharacterListPanel";
+import { CharacterShareActions } from "@/features/characters/CharacterShareActions";
 import {
   CharacterSnapshotTimeline,
   type SnapshotSelection,
@@ -330,6 +331,21 @@ export function AppShell() {
             isLoading={charactersQ.isLoading}
             selected={selectedCharacter}
             onSelect={setCharacter}
+            headerActions={
+              <CharacterShareActions
+                league={selectedLeague}
+                characterName={characterNameForDetail}
+                selectedSnapshotId={selectedSnapshotId}
+                gearDetail={gearDetail}
+                gearEstimate={gearEstimate}
+                disabled={
+                  !characterNameForDetail ||
+                  (selectedSnapshotId === "current"
+                    ? characterQ.isLoading || characterQ.isFetching
+                    : historicCharacterQ.isLoading)
+                }
+              />
+            }
           />
 
           <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">

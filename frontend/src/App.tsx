@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/features/app/AppShell";
 import { LandingPage } from "@/features/landing/LandingPage";
+import { PublicCharacterPage } from "@/features/characters/PublicCharacterPage";
 import { PublicItemPage } from "@/features/items/PublicItemPage";
 
 export function App() {
@@ -10,6 +11,7 @@ export function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/app" element={<AppShell />} />
       <Route path="/i/:shareId" element={<PublicItemPage />} />
+      <Route path="/c/:shareId" element={<PublicCharacterPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

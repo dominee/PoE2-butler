@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import type { CharacterSummary } from "@/api/types";
@@ -10,6 +11,7 @@ export interface CharacterListPanelProps {
   isLoading: boolean;
   selected: string | null;
   onSelect: (name: string) => void;
+  headerActions?: ReactNode;
 }
 
 export function CharacterListPanel({
@@ -17,6 +19,7 @@ export function CharacterListPanel({
   isLoading,
   selected,
   onSelect,
+  headerActions,
 }: CharacterListPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const count = characters?.length ?? 0;
@@ -30,25 +33,30 @@ export function CharacterListPanel({
       ].join(" ")}
     >
       <CharacterPaneGothicBackdrop />
-      <button
-        type="button"
-        aria-expanded={!collapsed}
-        aria-controls="character-list-content"
-        onClick={() => setCollapsed((c) => !c)}
-        className="relative z-10 flex shrink-0 items-center justify-between px-2 py-2 text-ui-muted transition hover:text-parchment-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900"
-        title={collapsed ? "Expand character list" : "Collapse character list"}
-      >
-        <span className="text-sm" aria-hidden>
-          &#9786;
-        </span>
-        {collapsed && count > 0 && (
-          <span className="ml-0.5 rounded-full bg-ember-500 px-1 text-[9px] font-bold text-ink-950">
-            {count > 99 ? "99+" : count}
+      <div className="relative z-10 flex shrink-0 items-center gap-1 px-1">
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-controls="character-list-content"
+          onClick={() => setCollapsed((c) => !c)}
+          className="flex min-w-0 flex-1 items-center justify-between py-2 pl-1 pr-0.5 text-ui-muted transition hover:text-parchment-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900"
+          title={collapsed ? "Expand character list" : "Collapse character list"}
+        >
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="text-sm" aria-hidden>
+              &#9786;
+            </span>
+            {collapsed && count > 0 && (
+              <span className="rounded-full bg-ember-500 px-1 text-[9px] font-bold text-ink-950">
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
+            {!collapsed && <span className={PANE_SECTION_HEADING}>Characters</span>}
           </span>
-        )}
-        {!collapsed && <span className={PANE_SECTION_HEADING}>Characters</span>}
-        <span className="ml-auto text-xs">{collapsed ? "›" : "‹"}</span>
-      </button>
+          <span className="ml-1 shrink-0 text-xs">{collapsed ? "›" : "‹"}</span>
+        </button>
+        {!collapsed && headerActions}
+      </div>
       {!collapsed && (
         <div
           id="character-list-content"

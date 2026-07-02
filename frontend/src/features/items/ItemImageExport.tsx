@@ -82,7 +82,8 @@ const RARITY_CARD_BORDER: Record<ItemRarity, string> = {
  * lines, and roll bars. `compact` omits “Runes & Cores” only. `detail` includes
  * socketed items and optional ``priceSnapshot`` (quick + refined estimates).
  */
-function ItemExportSnapshot({
+/** Compact read-only item card for character export / detailed share views. */
+export function ItemExportSnapshot({
   item,
   variant,
   priceSnapshot,

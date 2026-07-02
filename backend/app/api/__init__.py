@@ -4,6 +4,7 @@ from app.api.activity import router as activity_router
 from app.api.admin_ops import router as admin_ops_router
 from app.api.auth import router as auth_router
 from app.api.cdn_proxy import router as cdn_proxy_router
+from app.api.character_shares import router as character_shares_router
 from app.api.characters import router as characters_router
 from app.api.health import router as health_router
 from app.api.items import router as items_router
@@ -11,6 +12,7 @@ from app.api.leagues import router as leagues_router
 from app.api.me import router as me_router
 from app.api.prefs import router as prefs_router
 from app.api.pricing import router as pricing_router
+from app.api.public_character import router as public_character_router
 from app.api.public_item import router as public_item_router
 from app.api.refresh import router as refresh_router
 from app.api.shares import router as shares_router
@@ -21,12 +23,14 @@ __all__ = [
     "activity_router",
     "admin_ops_router",
     "auth_router",
+    "character_shares_router",
     "cdn_proxy_router",
     "characters_router",
     "health_router",
     "items_router",
     "leagues_router",
     "me_router",
+    "public_character_router",
     "public_item_router",
     "shares_router",
     "prefs_router",
