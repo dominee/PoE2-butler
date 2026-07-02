@@ -267,7 +267,7 @@ export function AppShell() {
               if (!selectedLeague) return;
               setAppriseNotice(null);
               apprise.mutate(
-                { league: selectedLeague },
+                { league: selectedLeague, character: characterNameForDetail },
                 {
                   onSuccess: (data) => {
                     setAppriseNotice(`Queued price checks for ${data.league}`);

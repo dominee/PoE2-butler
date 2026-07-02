@@ -216,12 +216,17 @@ async def price_estimate_item(
 
 
 async def backfill_item_price_estimates(
-    ctx: dict, user_id: str, league: str, stash_only: bool = False
+    ctx: dict,
+    user_id: str,
+    league: str,
+    stash_only: bool = False,
+    character_name: str | None = None,
 ) -> dict:
     """Persist hybrid estimates: missing rows first, then oldest ``computed_at``.
 
-    When ``stash_only`` is True, only stash tab items are considered (Apprise).
-    Otherwise stash tabs and equipped character items are included.
+    When ``character_name`` is set, only that character's gear is considered (Apprise).
+    When ``stash_only`` is True, only stash tab items are considered.
+    Otherwise stash tabs and all equipped character items are included.
     """
     log = get_logger("app.workers.backfill_item_price_estimates")
     settings = get_settings()
@@ -248,16 +253,19 @@ async def backfill_item_price_estimates(
                 return {"ok": False, "reason": "missing_user"}
             tol = float(user.trade_tolerance_pct)
             meta = await list_estimate_meta_for_league(session, user_id=user.id, league=league)
-            raws = (
-                await _collect_stash_raws(session, user.id, league)
-                if stash_only
-                else await _collect_stash_and_gear_raws(session, user.id, league)
-            )
+            char_key = (character_name or "").strip() or None
+            if char_key:
+                raws = await _collect_character_gear_raws(session, user.id, char_key)
+            elif stash_only:
+                raws = await _collect_stash_raws(session, user.id, league)
+            else:
+                raws = await _collect_stash_and_gear_raws(session, user.id, league)
             log.info(
                 "backfill_item.start",
                 user_id=user_id,
                 league=league,
                 stash_only=stash_only,
+                character=char_key,
                 candidates=len(raws),
             )
             missing = [(iid, raw) for iid, raw in raws if iid not in meta]
@@ -382,6 +390,32 @@ async def _collect_stash_raws(session, user_id: uuid.UUID, league: str) -> list[
             continue
         for raw in snap.payload.get("items", []) or []:
             push(raw)
+    return out
+
+
+async def _collect_character_gear_raws(
+    session, user_id: uuid.UUID, character_name: str
+) -> list[tuple[str, dict]]:
+    """Equipped gear, gems, and inventory for one character snapshot."""
+    snap = await get_latest_snapshot(
+        session, user_id, SnapshotKind.CHARACTER, key=character_name
+    )
+    if snap is None:
+        return []
+    out: list[tuple[str, dict]] = []
+    seen: set[str] = set()
+
+    def push(raw: object) -> None:
+        if not isinstance(raw, dict):
+            return
+        iid = str(raw.get("id") or "").strip()
+        if not iid or iid in seen:
+            return
+        seen.add(iid)
+        out.append((iid, raw))
+
+    for raw in collect_character_items(snap.payload):
+        push(raw)
     return out
 
 

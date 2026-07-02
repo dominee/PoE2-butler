@@ -235,14 +235,22 @@ async def apprise_stash_prices(
         default=None,
         description="League id; defaults to the signed-in user's preferred league.",
     ),
+    character: str | None = Query(
+        default=None,
+        description="When set, queue hybrid estimates for this character's gear only.",
+    ),
 ) -> AppriseQueued:
-    """Enqueue ``backfill_item_price_estimates`` for stash tabs and character gear in ``league``."""
+    """Enqueue ``backfill_item_price_estimates`` for stash and/or character gear in ``league``."""
     lg = (league or user.preferred_league or "").strip()
     if not lg:
         raise HTTPException(status_code=400, detail="league_required")
+    char = (character or "").strip() or None
+    stash_only = char is None
     try:
         pool = await get_arq_pool()
-        await pool.enqueue_job("backfill_item_price_estimates", str(user.id), lg, False)
+        await pool.enqueue_job(
+            "backfill_item_price_estimates", str(user.id), lg, stash_only, char
+        )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail="queue_unavailable") from exc
     return AppriseQueued(league=lg)

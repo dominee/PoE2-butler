@@ -175,10 +175,17 @@ export function useRefresh() {
 
 export function useApprise() {
   const qc = useQueryClient();
-  return useMutation<AppriseQueued, Error, { league: string | null }>({
-    mutationFn: ({ league }) => {
-      const q = league ? `?league=${encodeURIComponent(league)}` : "";
-      return api.post<AppriseQueued>(`/api/pricing/apprise${q}`);
+  return useMutation<
+    AppriseQueued,
+    Error,
+    { league: string | null; character?: string | null }
+  >({
+    mutationFn: ({ league, character }) => {
+      const params = new URLSearchParams();
+      if (league) params.set("league", league);
+      if (character) params.set("character", character);
+      const q = params.toString();
+      return api.post<AppriseQueued>(`/api/pricing/apprise${q ? `?${q}` : ""}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["persisted-price-estimate"] });
