@@ -10,6 +10,11 @@ vi.mock("@/api/hooks", () => ({
   usePublicCharacter: (...args: unknown[]) => mockUsePublicCharacter(...args),
 }));
 
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 describe("PublicCharacterPage", () => {
   it("renders simple character gear view", () => {
     mockUsePublicCharacter.mockReturnValue({
@@ -68,7 +73,7 @@ describe("PublicCharacterPage", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/c/abc"]}>
+      <MemoryRouter future={routerFuture} initialEntries={["/c/abc"]}>
         <Routes>
           <Route path="/c/:shareId" element={<PublicCharacterPage />} />
         </Routes>
@@ -137,7 +142,7 @@ describe("PublicCharacterPage", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/c/abc"]}>
+      <MemoryRouter future={routerFuture} initialEntries={["/c/abc"]}>
         <Routes>
           <Route path="/c/:shareId" element={<PublicCharacterPage />} />
         </Routes>

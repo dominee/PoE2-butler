@@ -1,6 +1,6 @@
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
 
-import { useIsItemPriceInflight } from "@/features/pricing/PriceInflightContext";
+import { useIsItemPriceInflight } from "@/features/pricing/priceInflightContext";
 import { PriceBadge } from "./PriceBadge";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
 import { ModText } from "./ItemModPresentation";

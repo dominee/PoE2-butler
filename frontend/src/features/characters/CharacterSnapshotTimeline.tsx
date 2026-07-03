@@ -50,7 +50,10 @@ export function CharacterSnapshotTimeline({
   onSelect,
 }: CharacterSnapshotTimelineProps) {
   const snapshotsQ = useCharacterSnapshots(characterName);
-  const snapshots = snapshotsQ.data?.snapshots ?? [];
+  const snapshots = useMemo(
+    () => snapshotsQ.data?.snapshots ?? [],
+    [snapshotsQ.data?.snapshots],
+  );
 
   const selectedSnap = useMemo(() => {
     if (selectedId === "current") {

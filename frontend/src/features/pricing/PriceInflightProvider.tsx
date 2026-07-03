@@ -1,8 +1,8 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { useInflightPriceEstimates } from "@/api/hooks";
 
-const PriceInflightContext = createContext<ReadonlySet<string>>(new Set());
+import { PriceInflightContext } from "./priceInflightContext";
 
 export function PriceInflightProvider({
   league,
@@ -19,9 +19,4 @@ export function PriceInflightProvider({
   return (
     <PriceInflightContext.Provider value={ids}>{children}</PriceInflightContext.Provider>
   );
-}
-
-export function useIsItemPriceInflight(itemId: string | undefined): boolean {
-  const inflight = useContext(PriceInflightContext);
-  return Boolean(itemId && inflight.has(itemId));
 }

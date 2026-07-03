@@ -11,7 +11,7 @@ import type { GearEstimate } from "@/features/characters/characterGearItems";
 import { formatGearEstimateLabel } from "@/features/characters/characterGearItems";
 import { filterNotableCharacterGems } from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
-import { dataUrlToBlob } from "@/features/items/ItemImageExport";
+import { dataUrlToBlob } from "@/utils/pngExport";
 import type { CurrencyChaosPair } from "@/features/items/itemMetrics";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 

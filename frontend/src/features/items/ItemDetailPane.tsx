@@ -12,7 +12,7 @@ import {
   shareViewPath,
 } from "@/api/hooks";
 import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
-import { useIsItemPriceInflight } from "@/features/pricing/PriceInflightContext";
+import { useIsItemPriceInflight } from "@/features/pricing/priceInflightContext";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
 import {

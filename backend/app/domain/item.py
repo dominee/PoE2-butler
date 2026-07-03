@@ -144,7 +144,11 @@ def _resolve_item_icon(raw: dict[str, Any], merged: dict[str, Any]) -> str | Non
     if not isinstance(wrap_icon, str) or not wrap_icon.strip():
         return None
     slot = _resolve_inventory_id(raw, merged) or merged.get("inventoryId")
-    if isinstance(slot, str) and slot in _EQUIPMENT_INVENTORY_IDS and _looks_like_gem_art(wrap_icon):
+    if (
+        isinstance(slot, str)
+        and slot in _EQUIPMENT_INVENTORY_IDS
+        and _looks_like_gem_art(wrap_icon)
+    ):
         return None
     return wrap_icon.strip()
 
