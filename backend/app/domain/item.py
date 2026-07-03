@@ -105,6 +105,50 @@ def _resolve_inventory_id(wrapper: dict[str, Any], merged: dict[str, Any]) -> st
     return _normalize_inventory_id(merged)
 
 
+_EQUIPMENT_INVENTORY_IDS = frozenset(
+    {
+        "Weapon",
+        "Weapon2",
+        "Offhand",
+        "Offhand2",
+        "Helm",
+        "BodyArmour",
+        "Gloves",
+        "Boots",
+        "Amulet",
+        "Ring",
+        "Ring2",
+        "Belt",
+    }
+)
+
+
+def _looks_like_gem_art(url: str) -> bool:
+    u = url.lower()
+    return (
+        "/gems/" in u
+        or "skillgem" in u
+        or "supportgem" in u
+        or "blankgem" in u
+        or "gemhover" in u
+    )
+
+
+def _resolve_item_icon(raw: dict[str, Any], merged: dict[str, Any]) -> str | None:
+    """Pick item art; ignore stale skill-gem icons on equipment wrappers."""
+    inner = raw.get("itemData")
+    inner_icon = inner.get("icon") if isinstance(inner, dict) else None
+    if isinstance(inner_icon, str) and inner_icon.strip():
+        return inner_icon.strip()
+    wrap_icon = raw.get("icon")
+    if not isinstance(wrap_icon, str) or not wrap_icon.strip():
+        return None
+    slot = _resolve_inventory_id(raw, merged) or merged.get("inventoryId")
+    if isinstance(slot, str) and slot in _EQUIPMENT_INVENTORY_IDS and _looks_like_gem_art(wrap_icon):
+        return None
+    return wrap_icon.strip()
+
+
 def _unwrap_ggg_item_dict(raw: dict[str, Any]) -> dict[str, Any]:
     """Path of Exile 2 character payloads often put the item under ``itemData``; flavour and
     ``extended`` live there while ``inventoryId`` / slot metadata stay on the outer object."""
@@ -124,6 +168,11 @@ def _unwrap_ggg_item_dict(raw: dict[str, Any]) -> dict[str, Any]:
     resolved = _resolve_inventory_id(raw, out)
     if resolved:
         out["inventoryId"] = resolved
+    icon = _resolve_item_icon(raw, out)
+    if icon:
+        out["icon"] = icon
+    elif "icon" in out:
+        out.pop("icon", None)
     return out
 
 

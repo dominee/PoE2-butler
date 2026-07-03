@@ -5,11 +5,12 @@ import {
   useCharacter,
   useCharacterSnapshot,
   useCharacters,
+  useCharacterGearPriceLookup,
+  useCurrencyRates,
   useLeagues,
   useLogout,
   useMe,
   usePrefs,
-  usePriceLookup,
   useRefresh,
 } from "@/api/hooks";
 import { ApiError } from "@/api/client";
@@ -30,10 +31,11 @@ import { filterNotableCharacterGems, isNotableCharacterGem } from "@/features/ch
 import {
   collectCharacterGearPricingItems,
   computeGearEstimate,
+  formatGearEstimateLabel,
 } from "@/features/characters/characterGearItems";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
-import { formatChaos } from "@/features/items/itemMetrics";
+import { currencyRatesToChaosPair } from "@/features/items/itemMetrics";
 import { PriceInflightProvider } from "@/features/pricing/PriceInflightContext";
 import { ItemCard } from "@/features/items/ItemCard";
 import { ItemDetailPane } from "@/features/items/ItemDetailPane";
@@ -89,10 +91,19 @@ export function AppShell() {
     () => (gearDetail ? collectCharacterGearPricingItems(gearDetail) : []),
     [gearDetail],
   );
-  const gearPriceQ = usePriceLookup(selectedLeague, gearPricingItems);
+  const gearPriceQ = useCharacterGearPriceLookup(selectedLeague, gearPricingItems);
+  const currencyRatesQ = useCurrencyRates(selectedLeague);
+  const currencyChaos = useMemo(
+    () => currencyRatesToChaosPair(currencyRatesQ.data),
+    [currencyRatesQ.data],
+  );
   const gearEstimate = useMemo(
     () => computeGearEstimate(gearPricingItems, gearPriceQ.data?.prices),
     [gearPricingItems, gearPriceQ.data?.prices],
+  );
+  const gearEstimateLabel = useMemo(
+    () => formatGearEstimateLabel(gearEstimate, currencyChaos),
+    [gearEstimate, currencyChaos],
   );
 
   useEffect(() => {
@@ -215,7 +226,7 @@ export function AppShell() {
   return (
     <PriceInflightProvider league={selectedLeague}>
     <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-ink-950 bg-ink-950/70 px-4 py-2 backdrop-blur">
+      <header className="relative z-50 flex flex-wrap items-center gap-3 border-b border-ink-950 bg-ink-950/70 px-4 py-2 backdrop-blur">
         <h1 className="font-display text-lg text-ember-400">Hideout Butler</h1>
         <span className="text-sm text-parchment-100/80">{me.account_name}</span>
         <nav aria-label="Primary view" className="ml-3 flex gap-1 text-sm">
@@ -238,14 +249,30 @@ export function AppShell() {
             </button>
           )}
         </nav>
+        {view === "characters" && (
+          <CharacterShareActions
+            league={selectedLeague}
+            characterName={characterNameForDetail}
+            selectedSnapshotId={selectedSnapshotId}
+            gearDetail={gearDetail}
+            gearEstimate={gearEstimate}
+            currencyChaos={currencyChaos}
+            disabled={
+              !characterNameForDetail ||
+              (selectedSnapshotId === "current"
+                ? characterQ.isLoading || characterQ.isFetching
+                : historicCharacterQ.isLoading)
+            }
+          />
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           <HeaderCurrencyRates league={selectedLeague} />
           {leaguesInferred && (
             <span
-              className="hidden max-w-[11rem] truncate text-[10px] text-parchment-200/70 sm:inline"
+              className="hidden text-[10px] text-parchment-200/70 sm:inline"
               title="League list is inferred from your characters; GGG leagues API is not available for this app."
             >
-              Leagues from characters
+              League:
             </span>
           )}
           <select
@@ -331,21 +358,6 @@ export function AppShell() {
             isLoading={charactersQ.isLoading}
             selected={selectedCharacter}
             onSelect={setCharacter}
-            headerActions={
-              <CharacterShareActions
-                league={selectedLeague}
-                characterName={characterNameForDetail}
-                selectedSnapshotId={selectedSnapshotId}
-                gearDetail={gearDetail}
-                gearEstimate={gearEstimate}
-                disabled={
-                  !characterNameForDetail ||
-                  (selectedSnapshotId === "current"
-                    ? characterQ.isLoading || characterQ.isFetching
-                    : historicCharacterQ.isLoading)
-                }
-              />
-            }
           />
 
           <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">
@@ -359,11 +371,7 @@ export function AppShell() {
                       </span>
                       <span className="font-normal text-parchment-200/70">
                         {" — "}
-                        {gearEstimate.totalChaos > 0
-                          ? `${formatChaos(gearEstimate.totalChaos)}c`
-                          : "—"}
-                        {gearEstimate.totalCount > 0 &&
-                          ` (${gearEstimate.pricedCount}/${gearEstimate.totalCount} items)`}
+                        {gearEstimateLabel}
                       </span>
                     </>
                   ) : (

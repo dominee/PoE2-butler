@@ -77,7 +77,9 @@ export function PublicCharacterPage() {
           </a>
         </p>
       </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 p-4">
+      <main
+        className={`mx-auto w-full flex-1 space-y-4 p-4 ${viewMode === "detailed" ? "max-w-6xl" : "max-w-3xl"}`}
+      >
         <CharacterStatSummary detail={character} />
         {viewMode === "simple" ? (
           <CharacterGearDisplay detail={character} readOnly />

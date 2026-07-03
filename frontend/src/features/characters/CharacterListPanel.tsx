@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { useState } from "react";
 
 import type { CharacterSummary } from "@/api/types";
@@ -11,7 +10,6 @@ export interface CharacterListPanelProps {
   isLoading: boolean;
   selected: string | null;
   onSelect: (name: string) => void;
-  headerActions?: ReactNode;
 }
 
 export function CharacterListPanel({
@@ -19,7 +17,6 @@ export function CharacterListPanel({
   isLoading,
   selected,
   onSelect,
-  headerActions,
 }: CharacterListPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const count = characters?.length ?? 0;
@@ -33,29 +30,39 @@ export function CharacterListPanel({
       ].join(" ")}
     >
       <CharacterPaneGothicBackdrop />
-      <div className="relative z-10 flex shrink-0 items-center gap-1 px-1">
+      <div
+        className={[
+          "relative z-10 flex shrink-0 px-2 py-2",
+          collapsed ? "flex-col items-center gap-1" : "items-center gap-1.5",
+        ].join(" ")}
+      >
         <button
           type="button"
           aria-expanded={!collapsed}
           aria-controls="character-list-content"
           onClick={() => setCollapsed((c) => !c)}
-          className="flex min-w-0 flex-1 items-center justify-between py-2 pl-1 pr-0.5 text-ui-muted transition hover:text-parchment-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900"
+          className={[
+            "text-ui-muted transition hover:text-parchment-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900",
+            collapsed
+              ? "flex flex-col items-center gap-0.5"
+              : "flex min-w-0 flex-1 items-center gap-1.5",
+          ].join(" ")}
           title={collapsed ? "Expand character list" : "Collapse character list"}
         >
-          <span className="flex min-w-0 items-center gap-1">
-            <span className="text-sm" aria-hidden>
-              &#9786;
-            </span>
-            {collapsed && count > 0 && (
-              <span className="rounded-full bg-ember-500 px-1 text-[9px] font-bold text-ink-950">
-                {count > 99 ? "99+" : count}
-              </span>
-            )}
-            {!collapsed && <span className={PANE_SECTION_HEADING}>Characters</span>}
+          <span aria-hidden className="text-sm font-semibold leading-none">
+            {collapsed ? "+" : "−"}
           </span>
-          <span className="ml-1 shrink-0 text-xs">{collapsed ? "›" : "‹"}</span>
+          {!collapsed && <span className={PANE_SECTION_HEADING}>Characters</span>}
+          {!collapsed && <span className="ml-auto text-xs">‹</span>}
         </button>
-        {!collapsed && headerActions}
+        {collapsed && count > 0 && (
+          <span
+            className="rounded-full bg-ember-500 px-1 text-[9px] font-bold leading-tight text-ink-950"
+            title={`${count} character${count === 1 ? "" : "s"}`}
+          >
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
       </div>
       {!collapsed && (
         <div

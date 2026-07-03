@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import type { CharacterDetail } from "@/api/types";
 import { CharacterExportSnapshot, CharacterImageExportActions } from "./CharacterImageExport";
@@ -43,5 +44,29 @@ describe("CharacterImageExportActions", () => {
       />,
     );
     expect(screen.getByTestId("character-export-simple-branded")).toBeInTheDocument();
+  });
+
+  it("download uses file save, not clipboard", async () => {
+    const user = userEvent.setup();
+    const write = vi.spyOn(navigator.clipboard, "write").mockResolvedValue(undefined);
+    const click = vi.fn();
+    const origCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag, ...args) => {
+      const el = origCreate(tag, ...args);
+      if (tag === "a") {
+        el.click = click;
+      }
+      return el;
+    });
+
+    render(<CharacterImageExportActions detail={detail} league="Standard" />);
+    await user.click(screen.getByRole("button", { name: "Download PNG" }));
+
+    expect(click).toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+    expect(await screen.findByText("PNG downloaded")).toBeInTheDocument();
+
+    write.mockRestore();
+    vi.restoreAllMocks();
   });
 });

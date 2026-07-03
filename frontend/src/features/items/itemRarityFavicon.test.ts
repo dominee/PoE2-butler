@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { itemIconDisplayUrl, itemIconForExportPng, itemRarityFaviconPath } from "./itemRarityFavicon";
 import type { Item } from "@/api/types";
@@ -59,14 +59,24 @@ describe("itemIconForExportPng", () => {
   it("uses proxy for web.poecdn.com icons in export context", () => {
     const u = "https://web.poecdn.com/gen/image/abc/1/Foo.png";
     const item = { ...baseItem, icon: u, rarity: "Normal" as const };
-    expect(itemIconForExportPng(item)).toBe(
+    expect(itemIconForExportPng(item)).toContain(
       `/api/cdn/poecdn?u=${encodeURIComponent(u)}`,
     );
+  });
+
+  it("uses absolute proxy URLs in the browser for off-screen export", () => {
+    const u = "https://web.poecdn.com/gen/image/abc/1/Foo.png";
+    const item = { ...baseItem, icon: u, rarity: "Normal" as const };
+    vi.stubGlobal("window", { location: { origin: "https://app.example.test" } });
+    expect(itemIconForExportPng(item)).toBe(
+      `https://app.example.test/api/cdn/poecdn?u=${encodeURIComponent(u)}`,
+    );
+    vi.unstubAllGlobals();
   });
 
   it("uses rarity path when there is no icon", () => {
     expect(
       itemIconForExportPng({ ...baseItem, icon: null, rarity: "Currency" }),
-    ).toBe("/icons/item-rarity/currency.svg");
+    ).toContain("/icons/item-rarity/currency.svg");
   });
 });

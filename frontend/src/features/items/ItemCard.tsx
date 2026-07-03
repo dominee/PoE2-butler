@@ -91,7 +91,7 @@ export function ItemCard({
       )}
       {priceInflight && (
         <span
-          className="absolute left-1.5 top-1.5 rounded border border-amber-500/40 bg-amber-500/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-200/95"
+          className="absolute bottom-1.5 right-1.5 rounded border border-amber-500/40 bg-amber-500/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-200/95"
           title="Hybrid price estimate queued or running"
         >
           Updating

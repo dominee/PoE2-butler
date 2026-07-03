@@ -339,6 +339,35 @@ export function usePriceLookup(league: string | null, items: Item[]) {
   });
 }
 
+/** Bulk lookup for character gear; refetches while hybrid jobs run on those items. */
+export function useCharacterGearPriceLookup(league: string | null, items: Item[]) {
+  const qc = useQueryClient();
+  const ids = items.map((i) => i.id).join(",");
+  const gearIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
+  const inflightQ = useInflightPriceEstimates(league);
+  const inflightGearCount = useMemo(
+    () => (inflightQ.data?.items ?? []).filter((row) => gearIds.has(row.item_id)).length,
+    [inflightQ.data?.items, gearIds],
+  );
+  const prevInflightGear = useRef(inflightGearCount);
+
+  useEffect(() => {
+    if (inflightGearCount < prevInflightGear.current) {
+      void qc.invalidateQueries({ queryKey: ["prices", league] });
+    }
+    prevInflightGear.current = inflightGearCount;
+  }, [inflightGearCount, league, qc]);
+
+  return useQuery<PricingResponse>({
+    queryKey: ["prices", league, ids],
+    queryFn: () =>
+      api.post<PricingResponse>("/api/pricing/lookup", { league, items }),
+    enabled: Boolean(league) && items.length > 0,
+    staleTime: 15_000,
+    refetchInterval: inflightGearCount > 0 ? 2000 : false,
+  });
+}
+
 /** Divine/Exalted chaos rates and ex-per-div (poe.ninja or server fallbacks). */
 export function useCurrencyRates(league: string | null) {
   return useQuery<CurrencyRatesResponse>({

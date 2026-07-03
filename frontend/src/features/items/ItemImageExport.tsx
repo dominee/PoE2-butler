@@ -87,14 +87,24 @@ export function ItemExportSnapshot({
   item,
   variant,
   priceSnapshot,
+  showBranding = true,
+  embedded = false,
 }: {
   item: Item;
   variant: "compact" | "detail";
   priceSnapshot?: ItemExportPriceSnapshot | null;
+  /** When false, omits the app title strip (character gear embeds). */
+  showBranding?: boolean;
+  /** Fit parent width instead of fixed 400px card (character export grid). */
+  embedded?: boolean;
 }) {
   const b = RARITY_CARD_BORDER[item.rarity] ?? "border-ink-600";
   const resolvedIcon = itemIconForExportPng(item);
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
+  const widthClass = embedded ? "w-full max-w-full min-w-0 box-border" : "w-[400px]";
+  const padClass = embedded ? "p-2 text-xs" : "p-3 text-sm";
+  const iconScale = embedded ? 24 : 32;
+  const iconMax = embedded ? 64 : 96;
 
   const visibleProps = usefulProperties(item.properties);
   const visibleReqs = usefulProperties(item.requirements);
@@ -117,16 +127,23 @@ export function ItemExportSnapshot({
 
   return (
     <div
-      className={`${b} w-[400px] rounded-md border-2 bg-ink-900 p-3 text-left text-sm text-parchment-100 shadow-lg`}
+      className={`${b} ${widthClass} ${padClass} rounded-md border-2 bg-ink-900 text-left text-parchment-100 shadow-lg`}
     >
-      <div className="font-display text-sm font-semibold text-ember-200/90">PoE2 Hideout Butler</div>
-      <div className="mt-2 flex items-start gap-2">
+      {showBranding && (
+        <div className="font-display text-sm font-semibold text-ember-200/90">PoE2 Hideout Butler</div>
+      )}
+      <div className={`flex items-start gap-2 ${showBranding ? "mt-2" : ""}`}>
         <div className="flex shrink-0 items-center justify-center rounded border border-ink-700 bg-ink-950/60 p-1">
           <img
             src={resolvedIcon}
             alt=""
             className="object-contain"
-            style={{ width: item.w * 32, height: item.h * 32, maxWidth: 96, maxHeight: 96 }}
+            style={{
+              width: item.w * iconScale,
+              height: item.h * iconScale,
+              maxWidth: iconMax,
+              maxHeight: iconMax,
+            }}
           />
         </div>
         <div className="min-w-0">
@@ -515,3 +532,5 @@ export function ItemImageExportActions({
     </div>
   );
 }
+
+export { dataUrlToBlob };

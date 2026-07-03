@@ -4,6 +4,7 @@ import type { CharacterDetail, Item } from "@/api/types";
 import {
   collectCharacterGearPricingItems,
   computeGearEstimate,
+  formatGearEstimateLabel,
 } from "./characterGearItems";
 
 function item(id: string, slot: string | null = null): Item {
@@ -71,5 +72,15 @@ describe("computeGearEstimate", () => {
       c: { chaos_equiv: 5, value: 5, unit: "chaos", source: "static", confidence: 1, note: null },
     });
     expect(result).toEqual({ totalChaos: 15, pricedCount: 2, totalCount: 3 });
+  });
+});
+
+describe("formatGearEstimateLabel", () => {
+  it("formats div/ex total with item count in brackets", () => {
+    const label = formatGearEstimateLabel(
+      { totalChaos: 3600, pricedCount: 4, totalCount: 25 },
+      { chaosPerDivine: 36, chaosPerExalted: 1 },
+    );
+    expect(label).toBe("100div (3600ex) [4/25 items]");
   });
 });

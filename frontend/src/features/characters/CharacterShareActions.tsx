@@ -9,8 +9,9 @@ import type { CharacterDetail } from "@/api/types";
 import type { SnapshotSelection } from "@/features/characters/CharacterSnapshotTimeline";
 import type { GearEstimate } from "@/features/characters/characterGearItems";
 import { CharacterImageExportActions } from "@/features/characters/CharacterImageExport";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import type { CurrencyChaosPair } from "@/features/items/itemMetrics";
 import { IconLinkShare } from "@/features/items/itemPaneIcons";
+import { copyTextToClipboard } from "@/utils/clipboard";
 
 export interface CharacterShareActionsProps {
   league: string | null;
@@ -18,6 +19,7 @@ export interface CharacterShareActionsProps {
   selectedSnapshotId: SnapshotSelection;
   gearDetail: CharacterDetail | undefined;
   gearEstimate?: GearEstimate;
+  currencyChaos?: CurrencyChaosPair | null;
   disabled?: boolean;
 }
 
@@ -27,6 +29,7 @@ export function CharacterShareActions({
   selectedSnapshotId,
   gearDetail,
   gearEstimate,
+  currencyChaos,
   disabled = false,
 }: CharacterShareActionsProps) {
   const createShare = useCreateCharacterShare();
@@ -74,20 +77,19 @@ export function CharacterShareActions({
   };
 
   return (
-    <div className="relative z-10 shrink-0">
+    <div className="relative z-50 shrink-0">
       <button
         type="button"
-        className="btn-ghost px-1.5 py-0.5 text-xs"
+        className="btn-ghost inline-flex items-center gap-1.5 text-sm"
         aria-expanded={expanded}
         disabled={!canShare}
         onClick={() => setExpanded((e) => !e)}
-        title="Share or export character"
       >
-        <IconLinkShare />
-        <span className="sr-only">Share</span>
+        <IconLinkShare className="h-4 w-4 shrink-0 opacity-90" />
+        Share or export character
       </button>
       {expanded && canShare && gearDetail && league && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-md border border-ink-700 bg-ink-900 p-2 shadow-lg">
+        <div className="absolute left-0 top-full z-[200] mt-1 w-56 rounded-md border border-ink-700 bg-ink-900 p-2 shadow-xl">
           <p className="mb-2 text-[10px] text-amber-200/90">
             Anyone with the link can view this gear snapshot.
           </p>
@@ -124,6 +126,7 @@ export function CharacterShareActions({
             detail={gearDetail}
             league={league}
             gearEstimate={gearEstimate}
+            currencyChaos={currencyChaos}
           />
           {feedback && <p className="mt-1 text-[10px] text-ember-400">{feedback}</p>}
         </div>

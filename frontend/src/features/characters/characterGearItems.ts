@@ -1,4 +1,8 @@
 import type { CharacterDetail, Item, PriceEstimate } from "@/api/types";
+import {
+  type CurrencyChaosPair,
+  getChaosEquivDisplayParts,
+} from "@/features/items/itemMetrics";
 import { filterNotableCharacterGems } from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 
@@ -41,4 +45,23 @@ export function computeGearEstimate(
     }
   }
   return { totalChaos, pricedCount, totalCount: items.length };
+}
+
+/** e.g. ``100div (3600ex) [4/25 items]`` */
+export function formatGearEstimateLabel(
+  estimate: GearEstimate,
+  rates: CurrencyChaosPair | null | undefined,
+): string {
+  const countSuffix =
+    estimate.totalCount > 0
+      ? ` [${estimate.pricedCount}/${estimate.totalCount} items]`
+      : "";
+  if (estimate.totalChaos <= 0) {
+    return estimate.totalCount > 0 ? `—${countSuffix}` : "—";
+  }
+  const parts = getChaosEquivDisplayParts(estimate.totalChaos, rates);
+  if (parts.kind === "chaos") {
+    return `${parts.text}${countSuffix}`;
+  }
+  return `${parts.divAmount}div (${parts.exAmount}ex)${countSuffix}`;
 }

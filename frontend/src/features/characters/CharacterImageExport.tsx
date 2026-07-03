@@ -2,17 +2,23 @@ import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
 
 import type { CharacterDetail } from "@/api/types";
-import { CharacterDetailedGearView } from "@/features/characters/CharacterDetailedGearView";
-import { CharacterGearDisplay } from "@/features/characters/CharacterGearDisplay";
+import {
+  CharacterDetailedGearView,
+  CharacterSimpleExportBody,
+} from "@/features/characters/CharacterDetailedGearView";
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import type { GearEstimate } from "@/features/characters/characterGearItems";
+import { formatGearEstimateLabel } from "@/features/characters/characterGearItems";
 import { filterNotableCharacterGems } from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
-import { formatChaos } from "@/features/items/itemMetrics";
+import { dataUrlToBlob } from "@/features/items/ItemImageExport";
+import type { CurrencyChaosPair } from "@/features/items/itemMetrics";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
 export type CharacterExportLayout = "simple" | "detailed";
 export type CharacterExportTheme = "transparent" | "branded" | "epic";
+
+const EXPORT_WIDTH_PX = 1280;
 
 export interface CharacterImageExportProps {
   detail: CharacterDetail;
@@ -20,6 +26,7 @@ export interface CharacterImageExportProps {
   layout: CharacterExportLayout;
   theme: CharacterExportTheme;
   gearEstimate?: GearEstimate;
+  currencyChaos?: CurrencyChaosPair | null;
 }
 
 function snapshotLabel(detail: CharacterDetail): string {
@@ -51,43 +58,45 @@ function CharacterExportSnapshot({
   layout,
   theme,
   gearEstimate,
+  currencyChaos,
 }: CharacterImageExportProps) {
   const { summary } = detail;
   const notableGems = filterNotableCharacterGems(detail.gems ?? []);
+  const dollItems = collectPaperDollItems(detail);
   const transparent = theme === "transparent";
   const epic = theme === "epic";
 
   return (
     <div
       className={[
-        "w-[800px] text-left text-sm text-parchment-100",
+        "box-border overflow-visible text-left text-sm text-parchment-100",
         transparent ? "bg-transparent p-2" : "rounded-md border border-ink-700 bg-ink-950 p-4 shadow-lg",
       ].join(" ")}
+      style={{ width: EXPORT_WIDTH_PX, maxWidth: EXPORT_WIDTH_PX }}
       data-testid={`character-export-${layout}-${theme}`}
     >
       {!transparent && (
-        <header className="mb-3 border-b border-ink-700/80 pb-2">
-          <h1 className="font-display text-xl font-semibold text-amber-100/95">{summary.name}</h1>
-          <p className="text-sm text-parchment-200/80">
-            Lv {summary.level} · {summary.class} · {league}
-          </p>
-          {detail.is_historical && detail.snapshot_fetched_at && (
-            <p className="mt-1 text-xs text-amber-200/80">
-              Historic snapshot · {snapshotLabel(detail)}
+        <header className="mb-3 flex flex-wrap items-end justify-between gap-3 border-b border-ink-700/80 pb-2">
+          <div>
+            <h1 className="font-display text-xl font-semibold text-amber-100/95">{summary.name}</h1>
+            <p className="text-sm text-parchment-200/80">
+              Lv {summary.level} · {summary.class} · {league}
             </p>
+            {detail.is_historical && detail.snapshot_fetched_at && (
+              <p className="mt-1 text-xs text-amber-200/80">
+                Historic snapshot · {snapshotLabel(detail)}
+              </p>
+            )}
+          </div>
+          {epic && gearEstimate && (
+            <div className="rounded-md border border-ember-500/30 bg-ember-950/20 px-3 py-1.5 text-sm">
+              <span className={PANE_SECTION_HEADING}>Gear estimate </span>
+              <span className="text-parchment-50">
+                {formatGearEstimateLabel(gearEstimate, currencyChaos ?? null)}
+              </span>
+            </div>
           )}
         </header>
-      )}
-
-      {epic && gearEstimate && (
-        <div className="mb-3 rounded-md border border-ember-500/30 bg-ember-950/20 px-3 py-2 text-sm">
-          <span className={PANE_SECTION_HEADING}>Gear estimate </span>
-          <span className="text-parchment-50">
-            {gearEstimate.totalChaos > 0 ? `${formatChaos(gearEstimate.totalChaos)}c` : "—"}
-            {gearEstimate.totalCount > 0 &&
-              ` (${gearEstimate.pricedCount}/${gearEstimate.totalCount} items)`}
-          </span>
-        </div>
       )}
 
       {epic && detail.stat_summary && (
@@ -97,12 +106,17 @@ function CharacterExportSnapshot({
       )}
 
       {layout === "simple" ? (
-        <CharacterGearDisplay detail={detail} readOnly />
-      ) : (
-        <CharacterDetailedGearView
-          equipped={collectPaperDollItems(detail)}
+        <CharacterSimpleExportBody
+          equipped={dollItems}
           jewels={detail.jewels}
           gems={notableGems}
+        />
+      ) : (
+        <CharacterDetailedGearView
+          equipped={dollItems}
+          jewels={detail.jewels}
+          gems={notableGems}
+          layout="grid"
         />
       )}
 
@@ -116,45 +130,90 @@ function CharacterExportSnapshot({
   );
 }
 
-async function copyOrDownloadPng(
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const imgs = [...root.querySelectorAll("img")];
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          img.addEventListener("load", () => resolve(), { once: true });
+          img.addEventListener("error", () => resolve(), { once: true });
+        }),
+    ),
+  );
+}
+
+async function renderExportPng(
   el: HTMLDivElement,
-  fileName: string,
   transparent: boolean,
-): Promise<"copied" | "downloaded" | "failed"> {
+): Promise<string | null> {
   try {
-    const dataUrl = await toPng(el, {
+    await waitForImages(el);
+    return await toPng(el, {
       pixelRatio: 2,
       cacheBust: true,
       backgroundColor: transparent ? undefined : "#0a0a0f",
     });
-    const secure = window.isSecureContext;
-    if (secure && navigator.clipboard?.write) {
-      try {
-        const blob = await (await fetch(dataUrl)).blob();
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        return "copied";
-      } catch {
-        // fall through to download
-      }
-    }
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `${fileName}.png`;
-    a.click();
-    return "downloaded";
   } catch {
-    return "failed";
+    return null;
   }
+}
+
+async function copyPngToClipboard(dataUrl: string): Promise<boolean> {
+  if (!window.isSecureContext || !navigator.clipboard?.write) {
+    return false;
+  }
+  try {
+    const blob = dataUrlToBlob(dataUrl);
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function downloadPng(dataUrl: string, fileName: string): void {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = `${fileName}.png`;
+  a.click();
+}
+
+async function runCharacterPngExport(
+  el: HTMLDivElement,
+  fileName: string,
+  transparent: boolean,
+  mode: "copy" | "download",
+): Promise<"copied" | "downloaded" | "failed"> {
+  const dataUrl = await renderExportPng(el, transparent);
+  if (!dataUrl) return "failed";
+
+  if (mode === "download") {
+    downloadPng(dataUrl, fileName);
+    return "downloaded";
+  }
+
+  if (await copyPngToClipboard(dataUrl)) {
+    return "copied";
+  }
+  downloadPng(dataUrl, fileName);
+  return "downloaded";
 }
 
 export function CharacterImageExportActions({
   detail,
   league,
   gearEstimate,
+  currencyChaos,
 }: {
   detail: CharacterDetail;
   league: string;
   gearEstimate?: GearEstimate;
+  currencyChaos?: CurrencyChaosPair | null;
 }) {
   const [layout, setLayout] = useState<CharacterExportLayout>("simple");
   const [theme, setTheme] = useState<CharacterExportTheme>("branded");
@@ -165,12 +224,13 @@ export function CharacterImageExportActions({
     const el = ref.current;
     if (!el) return;
     setMsg("rendering…");
-    const result = await copyOrDownloadPng(
+    const result = await runCharacterPngExport(
       el,
       `${detail.summary.name}-${layout}-${theme}`,
       theme === "transparent",
+      mode,
     );
-    if (result === "copied") setMsg(mode === "copy" ? "PNG copied" : "PNG copied");
+    if (result === "copied") setMsg("PNG copied");
     else if (result === "downloaded") setMsg("PNG downloaded");
     else setMsg("export failed");
     setTimeout(() => setMsg(null), 4000);
@@ -208,14 +268,15 @@ export function CharacterImageExportActions({
         </button>
       </div>
       {msg && <p className="text-[10px] text-ui-muted">{msg}</p>}
-      <div className="pointer-events-none fixed -left-[10000px] top-0" aria-hidden>
-        <div ref={ref}>
+      <div className="pointer-events-none fixed -left-[10000px] top-0 z-0" aria-hidden>
+        <div ref={ref} className="inline-block overflow-visible">
           <CharacterExportSnapshot
             detail={detail}
             league={league}
             layout={layout}
             theme={theme}
             gearEstimate={gearEstimate}
+            currencyChaos={currencyChaos}
           />
         </div>
       </div>

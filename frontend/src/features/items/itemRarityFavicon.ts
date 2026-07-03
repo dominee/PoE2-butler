@@ -27,12 +27,21 @@ export function itemIconDisplayUrl(item: Pick<Item, "icon" | "rarity">): string 
   return itemRarityFaviconPath(item.rarity);
 }
 
+/** Same-origin path for html-to-image (avoids relative URL resolution quirks off-screen). */
+function exportAbsoluteUrl(url: string): string {
+  if (typeof window !== "undefined" && url.startsWith("/")) {
+    return `${window.location.origin}${url}`;
+  }
+  return url;
+}
+
 /**
  * URL safe for `html-to-image` / same-origin: PoE CDN via proxy, else rarity SVG.
  */
 export function itemIconForExportPng(item: Item): string {
   if (item.icon?.trim()) {
-    return itemIconForCanvasProxy(item.icon) ?? item.icon;
+    const proxied = itemIconForCanvasProxy(item.icon) ?? item.icon;
+    return exportAbsoluteUrl(proxied);
   }
-  return itemRarityFaviconPath(item.rarity);
+  return exportAbsoluteUrl(itemRarityFaviconPath(item.rarity));
 }

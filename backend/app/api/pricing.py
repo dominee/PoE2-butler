@@ -73,9 +73,24 @@ async def lookup_prices(
     body: PricingRequest,
     user: User = Depends(get_current_user),
     pricing: PricingService = Depends(get_pricing_service),
+    db: AsyncSession = Depends(get_session),
 ) -> PricingResponse:
-    _ = user  # authenticated-only; we don't filter by user yet
     prices = await pricing.price_bulk(body.league, body.items)
+    league = body.league.strip()
+    tolerance = float(user.trade_tolerance_pct)
+    for item in body.items:
+        persisted = await load_persisted_estimate(
+            db,
+            user_id=user.id,
+            league=league,
+            item_id=item.id,
+            tolerance_pct=tolerance,
+        )
+        if persisted is None or persisted.status != "completed" or persisted.result is None:
+            continue
+        method = persisted.result.estimate_method
+        if method in ("trade_median", "poe2scout") or prices.get(item.id) is None:
+            prices[item.id] = persisted.result
     return PricingResponse(league=body.league, prices=prices)
 
 

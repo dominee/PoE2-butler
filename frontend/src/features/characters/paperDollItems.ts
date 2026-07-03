@@ -24,12 +24,7 @@ export function collectPaperDollItems(
   detail: Pick<CharacterDetail, "equipped" | "gems" | "jewels" | "inventory">,
 ): Item[] {
   const bySlot = new Map<string, Item>();
-  for (const item of [
-    ...detail.equipped,
-    ...(detail.gems ?? []),
-    ...(detail.jewels ?? []),
-    ...(detail.inventory ?? []),
-  ]) {
+  for (const item of [...detail.equipped, ...(detail.inventory ?? [])]) {
     const slot = item.inventory_id;
     if (slot && PAPER_DOLL_SLOT_IDS.has(slot) && !bySlot.has(slot)) {
       bySlot.set(slot, item);
