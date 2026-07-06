@@ -25,8 +25,8 @@ export function CharacterListPanel({
     <section
       aria-label="Characters"
       className={[
-        "relative flex min-h-0 flex-col overflow-hidden rounded-sm border border-ink-800/70 bg-ink-950/40 shadow-[inset_0_1px_0_rgba(200,170,120,0.04)] transition-all duration-200",
-        collapsed ? "w-9 min-w-[2.25rem]" : "min-w-[13rem] w-full",
+        "relative flex min-h-0 shrink-0 flex-col overflow-hidden rounded-sm border border-ink-800/70 bg-ink-950/40 shadow-[inset_0_1px_0_rgba(200,170,120,0.04)] transition-all duration-200",
+        collapsed ? "w-9 min-w-[2.25rem]" : "w-52 min-w-[13rem] max-w-[280px]",
       ].join(" ")}
     >
       <CharacterPaneGothicBackdrop />

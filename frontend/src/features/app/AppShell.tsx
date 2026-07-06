@@ -352,7 +352,7 @@ export function AppShell() {
       {view === "characters" ? (
         <main className="flex min-h-0 flex-1 overflow-hidden">
         <ActivityLog league={selectedLeague} onSelectItem={setSelectedItem} />
-        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(2.25rem,280px),1fr,360px]">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:flex-row sm:flex-wrap lg:flex-nowrap">
           <CharacterListPanel
             characters={charactersQ.data?.characters}
             isLoading={charactersQ.isLoading}
@@ -360,7 +360,10 @@ export function AppShell() {
             onSelect={setCharacter}
           />
 
-          <section aria-label="Equipped gear" className="flex flex-col gap-2 overflow-y-auto">
+          <section
+            aria-label="Equipped gear"
+            className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto sm:min-w-[12rem]"
+          >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-parchment-100/80">
@@ -532,12 +535,14 @@ export function AppShell() {
             )}
           </section>
 
-          <ItemDetailPane
-            item={selectedItem}
-            league={selectedLeague}
-            prefs={prefsQ.data}
-            onClose={() => setSelectedItem(null)}
-          />
+          <div className="w-full min-h-0 lg:w-[360px] lg:shrink-0">
+            <ItemDetailPane
+              item={selectedItem}
+              league={selectedLeague}
+              prefs={prefsQ.data}
+              onClose={() => setSelectedItem(null)}
+            />
+          </div>
         </div>
         </main>
       ) : (
