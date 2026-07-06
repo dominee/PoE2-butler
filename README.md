@@ -8,8 +8,6 @@ A web application that lets **Path of Exile 2** players pair their GGG account v
 
 ![Screenshot](Screenshot.png)
 
-![Screenshot-stash](Screenshot_stash.png)
-
 ## Features
 
 - Log in with your GGG account to load your characters and equipped gear. **Production and UAT** use **live GGG OAuth2** for `account:profile` and `account:characters`; **local dev** uses a mock GGG service with fixture / Poe.ninja-backed data. **PoE2 stash OAuth is not available from GGG yet** — stash browsing works only in dev via the mock until GGG grants a PoE2 stash scope.
