@@ -15,6 +15,7 @@ from admin.app.user_dashboard_data import (
     fill_missing_days,
     league_mix_bars,
     user_bundle_for_json,
+    user_chart_payload,
 )
 
 
@@ -41,6 +42,17 @@ def test_league_mix_bars_percentages() -> None:
     mix = league_mix_bars(rows)
     assert mix[0]["pct"] == 25.0
     assert mix[1]["pct"] == 75.0
+
+
+def test_user_chart_payload_strips_headline() -> None:
+    bundle = {
+        "headline": {"total_users": 9},
+        "signups_by_day": [{"day": "2026-01-01", "n": 1}],
+        "cumulative_users": [{"day": "2026-01-01", "n": 9}],
+    }
+    chart = user_chart_payload(bundle)
+    assert "headline" not in chart
+    assert chart["signups_by_day"][0]["n"] == 1
 
 
 def test_user_bundle_for_json_is_copy() -> None:
@@ -77,7 +89,6 @@ async def test_users_stats_api_authenticated(
                 "inactive_30d": 3,
                 "not_logged_in_30d": 1,
                 "never_refreshed": 0,
-                "never_logged_in": 0,
             },
             "signups_by_day": [],
             "cumulative_users": [],

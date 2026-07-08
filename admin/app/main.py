@@ -38,7 +38,11 @@ from admin.app.redis_stats import (
     top_queued_price_estimate_jobs,
 )
 from admin.app.redis_user import user_redis_state
-from admin.app.user_dashboard_data import load_user_dashboard_bundle, user_bundle_for_json
+from admin.app.user_dashboard_data import (
+    load_user_dashboard_bundle,
+    user_bundle_for_json,
+    user_chart_payload,
+)
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _STATIC_DIR = Path(__file__).parent / "static"
@@ -218,7 +222,7 @@ def _register_routes(app: FastAPI) -> None:
                 "users": await list_users(query=q),
                 "q": q or "",
                 "user_stats": user_stats,
-                "chart_data_json": json.dumps(user_stats),
+                "chart_data_json": json.dumps(user_chart_payload(user_stats)),
             },
         )
 

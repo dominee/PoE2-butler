@@ -439,6 +439,15 @@ export function ItemDetailPane({
                 <div className="text-xs font-semibold text-rarity-currency">
                   {si.type_line || si.name}
                 </div>
+                {(si.granted_skills?.length ?? 0) > 0 && (
+                  <ul className="mt-0.5 space-y-0.5 text-[11px] text-rarity-gem">
+                    {si.granted_skills!.map((skill, idx) => (
+                      <li key={idx} className="break-words leading-snug">
+                        {skill}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {si.explicit_mods.length > 0 && (
                   <ul className="mt-0.5 space-y-0.5 text-[11px] text-parchment-100/70">
                     {si.explicit_mods.map((mod, idx) => (

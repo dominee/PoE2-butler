@@ -204,6 +204,33 @@ def test_parse_item_socketed_items_empty_when_absent() -> None:
     assert item.socketed_items == []
 
 
+def test_parse_item_socketed_granted_skill_level() -> None:
+    """Soul cores / runes that grant skills expose level in socketed_items[].granted_skills."""
+    raw = {
+        "id": "shield-1",
+        "typeLine": "Chiming Spirit Shield",
+        "rarity": "Unique",
+        "socketedItems": [
+            {
+                "id": "core-1",
+                "typeLine": "Soul Core of Zalatl",
+                "baseType": "Soul Core of Zalatl",
+                "frameType": 5,
+                "grantedSkills": [
+                    {
+                        "name": "Grants Skill",
+                        "values": [["Level 18 Purity of Ice", 25]],
+                        "displayMode": 0,
+                    }
+                ],
+            }
+        ],
+    }
+    item = parse_item(raw)
+    assert len(item.socketed_items) == 1
+    assert item.socketed_items[0].granted_skills == ["Purity of Ice (lvl 18)"]
+
+
 def test_parse_item_extended_all_tiers_populated_from_db() -> None:
     """When extended.mods contains a known mod name, all_tiers is populated from mod_db."""
     raw = {

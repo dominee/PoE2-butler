@@ -71,6 +71,21 @@ def league_mix_bars(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     )
 
 
+def user_chart_payload(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Chart.js series only (embedded in users.html)."""
+    keys = (
+        "signups_by_day",
+        "cumulative_users",
+        "refresh_users_by_day",
+        "refresh_events_by_day",
+        "login_users_by_day",
+        "gear_history_by_day",
+        "price_estimates_by_day",
+        "shares_by_day",
+    )
+    return {k: bundle.get(k, []) for k in keys}
+
+
 async def load_user_dashboard_bundle(*, days: int = 90) -> dict[str, Any]:
     window = max(7, min(int(days), 365))
     (

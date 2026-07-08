@@ -9,7 +9,7 @@
     <strong>Definitions:</strong>
     Active = refreshed snapshot data within 30 days (<code>last_refreshed_at</code>).
     Inactive = all other registered users.
-    Not logged in (30d) = no OAuth login in 30 days (<code>last_login_at</code>).
+    No OAuth return (30d) = no GGG login in 30 days (<code>last_login_at</code>).
     Daily refresh/login charts use the <code>user_activity_events</code> log (from backend deploy forward).
   </div>
 
@@ -28,17 +28,13 @@
       <span class="sub">no refresh in window</span>
     </div>
     <div class="metric-card">
-      <span class="label">Not logged in (30d)</span>
+      <span class="label">No OAuth return (30d)</span>
       <span class="value">{{ user_stats.headline.not_logged_in_30d }}</span>
-      <span class="sub">OAuth login metric</span>
+      <span class="sub">last login older than 30 days</span>
     </div>
     <div class="metric-card">
       <span class="label">Never refreshed</span>
       <span class="value">{{ user_stats.headline.never_refreshed }}</span>
-    </div>
-    <div class="metric-card">
-      <span class="label">Never logged in</span>
-      <span class="value">{{ user_stats.headline.never_logged_in }}</span>
     </div>
   </div>
 

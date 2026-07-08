@@ -40,6 +40,9 @@ class AdminSecurityHeaders(BaseHTTPMiddleware):
         response.headers.setdefault("Referrer-Policy", "same-origin")
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'",
+            "default-src 'self'; "
+            "script-src 'self' https://cdn.jsdelivr.net; "
+            "img-src 'self' data:; "
+            "style-src 'self' 'unsafe-inline'",
         )
         return response

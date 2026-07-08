@@ -3,8 +3,11 @@
  * Expects JSON in #user-chart-data and canvas ids chart-adoption, chart-activity, etc.
  */
 (function () {
+  function init() {
   const dataEl = document.getElementById("user-chart-data");
   if (!dataEl || typeof Chart === "undefined") {
+    if (!dataEl) return;
+    console.error("[admin-charts] Chart.js not loaded — check Content-Security-Policy script-src");
     return;
   }
 
@@ -177,4 +180,11 @@
     },
     options: baseOptions,
   });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();

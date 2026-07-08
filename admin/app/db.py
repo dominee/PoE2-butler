@@ -374,8 +374,7 @@ async def user_headline_stats() -> dict[str, int]:
                     " WHERE last_login_at IS NULL "
                     " OR last_login_at < NOW() - INTERVAL '30 days') AS not_logged_in_30d, "
                     "(SELECT COUNT(*) FROM users "
-                    " WHERE last_refreshed_at IS NULL) AS never_refreshed, "
-                    "(SELECT COUNT(*) FROM users WHERE last_login_at IS NULL) AS never_logged_in"
+                    " WHERE last_refreshed_at IS NULL) AS never_refreshed"
                 )
             )
         ).first()
@@ -386,7 +385,6 @@ async def user_headline_stats() -> dict[str, int]:
                 "inactive_30d": 0,
                 "not_logged_in_30d": 0,
                 "never_refreshed": 0,
-                "never_logged_in": 0,
             }
         m = dict(row._mapping)
         total = int(m["total_users"] or 0)
@@ -397,7 +395,6 @@ async def user_headline_stats() -> dict[str, int]:
             "inactive_30d": max(0, total - active),
             "not_logged_in_30d": int(m["not_logged_in_30d"] or 0),
             "never_refreshed": int(m["never_refreshed"] or 0),
-            "never_logged_in": int(m["never_logged_in"] or 0),
         }
 
 

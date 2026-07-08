@@ -171,6 +171,26 @@ describe("ItemDetailPane", () => {
     expect(screen.getAllByText(/Purity of Ice \(lvl 18\)/).length).toBeGreaterThan(0);
   });
 
+  it("renders granted skill level on socketed runes and cores", () => {
+    installFetchMock("");
+    renderPane({
+      ...testItem,
+      socketed_items: [
+        {
+          ...testItem,
+          id: "core-1",
+          name: "Soul Core of Zalatl",
+          type_line: "Soul Core of Zalatl",
+          granted_skills: ["Purity of Ice (lvl 18)"],
+          explicit_mods: [],
+          socketed_items: [],
+        },
+      ],
+    });
+    expect(screen.getByText(/Runes & Cores/i)).toBeInTheDocument();
+    expect(screen.getByText(/Purity of Ice \(lvl 18\)/)).toBeInTheDocument();
+  });
+
   it("starts with tolerance pulled from prefs", () => {
     installFetchMock("");
     renderPane(testItem);

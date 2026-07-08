@@ -60,8 +60,10 @@ Headline cards on **`GET /admin/users`**:
 | Total users | `COUNT(*)` from `users` |
 | Active (30d) | `last_refreshed_at` within 30 days |
 | Inactive (30d) | all other registered users |
-| Not logged in (30d) | `last_login_at` null or older than 30 days |
-| Never refreshed / never logged in | null timestamp columns |
+| No OAuth return (30d) | `last_login_at` older than 30 days |
+| Never refreshed | `last_refreshed_at` is null |
+
+Charts require Chart.js from jsDelivr — CSP `script-src` must allow `https://cdn.jsdelivr.net`.
 
 Charts (default **90** days, UTC):
 
