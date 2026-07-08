@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import uuid
 from functools import lru_cache
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -356,4 +357,177 @@ async def count_character_history(user_id: str) -> int:
             )
         ).first()
         return int(row._mapping["n"]) if row else 0
+
+
+async def user_headline_stats() -> dict[str, int]:
+    """Headline user counts for the Users dashboard (PostgreSQL)."""
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT "
+                    "(SELECT COUNT(*) FROM users) AS total_users, "
+                    "(SELECT COUNT(*) FROM users "
+                    " WHERE last_refreshed_at >= NOW() - INTERVAL '30 days') AS active_30d, "
+                    "(SELECT COUNT(*) FROM users "
+                    " WHERE last_login_at IS NULL "
+                    " OR last_login_at < NOW() - INTERVAL '30 days') AS not_logged_in_30d, "
+                    "(SELECT COUNT(*) FROM users "
+                    " WHERE last_refreshed_at IS NULL) AS never_refreshed, "
+                    "(SELECT COUNT(*) FROM users WHERE last_login_at IS NULL) AS never_logged_in"
+                )
+            )
+        ).first()
+        if row is None:
+            return {
+                "total_users": 0,
+                "active_30d": 0,
+                "inactive_30d": 0,
+                "not_logged_in_30d": 0,
+                "never_refreshed": 0,
+                "never_logged_in": 0,
+            }
+        m = dict(row._mapping)
+        total = int(m["total_users"] or 0)
+        active = int(m["active_30d"] or 0)
+        return {
+            "total_users": total,
+            "active_30d": active,
+            "inactive_30d": max(0, total - active),
+            "not_logged_in_30d": int(m["not_logged_in_30d"] or 0),
+            "never_refreshed": int(m["never_refreshed"] or 0),
+            "never_logged_in": int(m["never_logged_in"] or 0),
+        }
+
+
+async def _counts_by_day(
+    sql: str,
+    *,
+    days: int,
+    value_key: str = "n",
+) -> list[dict[str, Any]]:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        rows = await conn.execute(text(sql), {"days": days})
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            mapping = dict(row._mapping)
+            mapping[value_key] = int(mapping[value_key] or 0)
+            out.append(mapping)
+        return out
+
+
+async def user_signups_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT (created_at AT TIME ZONE 'UTC')::date AS day, COUNT(*) AS n "
+        "FROM users "
+        "WHERE created_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def users_before_window(days: int) -> int:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT COUNT(*) AS n FROM users "
+                    "WHERE created_at < NOW() - CAST(:days AS integer) * INTERVAL '1 day'"
+                ),
+                {"days": days},
+            )
+        ).first()
+        return int(row._mapping["n"]) if row else 0
+
+
+async def user_refresh_distinct_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT (created_at AT TIME ZONE 'UTC')::date AS day, "
+        "COUNT(DISTINCT user_id) AS n "
+        "FROM user_activity_events "
+        "WHERE event_type = 'refresh' "
+        "AND created_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def user_refresh_events_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT (created_at AT TIME ZONE 'UTC')::date AS day, COUNT(*) AS n "
+        "FROM user_activity_events "
+        "WHERE event_type = 'refresh' "
+        "AND created_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def user_login_distinct_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT (created_at AT TIME ZONE 'UTC')::date AS day, "
+        "COUNT(DISTINCT user_id) AS n "
+        "FROM user_activity_events "
+        "WHERE event_type = 'login' "
+        "AND created_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def character_history_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT (fetched_at AT TIME ZONE 'UTC')::date AS day, COUNT(*) AS n "
+        "FROM character_snapshot_history "
+        "WHERE fetched_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def price_estimates_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT (computed_at AT TIME ZONE 'UTC')::date AS day, COUNT(*) AS n "
+        "FROM item_price_estimates "
+        "WHERE computed_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def shares_created_by_day(days: int = 90) -> list[dict[str, Any]]:
+    return await _counts_by_day(
+        "SELECT day, SUM(n) AS n FROM ( "
+        "  SELECT (created_at AT TIME ZONE 'UTC')::date AS day, COUNT(*) AS n "
+        "  FROM item_shares "
+        "  WHERE created_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "  GROUP BY day "
+        "  UNION ALL "
+        "  SELECT (created_at AT TIME ZONE 'UTC')::date AS day, COUNT(*) AS n "
+        "  FROM character_shares "
+        "  WHERE created_at >= NOW() - CAST(:days AS integer) * INTERVAL '1 day' "
+        "  GROUP BY day "
+        ") combined GROUP BY day ORDER BY day",
+        days=days,
+    )
+
+
+async def users_by_league(limit: int = 12) -> list[dict[str, Any]]:
+    engine = get_engine()
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT COALESCE(NULLIF(TRIM(preferred_league), ''), '(none)') AS league, "
+                "COUNT(*) AS n "
+                "FROM users "
+                "GROUP BY league "
+                "ORDER BY n DESC, league "
+                "LIMIT :limit"
+            ),
+            {"limit": limit},
+        )
+        return [dict(row._mapping) for row in rows]
 

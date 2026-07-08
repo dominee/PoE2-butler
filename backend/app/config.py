@@ -68,6 +68,8 @@ class Settings(BaseSettings):
     ggg_user_agent_suffix: str = "PoE2-Hideout-Butler"
     # httpx read timeout for GGG (and dev mock) HTTP calls; raise for slow mock Poe.ninja scrapes.
     ggg_http_timeout_seconds: float = 15.0
+    # Pause between per-character GGG detail fetches during manual refresh (avoids 429 bursts).
+    ggg_character_fetch_spacing_sec: float = 1.5
 
     refresh_cooldown_seconds: int = 60
     # Max historic character gear snapshots retained per character (timeline UI).

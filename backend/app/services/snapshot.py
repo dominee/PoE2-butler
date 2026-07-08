@@ -6,6 +6,7 @@ the OAuth callback and from the ``arq`` worker.
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import uuid
 from dataclasses import dataclass
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient, GGGError
 from app.config import get_settings
-from app.db.models import Snapshot, SnapshotKind, User
+from app.db.models import Snapshot, SnapshotKind, User, UserActivityEventType
 from app.domain.character import collect_character_items, parse_summaries
 from app.domain.league import (
     _PERMANENT_LEAGUES,
@@ -29,6 +30,7 @@ from app.logging import get_logger
 from app.security.crypto import TokenCipher
 from app.services.character_snapshot_history import archive_character_snapshot_if_changed
 from app.services.ggg_token import force_refresh_ggg_access, get_valid_ggg_access
+from app.services.user_activity import record_user_activity
 
 log = get_logger("app.services.snapshot")
 
@@ -130,6 +132,37 @@ class CapturedCharacterSnapshot:
 
     payload: dict
     prev_payload: dict | None
+    fetched_at: datetime | None = None
+
+
+async def restore_character_snapshot(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    name: str,
+    captured: CapturedCharacterSnapshot,
+) -> None:
+    """Re-insert cached gear after a failed refresh fetch (no archive side-effects)."""
+    existing = await get_latest_snapshot(session, user_id, SnapshotKind.CHARACTER, key=name)
+    if existing is not None:
+        return
+    when = captured.fetched_at
+    if when is not None:
+        when = _as_utc(when)
+    session.add(
+        Snapshot(
+            user_id=user_id,
+            kind=SnapshotKind.CHARACTER,
+            key=name,
+            payload=copy.deepcopy(captured.payload),
+            prev_payload=(
+                copy.deepcopy(captured.prev_payload)
+                if captured.prev_payload is not None
+                else copy.deepcopy(captured.payload)
+            ),
+            fetched_at=when or _utc_now(),
+        )
+    )
 
 
 async def delete_character_snapshots(
@@ -142,7 +175,11 @@ async def delete_character_snapshots(
     )
     res = await session.execute(stmt)
     captured = {
-        snap.key: CapturedCharacterSnapshot(payload=snap.payload, prev_payload=snap.prev_payload)
+        snap.key: CapturedCharacterSnapshot(
+            payload=snap.payload,
+            prev_payload=snap.prev_payload,
+            fetched_at=snap.fetched_at,
+        )
         for snap in res.scalars().all()
     }
     await session.execute(
@@ -176,12 +213,15 @@ async def refresh_character_gear_snapshots(
         return
     summaries = parse_summaries(snap.payload)
     in_league = [c for c in summaries if (c.league or "").strip() == league]
-    for c in in_league:
+    spacing = max(float(get_settings().ggg_character_fetch_spacing_sec), 0.0)
+    for idx, c in enumerate(in_league):
+        if idx > 0 and spacing > 0:
+            await asyncio.sleep(spacing)
         name = (c.name or "").strip()
         if not name:
             continue
+        cap = (captured_characters or {}).get(name)
         try:
-            cap = (captured_characters or {}).get(name)
             await ensure_character_detail(
                 session=session,
                 user=user,
@@ -198,6 +238,13 @@ async def refresh_character_gear_snapshots(
                 character=name,
                 error=str(exc),
             )
+            if cap is not None:
+                await restore_character_snapshot(
+                    session,
+                    user_id=user.id,
+                    name=name,
+                    captured=cap,
+                )
 
 
 async def refresh_user_snapshot(
@@ -291,6 +338,7 @@ async def refresh_user_snapshot(
         outcome.errors.append(f"characters:{exc}")
 
     user.last_refreshed_at = datetime.now(UTC)
+    await record_user_activity(session, user_id=user.id, event_type=UserActivityEventType.REFRESH)
     return outcome
 
 
@@ -380,6 +428,13 @@ async def ensure_character_detail(
         if exc.status_code == 401:
             access = await force_refresh_ggg_access(session, user, ggg, cipher)
             payload = await ggg.get_character(access, name)
+        elif exc.status_code == 429 and existing is not None:
+            log.warning(
+                "character_detail.ggg_429_serving_stale",
+                character=name,
+                user_id=str(user.id),
+            )
+            return existing.payload
         else:
             raise
     await upsert_snapshot(

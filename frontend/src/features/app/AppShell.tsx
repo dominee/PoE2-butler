@@ -5,6 +5,7 @@ import {
   useCharacter,
   useCharacterSnapshot,
   useCharacters,
+  useCharacterSnapshots,
   useCharacterGearPriceLookup,
   useCurrencyRates,
   useLeagues,
@@ -61,6 +62,7 @@ export function AppShell() {
   const [charLayout, setCharLayout] = useState<"doll" | "table">("doll");
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<SnapshotSelection>("current");
   const [appriseNotice, setAppriseNotice] = useState<string | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedLeague) {
@@ -80,12 +82,19 @@ export function AppShell() {
       : null;
   }, [selectedCharacter, charactersQ.data, charactersQ.isError]);
   const characterQ = useCharacter(characterNameForDetail, selectedLeague);
+  const snapshotsQ = useCharacterSnapshots(characterNameForDetail);
+  const effectiveSnapshotId = useMemo((): SnapshotSelection => {
+    if (selectedSnapshotId === "current") return "current";
+    const snapshots = snapshotsQ.data?.snapshots ?? [];
+    if (snapshots.length === 0) return "current";
+    return snapshots.some((s) => s.id === selectedSnapshotId) ? selectedSnapshotId : "current";
+  }, [selectedSnapshotId, snapshotsQ.data?.snapshots]);
   const historicCharacterQ = useCharacterSnapshot(
     characterNameForDetail,
-    selectedSnapshotId === "current" ? null : selectedSnapshotId,
+    effectiveSnapshotId === "current" ? null : effectiveSnapshotId,
   );
   const gearDetail =
-    selectedSnapshotId === "current" ? characterQ.data : historicCharacterQ.data;
+    effectiveSnapshotId === "current" ? characterQ.data : historicCharacterQ.data;
 
   const gearPricingItems = useMemo(
     () => (gearDetail ? collectCharacterGearPricingItems(gearDetail) : []),
@@ -109,6 +118,13 @@ export function AppShell() {
   useEffect(() => {
     setSelectedSnapshotId("current");
   }, [characterNameForDetail]);
+
+  useEffect(() => {
+    if (selectedSnapshotId === "current") return;
+    if (!snapshotsQ.data) return;
+    const valid = snapshotsQ.data.snapshots.some((s) => s.id === selectedSnapshotId);
+    if (!valid) setSelectedSnapshotId("current");
+  }, [selectedSnapshotId, snapshotsQ.data]);
 
   const stashAvailable = Boolean(me?.capabilities?.stash_available);
   const leaguesInferred = Boolean(me?.capabilities?.leagues_inferred);
@@ -259,7 +275,7 @@ export function AppShell() {
             currencyChaos={currencyChaos}
             disabled={
               !characterNameForDetail ||
-              (selectedSnapshotId === "current"
+              (effectiveSnapshotId === "current"
                 ? characterQ.isLoading || characterQ.isFetching
                 : historicCharacterQ.isLoading)
             }
@@ -291,12 +307,59 @@ export function AppShell() {
           <button
             type="button"
             className="btn-ghost inline-flex items-center gap-1.5 text-sm"
-            onClick={() => refresh.mutate({ league: selectedLeague })}
+            onClick={() => {
+              setRefreshNotice(null);
+              refresh.mutate(
+                { league: selectedLeague },
+                {
+                  onSuccess: (data) => {
+                    if (data.errors?.length) {
+                      setRefreshNotice(
+                        `Refresh finished with warnings (${data.errors.length}). Gear may be partially updated — wait a minute before retrying.`,
+                      );
+                    }
+                  },
+                  onError: (err) => {
+                    if (err instanceof ApiError && err.status === 429) {
+                      const retryAfter =
+                        typeof err.body === "object" &&
+                        err.body !== null &&
+                        "retry_after" in err.body
+                          ? String((err.body as { retry_after?: unknown }).retry_after)
+                          : null;
+                      setRefreshNotice(
+                        retryAfter
+                          ? `Refresh cooldown — try again in ${retryAfter}s.`
+                          : "Refresh cooldown — wait about a minute before retrying.",
+                      );
+                      return;
+                    }
+                    const detail =
+                      err instanceof ApiError &&
+                      err.body &&
+                      typeof err.body === "object" &&
+                      "detail" in err.body
+                        ? String((err.body as { detail: unknown }).detail)
+                        : err.message;
+                    setRefreshNotice(`Refresh failed: ${detail}`);
+                  },
+                },
+              );
+            }}
             disabled={refresh.isPending}
           >
             <HeaderSyncIcon className="h-4 w-4 shrink-0 opacity-90" />
             {refresh.isPending ? "Refreshing\u2026" : "Refresh"}
           </button>
+          {refreshNotice && (
+            <span
+              className="max-w-[16rem] truncate text-[11px] text-parchment-200/85"
+              role="status"
+              aria-live="polite"
+            >
+              {refreshNotice}
+            </span>
+          )}
           <button
             type="button"
             className="btn-ghost inline-flex items-center gap-1.5 text-sm"
@@ -447,19 +510,20 @@ export function AppShell() {
             )}
             {selectedCharacter && characterQ.isError && (
               <p className="text-amber-200/90" role="alert">
-                Stage 3/3: Gear request failed — check Network for GET /api/characters/
-                {encodeURIComponent(selectedCharacter)}. Try another character or Refresh.
+                {characterQ.error instanceof ApiError && characterQ.error.status === 429
+                  ? "GGG rate limit — gear could not be refreshed right now. Wait a minute, then try Refresh or reload this character."
+                  : `Stage 3/3: Gear request failed — check Network for GET /api/characters/${encodeURIComponent(selectedCharacter)}. Try another character or Refresh.`}
               </p>
             )}
             {characterNameForDetail &&
-              selectedSnapshotId === "current" &&
+              effectiveSnapshotId === "current" &&
               (characterQ.isLoading || (characterQ.isFetching && !characterQ.data)) && (
                 <p className="text-ui-muted" aria-live="polite">
                   Loading gear&hellip;
                 </p>
               )}
             {characterNameForDetail &&
-              selectedSnapshotId !== "current" &&
+              effectiveSnapshotId !== "current" &&
               historicCharacterQ.isLoading && (
                 <p className="text-ui-muted" aria-live="polite">
                   Loading historic gear&hellip;

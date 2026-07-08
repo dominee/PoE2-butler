@@ -51,7 +51,28 @@ in quotes**—quoted values often leave `$$` unexpanded so bcrypt sees garbage.
   automatically after login (operators choose when to poll or enable live
   updates).
 
-**Price jobs (background)** on the same page includes arq function breakdown
+### Users dashboard metrics
+
+Headline cards on **`GET /admin/users`**:
+
+| Metric | Definition |
+|--------|------------|
+| Total users | `COUNT(*)` from `users` |
+| Active (30d) | `last_refreshed_at` within 30 days |
+| Inactive (30d) | all other registered users |
+| Not logged in (30d) | `last_login_at` null or older than 30 days |
+| Never refreshed / never logged in | null timestamp columns |
+
+Charts (default **90** days, UTC):
+
+- **Adoption** — cumulative users + daily signups (`users.created_at`)
+- **Daily activity** — distinct users with login/refresh events (`user_activity_events`; populated after backend migration **0009** and deploy)
+- **Snapshot / gear** — refresh event counts + `character_snapshot_history` rows per day
+- **Resource use** — price estimates computed and share links created per day
+
+Apply backend migration **`0009_user_activity_events`** before daily login/refresh charts accumulate data.
+
+**Price jobs (background)** on the Overview page includes arq function breakdown
 (unpickle when possible), Redis `poe2b:price_job:*` / dedupe stats, a
 **Throttles** table (PTTL for keys such as `tp3:ggg_trade:lock` and vendor
 `next` slots), and **Sample jobs (latest)** with columns including **Updated**
@@ -64,7 +85,8 @@ in quotes**—quoted values often leave `$$` unexpanded so bcrypt sees garbage.
 | `GET /admin/login` · `POST /admin/login` | Form-based sign in (bcrypt + optional TOTP) |
 | `GET /admin/` | **Dashboard:** totals, activity metrics, snapshot mix, Redis summary, backend probes |
 | `GET /admin/api/summary` | JSON bundle for the same dashboard (session cookie required); used for optional auto-refresh |
-| `GET /admin/users` | Recent users (search via `?q=`) |
+| `GET /admin/users` | **Users dashboard:** headline stats, adoption/activity charts (90d default), league mix, searchable user table (`?q=`, `?days=`) |
+| `GET /admin/api/users/stats` | JSON bundle for Users charts (session required; optional `?days=30..365`) |
 | `GET /admin/users/{uuid}` | User detail: token meta, Redis state, snapshots, estimates, shares |
 | `POST /admin/users/{uuid}/refresh` | Trigger snapshot refresh (requires `ADMIN_INTERNAL_SECRET`) |
 | `POST /admin/users/{uuid}/logout` | Force logout (destroy Redis sessions) |

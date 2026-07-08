@@ -38,6 +38,7 @@ from admin.app.redis_stats import (
     top_queued_price_estimate_jobs,
 )
 from admin.app.redis_user import user_redis_state
+from admin.app.user_dashboard_data import load_user_dashboard_bundle, user_bundle_for_json
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _STATIC_DIR = Path(__file__).parent / "static"
@@ -192,12 +193,22 @@ def _register_routes(app: FastAPI) -> None:
         }
         return TEMPLATES.TemplateResponse(request, "home.html", context)
 
+    @app.get("/admin/api/users/stats")
+    async def api_users_stats(
+        _session: AdminSession = Depends(_require_session),
+        days: int = 90,
+    ) -> JSONResponse:
+        bundle = await load_user_dashboard_bundle(days=days)
+        return JSONResponse(user_bundle_for_json(bundle))
+
     @app.get("/admin/users", response_class=HTMLResponse)
     async def users(
         request: Request,
         session: AdminSession = Depends(_require_session),
         q: str | None = None,
+        days: int = 90,
     ) -> HTMLResponse:
+        user_stats = await load_user_dashboard_bundle(days=days)
         return TEMPLATES.TemplateResponse(
             request,
             "users.html",
@@ -206,6 +217,8 @@ def _register_routes(app: FastAPI) -> None:
                 "active": "users",
                 "users": await list_users(query=q),
                 "q": q or "",
+                "user_stats": user_stats,
+                "chart_data_json": json.dumps(user_stats),
             },
         )
 

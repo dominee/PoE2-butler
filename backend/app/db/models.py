@@ -36,6 +36,12 @@ UUIDType = Uuid(as_uuid=True)
 SnapshotIdType = BigInteger().with_variant(Integer(), "sqlite")
 ItemPriceEstimateIdType = BigInteger().with_variant(Integer(), "sqlite")
 CharacterSnapshotHistoryIdType = BigInteger().with_variant(Integer(), "sqlite")
+UserActivityEventIdType = BigInteger().with_variant(Integer(), "sqlite")
+
+
+class UserActivityEventType(enum.StrEnum):
+    LOGIN = "login"
+    REFRESH = "refresh"
 
 
 class SnapshotKind(enum.StrEnum):
@@ -76,6 +82,9 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     item_price_estimates: Mapped[list[ItemPriceEstimate]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    activity_events: Mapped[list[UserActivityEvent]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -220,3 +229,28 @@ class ItemPriceEstimate(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="item_price_estimates")
+
+
+class UserActivityEvent(Base):
+    """Append-only login / refresh events for admin adoption and activity charts."""
+
+    __tablename__ = "user_activity_events"
+    __table_args__ = (Index("ix_user_activity_events_type_created", "event_type", "created_at"),)
+
+    id: Mapped[int] = mapped_column(UserActivityEventIdType, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    event_type: Mapped[UserActivityEventType] = mapped_column(
+        Enum(
+            UserActivityEventType,
+            values_callable=lambda e: [m.value for m in e],
+            native_enum=False,
+            create_constraint=False,
+        )
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    user: Mapped[User] = relationship(back_populates="activity_events")

@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient, GGGError
 from app.config import Settings, get_settings
 from app.db import base as db_base
-from app.db.models import User, UserToken
+from app.db.models import User, UserActivityEventType, UserToken
 from app.deps import (
     get_cipher,
     get_ggg_client,
@@ -38,6 +38,7 @@ from app.services.snapshot import (
     refresh_stashes,
     refresh_user_snapshot,
 )
+from app.services.user_activity import record_user_activity
 
 log = get_logger("app.api.auth")
 
@@ -160,6 +161,7 @@ async def callback(
         await db.flush()
 
     user.last_login_at = datetime.now(UTC)
+    await record_user_activity(db, user_id=user.id, event_type=UserActivityEventType.LOGIN)
 
     expires_at = (
         datetime.now(UTC) + timedelta(seconds=tokens.expires_in) if tokens.expires_in else None

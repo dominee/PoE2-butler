@@ -128,6 +128,8 @@ async def get_character(
     except GGGError as exc:
         if exc.status_code == 404:
             raise HTTPException(status_code=404, detail="character_not_found") from exc
+        if exc.status_code == 429:
+            raise HTTPException(status_code=429, detail="ggg_rate_limited") from exc
         if ggg_error_implies_reauth(exc):
             raise HTTPException(status_code=401, detail="ggg_reauth_required") from exc
         raise HTTPException(status_code=502, detail="ggg_upstream_error") from exc
