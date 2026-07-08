@@ -228,6 +228,70 @@ class ItemProperty(BaseModel):
         return cls(name=name, value=value)
 
 
+_GRANTS_SKILL_LABEL = "grants skill"
+_GRANTED_SKILL_LEVEL_RE = re.compile(r"^Level\s+(\d+)\s+(.+)$", re.IGNORECASE)
+
+
+def format_granted_skill_display(raw_value: str) -> str:
+    """Format GGG granted-skill text as ``Skill Name (lvl N)``."""
+    text = _strip_tags(raw_value.strip())
+    if not text:
+        return ""
+    match = _GRANTED_SKILL_LEVEL_RE.match(text)
+    if match:
+        level, skill = match.group(1), match.group(2).strip()
+        return f"{skill} (lvl {level})"
+    return text
+
+
+def _granted_skill_from_property(prop: ItemProperty) -> str | None:
+    if _strip_tags(prop.name).strip().casefold() != _GRANTS_SKILL_LABEL:
+        return None
+    if prop.value is None or not str(prop.value).strip():
+        return None
+    formatted = format_granted_skill_display(str(prop.value))
+    return formatted or None
+
+
+def _parse_granted_skills_from_raw(raw: dict[str, Any]) -> list[str]:
+    skills: list[str] = []
+    seen: set[str] = set()
+    for gs in raw.get("grantedSkills") or []:
+        if not isinstance(gs, dict):
+            continue
+        for entry in gs.get("values") or []:
+            if isinstance(entry, list) and entry:
+                formatted = format_granted_skill_display(str(entry[0]))
+                if formatted and formatted not in seen:
+                    seen.add(formatted)
+                    skills.append(formatted)
+    return skills
+
+
+def _split_properties_and_granted_skills(
+    props: list[ItemProperty],
+) -> tuple[list[ItemProperty], list[str]]:
+    remaining: list[ItemProperty] = []
+    from_props: list[str] = []
+    seen: set[str] = set()
+    for prop in props:
+        skill = _granted_skill_from_property(prop)
+        if skill:
+            if skill not in seen:
+                seen.add(skill)
+                from_props.append(skill)
+            continue
+        remaining.append(prop)
+    return remaining, from_props
+
+
+def _merge_granted_skill_lists(primary: list[str], secondary: list[str]) -> list[str]:
+    """Prefer entries from ``primary`` (GGG ``grantedSkills``) when both exist."""
+    if primary:
+        return primary
+    return secondary
+
+
 class Socket(BaseModel):
     group: int = 0
     type: str = ""
@@ -282,6 +346,7 @@ class Item(BaseModel):
         description="Wiki/match per explicit line; parallel to explicit_mods.",
     )
     trailer_note: str | None = None
+    granted_skills: list[str] = Field(default_factory=list)
     properties: list[ItemProperty] = Field(default_factory=list)
     requirements: list[ItemProperty] = Field(default_factory=list)
     implicit_mods: list[str] = Field(default_factory=list)
@@ -483,6 +548,11 @@ def parse_item(raw: dict[str, Any]) -> Item:
     """Convert a GGG item dict into an :class:`Item`."""
     raw = _unwrap_ggg_item_dict(raw)
     props = [ItemProperty.from_ggg(p) for p in raw.get("properties", []) or []]
+    props, granted_from_props = _split_properties_and_granted_skills(props)
+    granted_skills = _merge_granted_skill_lists(
+        _parse_granted_skills_from_raw(raw),
+        granted_from_props,
+    )
     reqs = [ItemProperty.from_ggg(p) for p in raw.get("requirements", []) or []]
     sockets = [
         Socket(group=int(s.get("group", 0)), type=str(s.get("type", "")))
@@ -569,6 +639,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         identified=bool(raw.get("identified", True)),
         corrupted=bool(raw.get("corrupted", False)),
         flavour_text=flavour_text,
+        granted_skills=granted_skills,
         properties=props,
         requirements=reqs,
         implicit_mods=implicit_mods_list,

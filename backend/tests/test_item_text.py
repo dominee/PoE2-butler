@@ -68,3 +68,16 @@ def test_charm_evergreen_golden() -> None:
         "belt. Refill at Wells or by killing monsters.",
     )
     assert format_item_text(item) == _read_golden("charm.txt")
+
+
+def test_format_item_text_includes_granted_skills() -> None:
+    item = Item(
+        id="shield-1",
+        name="Guiding Palm of the Eye",
+        type_line="Chiming Spirit Shield",
+        base_type="Chiming Spirit Shield",
+        rarity="Unique",
+        granted_skills=["Purity of Ice (lvl 18)"],
+    )
+    text = format_item_text(item)
+    assert "Grants: Purity of Ice (lvl 18)" in text

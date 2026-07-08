@@ -699,3 +699,47 @@ def test_parse_item_ignores_stale_gem_icon_on_equipment_wrapper() -> None:
     item2 = parse_item(raw_no_inner_icon)
     assert item2.inventory_id == "Helm"
     assert item2.icon is None
+
+
+def test_parse_item_granted_skills_from_ggg_array() -> None:
+    raw = {
+        "id": "shield-1",
+        "name": "Guiding Palm of the Eye",
+        "typeLine": "Chiming Spirit Shield",
+        "baseType": "Chiming Spirit Shield",
+        "rarity": "Unique",
+        "grantedSkills": [
+            {
+                "name": "Grants Skill",
+                "values": [["Level 18 Purity of Ice", 25]],
+                "displayMode": 0,
+            }
+        ],
+        "properties": [
+            {"name": "Spirit Shield", "values": []},
+            {
+                "name": "Grants Skill",
+                "values": [["Purity of Ice", 25]],
+            },
+        ],
+    }
+    item = parse_item(raw)
+    assert item.granted_skills == ["Purity of Ice (lvl 18)"]
+    assert all(p.name != "Grants Skill" for p in item.properties)
+
+
+def test_parse_item_granted_skills_from_properties_when_array_missing() -> None:
+    raw = {
+        "id": "w-1",
+        "typeLine": "Test Wand",
+        "baseType": "Test Wand",
+        "rarity": "Rare",
+        "properties": [
+            {
+                "name": "Grants Skill",
+                "values": [["Level 17 Sigil of Power", 25]],
+            }
+        ],
+    }
+    item = parse_item(raw)
+    assert item.granted_skills == ["Sigil of Power (lvl 17)"]

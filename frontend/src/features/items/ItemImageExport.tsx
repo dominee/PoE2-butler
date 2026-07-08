@@ -11,7 +11,7 @@ import {
 } from "./itemMetrics";
 
 import { itemRollScoreState } from "./modRollMetrics";
-import { ExplicitModLine, ModDivider, ModSection, ModText, PANE_SECTION_HEADING } from "./ItemModPresentation";
+import { ExplicitModLine, GrantedSkillsSection, ModDivider, ModSection, ModText, PANE_SECTION_HEADING } from "./ItemModPresentation";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
@@ -186,6 +186,8 @@ export function ItemExportSnapshot({
           </ul>
         </div>
       )}
+
+      <GrantedSkillsSection skills={item.granted_skills ?? []} />
 
       {visibleReqs.length > 0 && (
         <div className="mt-1 text-xs text-parchment-200/85">

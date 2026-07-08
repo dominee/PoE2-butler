@@ -17,6 +17,7 @@ import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
 import {
   ExplicitModLine,
+  GrantedSkillsSection,
   ModDivider,
   ModSection,
   ModText,
@@ -379,6 +380,8 @@ export function ItemDetailPane({
           </ul>
         </div>
       )}
+
+      <GrantedSkillsSection skills={item.granted_skills ?? []} />
 
       {/* ── Requirements ── */}
       {visibleReqs.length > 0 && (

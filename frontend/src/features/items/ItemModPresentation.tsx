@@ -251,6 +251,24 @@ export function ModSection({ title, mods, tone }: { title: string; mods: string[
   );
 }
 
+export function GrantedSkillsSection({ skills }: { skills: string[] }) {
+  if (skills.length === 0) {
+    return null;
+  }
+  return (
+    <div>
+      <h4 className={PANE_SECTION_HEADING}>Grants</h4>
+      <ul className="mt-1 space-y-0.5 text-sm text-rarity-gem">
+        {skills.map((skill, idx) => (
+          <li key={idx} className="break-words leading-snug">
+            {skill}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ModDivider() {
   return <div className="my-1 border-t border-amber-950/20" />;
 }

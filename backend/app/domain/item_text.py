@@ -89,6 +89,10 @@ def format_item_text(item: Item) -> str:
     if pb:
         out_parts.append(SEP + pb)
 
+    if item.granted_skills:
+        grant_lines = "\n".join(f"Grants: {skill}" for skill in item.granted_skills)
+        out_parts.append(SEP + grant_lines + "\n")
+
     rline = _format_requirements_line(item.requirements)
     if rline:
         out_parts.append(SEP + rline)

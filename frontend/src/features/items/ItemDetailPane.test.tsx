@@ -158,6 +158,19 @@ describe("ItemDetailPane", () => {
     expect(screen.getAllByText(/requires/i).length).toBeGreaterThan(0);
   });
 
+  it("renders granted skills with level", () => {
+    installFetchMock("");
+    renderPane({
+      ...testItem,
+      name: "Guiding Palm of the Eye",
+      type_line: "Chiming Spirit Shield",
+      base_type: "Chiming Spirit Shield",
+      rarity: "Unique",
+      granted_skills: ["Purity of Ice (lvl 18)"],
+    });
+    expect(screen.getAllByText(/Purity of Ice \(lvl 18\)/).length).toBeGreaterThan(0);
+  });
+
   it("starts with tolerance pulled from prefs", () => {
     installFetchMock("");
     renderPane(testItem);
