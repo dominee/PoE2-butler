@@ -63,7 +63,7 @@ Headline cards on **`GET /admin/users`**:
 | No OAuth return (30d) | `last_login_at` older than 30 days |
 | Never refreshed | `last_refreshed_at` is null |
 
-Charts require Chart.js from jsDelivr — CSP `script-src` must allow `https://cdn.jsdelivr.net`.
+Charts use vendored Chart.js at `/static/chart.umd.min.js` (no CDN).
 
 Charts (default **90** days, UTC):
 

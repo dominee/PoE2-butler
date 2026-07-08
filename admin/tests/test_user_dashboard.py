@@ -74,6 +74,58 @@ async def test_users_stats_api_requires_auth() -> None:
 
 
 @pytest.mark.asyncio
+async def test_users_page_includes_chart_assets(
+    monkeypatch: pytest.MonkeyPatch,
+    admin_password_hash: str,
+) -> None:
+    get_admin_settings.cache_clear()
+
+    async def fake_bundle(*, days: int = 90):
+        return {
+            "days": days,
+            "headline": {
+                "total_users": 1,
+                "active_30d": 1,
+                "inactive_30d": 0,
+                "not_logged_in_30d": 0,
+                "never_refreshed": 0,
+            },
+            "signups_by_day": [{"day": "2026-01-01", "n": 1}],
+            "cumulative_users": [{"day": "2026-01-01", "n": 1}],
+            "refresh_users_by_day": [],
+            "refresh_events_by_day": [],
+            "login_users_by_day": [],
+            "gear_history_by_day": [],
+            "price_estimates_by_day": [],
+            "shares_by_day": [],
+            "users_by_league": [],
+            "league_mix": [],
+        }
+
+    async def fake_list_users(*, query: str | None = None):
+        return []
+
+    monkeypatch.setenv("ADMIN_PASSWORD_HASH", admin_password_hash)
+    monkeypatch.setenv("ADMIN_SESSION_SECRET", "x" * 32)
+    monkeypatch.setattr("admin.app.main.load_user_dashboard_bundle", fake_bundle)
+    monkeypatch.setattr("admin.app.main.list_users", fake_list_users)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        login = await client.post(
+            "/admin/login",
+            data={"username": "admin", "password": "s3cret"},
+            follow_redirects=False,
+        )
+        assert login.status_code == 303
+        resp = await client.get("/admin/users")
+        assert resp.status_code == 200
+        body = resp.text
+        assert "/static/chart.umd.min.js" in body
+        assert "user-chart-data" in body
+        assert "Never logged in" not in body
+
+
+@pytest.mark.asyncio
 async def test_users_stats_api_authenticated(
     monkeypatch: pytest.MonkeyPatch,
     admin_password_hash: str,

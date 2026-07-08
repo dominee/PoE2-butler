@@ -177,18 +177,40 @@ describe("ItemDetailPane", () => {
       ...testItem,
       socketed_items: [
         {
-          ...testItem,
           id: "core-1",
+          inventory_id: "",
+          w: 1,
+          h: 1,
+          x: null,
+          y: null,
           name: "Soul Core of Zalatl",
           type_line: "Soul Core of Zalatl",
-          granted_skills: ["Purity of Ice (lvl 18)"],
+          base_type: "Soul Core of Zalatl",
+          rarity: "Currency",
+          ilvl: 0,
+          identified: true,
+          corrupted: false,
+          properties: [],
+          requirements: [],
+          implicit_mods: [],
+          implicit_mod_details: [],
           explicit_mods: [],
+          explicit_mod_details: [],
+          granted_skills: ["Purity of Ice (lvl 18)"],
           socketed_items: [],
+          rune_mods: [],
+          enchant_mods: [],
+          crafted_mods: [],
+          sockets: [],
+          stack_size: null,
+          max_stack_size: null,
+          icon: null,
         },
       ],
     });
-    expect(screen.getByText(/Runes & Cores/i)).toBeInTheDocument();
-    expect(screen.getByText(/Purity of Ice \(lvl 18\)/)).toBeInTheDocument();
+    // ItemImageExport renders an off-screen duplicate tree — assert within the visible pane.
+    expect(screen.getByLabelText(/item details/i)).toHaveTextContent(/Runes & Cores/i);
+    expect(screen.getByLabelText(/item details/i)).toHaveTextContent(/Purity of Ice \(lvl 18\)/);
   });
 
   it("starts with tolerance pulled from prefs", () => {

@@ -9,10 +9,10 @@ from admin.app.main import app
 
 
 @pytest.mark.asyncio
-async def test_csp_allows_chartjs_cdn() -> None:
+async def test_csp_allows_self_hosted_scripts() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/admin/login")
     assert resp.status_code == 200
     csp = resp.headers.get("content-security-policy", "")
-    assert "script-src" in csp
-    assert "cdn.jsdelivr.net" in csp
+    assert "script-src 'self'" in csp
+    assert "cdn.jsdelivr.net" not in csp
