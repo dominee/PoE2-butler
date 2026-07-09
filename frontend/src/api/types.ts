@@ -65,6 +65,7 @@ export interface Item {
   ilvl: number | null;
   identified: boolean;
   corrupted: boolean;
+  double_corrupted?: boolean;
   properties: ItemProperty[];
   requirements: ItemProperty[];
   implicit_mods: string[];

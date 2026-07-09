@@ -174,6 +174,67 @@ def test_exact_search_unique_sets_name_type_and_rarity() -> None:
     assert tf["filters"]["rarity"]["option"] == "unique"
 
 
+def _misc_filters(q: dict) -> dict:
+    mf = q["filters"]["misc_filters"]
+    assert mf["disabled"] is False
+    return mf["filters"]
+
+
+def test_exact_search_sets_corruption_filters_uncorrupted() -> None:
+    item = make_item(corrupted=False, double_corrupted=False)
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    mf = _misc_filters(q)
+    assert mf["corrupted"]["option"] == "false"
+    assert mf["twice_corrupted"]["option"] == "false"
+
+
+def test_exact_search_sets_corruption_filters_corrupted() -> None:
+    item = make_item(corrupted=True, double_corrupted=False)
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    mf = _misc_filters(q)
+    assert mf["corrupted"]["option"] == "true"
+    assert mf["twice_corrupted"]["option"] == "false"
+
+
+def test_exact_search_sets_corruption_filters_twice_corrupted() -> None:
+    item = make_item(corrupted=True, double_corrupted=True)
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    mf = _misc_filters(q)
+    assert mf["corrupted"]["option"] == "true"
+    assert mf["twice_corrupted"]["option"] == "true"
+
+
+def test_exact_search_mageblood_unique_includes_corruption_filters() -> None:
+    item = make_item(
+        rarity="Unique",
+        name="Mageblood",
+        base_type="Heavy Belt",
+        corrupted=False,
+        double_corrupted=False,
+    )
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    assert q["name"] == "Mageblood"
+    assert q["type"] == "Heavy Belt"
+    mf = _misc_filters(q)
+    assert mf["corrupted"]["option"] == "false"
+    assert mf["twice_corrupted"]["option"] == "false"
+
+
+def test_upgrade_search_includes_corruption_filters() -> None:
+    item = make_item(corrupted=False)
+    q = build_upgrade_search(item, league="L")["payload"]["query"]
+    mf = _misc_filters(q)
+    assert mf["corrupted"]["option"] == "false"
+
+
+def test_weighted_upgrade_search_includes_corruption_filters() -> None:
+    item = make_item(corrupted=True, double_corrupted=True)
+    q = build_weighted_upgrade_search(item, league="L")["payload"]["query"]
+    mf = _misc_filters(q)
+    assert mf["corrupted"]["option"] == "true"
+    assert mf["twice_corrupted"]["option"] == "true"
+
+
 def test_exact_search_unique_without_display_name_omits_query_name() -> None:
     """GGG still needs ``name`` for a specific unique; omit key when unknown."""
     item = make_item(rarity="Unique", base_type="Spine Bow", name="")

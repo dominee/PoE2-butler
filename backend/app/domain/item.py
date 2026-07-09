@@ -336,6 +336,7 @@ class Item(BaseModel):
     ilvl: int | None = None
     identified: bool = True
     corrupted: bool = False
+    double_corrupted: bool = False
     flavour_text: str | None = None
     implicit_mod_range_hints: list[str | None] = Field(
         default_factory=list,
@@ -638,6 +639,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
         ilvl=raw.get("ilvl"),
         identified=bool(raw.get("identified", True)),
         corrupted=bool(raw.get("corrupted", False)),
+        double_corrupted=bool(raw.get("doubleCorrupted", raw.get("double_corrupted", False))),
         flavour_text=flavour_text,
         granted_skills=granted_skills,
         properties=props,

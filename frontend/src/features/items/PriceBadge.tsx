@@ -13,11 +13,23 @@ export interface PriceBadgeProps {
 export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBadgeProps) {
   if (!price) return null;
   const valuable = threshold != null && price.chaos_equiv >= threshold;
+  const methodLabel =
+    price.estimate_method === "trade_median"
+      ? `trade median${price.sample_size != null ? ` · ${price.sample_size} listings` : ""}`
+      : price.estimate_method === "poe2scout"
+        ? "poe2scout"
+        : price.estimate_method === "aggregator"
+          ? "aggregator"
+          : null;
   const label = currencyChaos ? (
     <DivExPriceText chaosEquiv={price.chaos_equiv} rates={currencyChaos} valuable={valuable} />
   ) : (
     `${formatChaos(price.chaos_equiv)}c`
   );
+  const titleParts = [`${Math.ceil(price.chaos_equiv)} chaos equivalent`, `source: ${price.source}`];
+  if (methodLabel) {
+    titleParts.push(`method: ${methodLabel}`);
+  }
   return (
     <span
       className={[
@@ -27,7 +39,7 @@ export function PriceBadge({ price, threshold, compact, currencyChaos }: PriceBa
           : "border-ink-700 bg-ink-800 text-parchment-100/90",
         compact ? "uppercase" : "",
       ].join(" ")}
-      title={`${Math.ceil(price.chaos_equiv)} chaos equivalent · source: ${price.source}`}
+      title={titleParts.join(" · ")}
       data-testid="price-badge"
     >
       <span aria-hidden="true">◈</span>

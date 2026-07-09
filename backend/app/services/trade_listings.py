@@ -26,7 +26,8 @@ log = get_logger("app.services.trade_listings")
 
 # GGG often returns a handful of ids per ``fetch`` call.
 _FETCH_BATCH = 8
-_MAX_FETCH_IDS = 40
+_MAX_FETCH_IDS = 80
+_MAX_SCAN_IDS = 80
 
 
 def trade_currency_chaos_fallback(settings: Settings) -> dict[str, float]:
@@ -86,6 +87,33 @@ def trade_currency_chaos_fallback(settings: Settings) -> dict[str, float]:
     }
 
 
+def normalize_trade_chaos_map(
+    chaos_per_name: dict[str, float], settings: Settings
+) -> dict[str, float]:
+    """Align GGG compact trade currency ids with poe.ninja display-name keys.
+
+    PoE2 trade listings use ``currency: "divine"`` while poe.ninja supplies
+    ``"divine orb"`` chaos values. Merging maps without syncing leaves ``divine``
+    on the static fallback (often 250) while the UI shows ~26 chaos/div — inflating
+    estimates by ~10×.
+    """
+    m = dict(chaos_per_name)
+    cdiv = m.get("divine orb") or m.get("divine")
+    cex = m.get("exalted orb") or m.get("exalted")
+    if cdiv is not None and float(cdiv) > 0:
+        cdiv_f = float(cdiv)
+        m["divine"] = cdiv_f
+        m["divine orb"] = cdiv_f
+    if cex is not None and float(cex) > 0:
+        cex_f = float(cex)
+        m["exalted"] = cex_f
+        m["exalted orb"] = cex_f
+    cdiv_eff = m.get("divine") or float(settings.trade_listing_divine_to_chaos)
+    cex_eff = max(float(m.get("exalted") or settings.trade_listing_exalt_to_chaos), 1e-6)
+    m["mirror"] = max(float(cdiv_eff) * 9000.0, cex_eff * 8000.0)
+    return m
+
+
 def median_chaos(values: list[float]) -> float:
     s = sorted(values)
     n = len(s)
@@ -110,6 +138,13 @@ def median_chaos_robust(values: list[float]) -> float:
         return 0.0
     if n <= 2:
         return median_chaos(s)
+    if n >= 8:
+        p90_idx = min(n - 1, int(math.ceil(0.9 * (n - 1))))
+        p90 = s[p90_idx]
+        trimmed = [x for x in s if x <= p90]
+        if len(trimmed) >= max(2, (n + 1) // 2):
+            s = trimmed
+            n = len(s)
     lo_i = (n - 1) // 4
     hi_i = max(0, (3 * (n - 1)) // 4)
     q1, q3 = s[lo_i], s[hi_i]
@@ -121,6 +156,74 @@ def median_chaos_robust(values: list[float]) -> float:
     if len(kept) < max(2, (n + 1) // 2):
         kept = s
     return median_chaos(kept)
+
+
+def _is_mirror_currency(currency: str) -> bool:
+    c = (currency or "").lower().strip()
+    return c == "mirror" or "mirror" in c
+
+
+def listing_price_currency(entry: dict[str, Any]) -> str:
+    """Return GGG ``listing.price.currency`` (or ``type`` fallback) for a fetch row."""
+    li = entry.get("listing")
+    if not isinstance(li, dict):
+        return ""
+    price = li.get("price")
+    if not isinstance(price, dict):
+        return ""
+    return str(price.get("currency") or price.get("type") or "")
+
+
+def listing_is_mirror_currency(entry: dict[str, Any]) -> bool:
+    return _is_mirror_currency(listing_price_currency(entry))
+
+
+def _divine_chaos_rate(chaos_per_name: dict[str, float], settings: Settings) -> float:
+    cdiv = chaos_per_name.get("divine orb") or chaos_per_name.get("divine")
+    if cdiv and cdiv > 0:
+        return float(cdiv)
+    return float(settings.trade_listing_divine_to_chaos)
+
+
+def estimate_upper_chaos_ceiling(
+    chaos_values: list[float],
+    chaos_per_name: dict[str, float],
+    settings: Settings,
+) -> float:
+    """Upper bound for listing chaos equivalents used in tier C medians."""
+    if not chaos_values:
+        return float("inf")
+    s = sorted(chaos_values)
+    n = len(s)
+    p75_idx = max(0, (3 * (n - 1)) // 4)
+    p75 = s[p75_idx]
+    dynamic_cap = p75 * 4.0 if n >= 4 else float("inf")
+    mirror = chaos_per_name.get("mirror") or 0.0
+    cdiv = _divine_chaos_rate(chaos_per_name, settings)
+    max_div = float(settings.trade_estimate_max_divine_equiv)
+    if max_div > 0:
+        config_cap = max_div * cdiv
+    elif mirror > 0:
+        config_cap = mirror * 0.85
+    else:
+        config_cap = float("inf")
+    return min(config_cap, dynamic_cap)
+
+
+def filter_listing_chaos_samples(
+    samples: list[tuple[float, bool]],
+    chaos_per_name: dict[str, float],
+    settings: Settings,
+) -> list[float]:
+    """Drop mirror-currency rows and ultra-high chaos asks before median."""
+    kept = samples
+    if settings.trade_estimate_exclude_mirror_currency:
+        kept = [(c, m) for c, m in kept if not m]
+    chaos_values = [c for c, _ in kept if c > 0 and math.isfinite(c)]
+    if not chaos_values:
+        return []
+    ceiling = estimate_upper_chaos_ceiling(chaos_values, chaos_per_name, settings)
+    return [c for c in chaos_values if c <= ceiling]
 
 
 def _match_currency_to_chaos(
@@ -158,6 +261,16 @@ def listing_chaos_value(entry: dict[str, Any], chaos_per_name: dict[str, float])
     except (TypeError, ValueError):
         return None
     return _match_currency_to_chaos(cur, chaos_per_name, a)
+
+
+def listing_chaos_sample(
+    entry: dict[str, Any], chaos_per_name: dict[str, float]
+) -> tuple[float, bool] | None:
+    """Chaos equivalent and mirror-currency flag for median filtering."""
+    v = listing_chaos_value(entry, chaos_per_name)
+    if v is None or v <= 0:
+        return None
+    return v, listing_is_mirror_currency(entry)
 
 
 def trade_listing_ids_from_search_post(post: dict[str, Any] | None) -> tuple[list[str], int]:
@@ -358,10 +471,12 @@ async def sample_median_listing_chaos(
     When *list_ids* is set (caller already ran list pagination), skip the
     duplicate list GET — same policy bucket as search POST / fetch.
 
-    Fetches up to *cap_ids* listings (batched) before aggregating so the median
-    is not dominated by a single early row. When *robust_median* is true, applies
-    :func:`median_chaos_robust` to damp ultra-high buyout outliers.
+    Scans up to *_MAX_SCAN_IDS* listing ids (not only the first GGG ``price asc``
+    page — that order is not chaos-normalized, so ``1 mirror`` can rank before
+    divines). Applies mirror / ceiling filters, then a robust median on the
+    chaos-sorted comparable set.
     """
+    chaos_per_name = normalize_trade_chaos_map(chaos_per_name, settings)
     if list_ids is not None:
         ids = [x for x in list_ids if isinstance(x, str) and x.strip()]
         list_rl = False
@@ -373,22 +488,25 @@ async def sample_median_listing_chaos(
         return 0.0, 0, True
     if not ids:
         return 0.0, 0, False
-    take = min(len(ids), cap_ids, _MAX_FETCH_IDS)
-    if take < 1:
-        return 0.0, 0, False
-    all_prices: list[float] = []
-    for off in range(0, take, _FETCH_BATCH):
+    med_fn = median_chaos_robust if robust_median else median_chaos
+    scan_cap = min(len(ids), max(cap_ids, _MAX_SCAN_IDS), _MAX_FETCH_IDS)
+    all_filtered: list[float] = []
+    for off in range(0, scan_cap, _FETCH_BATCH):
         chunk = ids[off : off + _FETCH_BATCH]
         rows, fetch_rl = await trade_fetch_listings(
             settings, league, search_id, chunk, redis=redis
         )
         if fetch_rl:
             return 0.0, 0, True
+        batch_samples: list[tuple[float, bool]] = []
         for row in rows:
-            v = listing_chaos_value(row, chaos_per_name)
-            if v is not None and v > 0:
-                all_prices.append(v)
-    if len(all_prices) < min_samples:
-        return 0.0, len(all_prices), False
-    med_fn = median_chaos_robust if robust_median else median_chaos
-    return med_fn(all_prices), len(all_prices), False
+            sample = listing_chaos_sample(row, chaos_per_name)
+            if sample is not None:
+                batch_samples.append(sample)
+        all_filtered.extend(filter_listing_chaos_samples(batch_samples, chaos_per_name, settings))
+        if len(all_filtered) >= max(min_samples, cap_ids):
+            break
+    if len(all_filtered) < min_samples:
+        return 0.0, len(all_filtered), False
+    all_filtered.sort()
+    return med_fn(all_filtered), len(all_filtered), False

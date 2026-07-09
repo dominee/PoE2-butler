@@ -16,6 +16,7 @@ from app.services.third_party_ratelimit import (
     release_price_estimate_slot,
 )
 from app.services.trade_listings import (
+    normalize_trade_chaos_map,
     sample_median_listing_chaos,
     trade_currency_chaos_fallback,
     trade_listing_ids_from_search_post,
@@ -48,7 +49,7 @@ async def build_chaos_currency_map(settings: Settings, league: str) -> dict[str,
         await poe.aclose()
         if m:
             base.update(m)
-    return base
+    return normalize_trade_chaos_map(base, settings)
 
 
 def _value_display_units(

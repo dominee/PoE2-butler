@@ -220,6 +220,96 @@ describe("ItemDetailPane", () => {
     expect(input.value).toBe("15");
   });
 
+  it("shows trade median provenance when bulk lookup returns a trade_median price", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const u = requestUrl(input);
+      if (u.includes("/api/pricing/lookup")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              league: "Dawn of the Hunt",
+              prices: {
+                i1: {
+                  value: 450,
+                  unit: "divine",
+                  chaos_equiv: 90000,
+                  source: "ggg_trade2",
+                  confidence: 0.9,
+                  estimate_method: "trade_median",
+                  sample_size: 12,
+                },
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (u.includes("/api/pricing/currency-rates")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              league: "Dawn of the Hunt",
+              chaos_per_divine: 200,
+              chaos_per_exalted: 8,
+              exalted_per_divine: 25,
+              source: "test",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (u.includes("/api/pricing/estimate/item")) {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (u.includes("/api/pricing/estimate/")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(failedPriceJob), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (u.includes("/api/pricing/estimate") && init?.method === "POST") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ job_id: "00000000-0000-0000-0000-000000000099", deduped: false }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (u.includes("/api/trade/search")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              mode: "exact",
+              league: "Dawn of the Hunt",
+              url: "https://www.pathofexile.com/trade2/search/poe2/Dawn%20of%20the%20Hunt",
+              payload: {},
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      if (u.includes("item-text")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ text: "" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(new Response("unmocked: " + u, { status: 500 }));
+    });
+    renderPane(testItem);
+    expect(await screen.findByText(/Trade median:/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/item details/i)).toHaveTextContent(/12 listings/i);
+    const badges = screen.getAllByTestId("price-badge");
+    expect(badges[0]).toHaveAttribute(
+      "title",
+      expect.stringContaining("method: trade median · 12 listings"),
+    );
+  });
+
   it("calls fetch when the exact trade button is clicked", async () => {
     const fetchMock = installFetchMock("");
     const openSpy = vi.spyOn(window, "open").mockReturnValue({

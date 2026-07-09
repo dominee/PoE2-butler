@@ -41,6 +41,7 @@ import { itemRollScoreState } from "./modRollMetrics";
 import { PercentBar } from "./PercentBar";
 import { itemReferenceHasAggregate, itemReferenceRollPcts, uniqueTypeRollPercent } from "./uniqueReferenceRoll";
 import { PriceBadge } from "./PriceBadge";
+import { RefinedEstimateValueRow } from "./DivExPriceText";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
 import {
   IconChevronsUp,
@@ -315,11 +316,16 @@ export function ItemDetailPane({
                   {refinedQ.job?.status === "running" ? "Updating price…" : "Price queued…"}
                 </span>
               ) : price ? (
-                <PriceBadge
-                  price={price}
-                  threshold={prefs?.valuable_threshold_chaos}
-                  currencyChaos={currencyChaos}
-                />
+                <>
+                  <PriceBadge
+                    price={price}
+                    threshold={prefs?.valuable_threshold_chaos}
+                    currencyChaos={currencyChaos}
+                  />
+                  {price.estimate_method === "trade_median" ? (
+                    <RefinedEstimateValueRow result={price} currencyChaos={currencyChaos} />
+                  ) : null}
+                </>
               ) : refinedQ.job?.status === "completed" &&
                 refinedQ.job.result &&
                 (refinedQ.job.result.estimate_method === "trade_median" ||

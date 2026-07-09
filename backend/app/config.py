@@ -113,6 +113,9 @@ class Settings(BaseSettings):
     # Fallback when poe.ninja is not the active source (rough conversion to chaos)
     trade_listing_divine_to_chaos: float = 250.0
     trade_listing_exalt_to_chaos: float = 8.0
+    trade_estimate_exclude_mirror_currency: bool = True
+    # Upper chaos cap for median samples (0 = derive from mirror rate only).
+    trade_estimate_max_divine_equiv: float = 6500.0
 
     # PoE2 trade site public filter metadata (optional; used by trade_stat_catalog).
     trade_filter_data_url: str = "https://www.pathofexile.com/api/trade2/data/filters"

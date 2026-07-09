@@ -21,7 +21,6 @@ FRAME_TO_RARITY = {
 }
 
 _STRIP = frozenset({
-    "doubleCorrupted",
     "desecrated",
     "desecratedMods",
     "bondedMods",
@@ -77,6 +76,7 @@ def convert_item_data(raw: dict, *, depth: int = 0) -> dict:
     item.setdefault("verified", True)
     item.setdefault("identified", True)
     item.setdefault("corrupted", False)
+    item.setdefault("doubleCorrupted", False)
     if not item.get("rarity"):
         item["rarity"] = FRAME_TO_RARITY.get(item.get("frameType", 0), "Normal")
     raw_socketed = item.pop("socketedItems", None) or []

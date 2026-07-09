@@ -207,6 +207,11 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
         tf = filt.setdefault("type_filters", {})
         tf["disabled"] = False
         tf.setdefault("filters", {})["rarity"] = {"option": rarity_option}
+    mf = filt.setdefault("misc_filters", {})
+    mf["disabled"] = False
+    mf_f = mf.setdefault("filters", {})
+    mf_f["corrupted"] = {"option": "true" if item.corrupted else "false"}
+    mf_f["twice_corrupted"] = {"option": "true" if item.double_corrupted else "false"}
     if stats:
         query["stats"] = [{"type": "and", "filters": stats}]
     return {"query": query, "sort": {"price": "asc"}}
