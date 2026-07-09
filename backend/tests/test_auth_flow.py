@@ -369,7 +369,8 @@ async def test_trade_search_uses_preferred_league_when_body_omits_league(
     ) -> tuple[str, dict | None, bool, int]:
         seen.append(league)
         assert "query" in payload
-        return ("FallbackSearchId", {"id": "FallbackSearchId", "result": [], "total": 0}, False, 200)
+        post = {"id": "FallbackSearchId", "result": [], "total": 0}
+        return ("FallbackSearchId", post, False, 200)
 
     monkeypatch.setattr("app.api.trade.ensure_trade_stats_index", _fake_ensure)
     monkeypatch.setattr("app.api.trade.submit_trade_search", _fake_submit)
