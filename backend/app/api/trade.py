@@ -33,6 +33,13 @@ router = APIRouter(prefix="/api/trade", tags=["trade"])
 log = get_logger("app.api.trade")
 
 
+def _resolve_trade_league(body_league: str | None, user: User) -> str:
+    league = (body_league or user.preferred_league or "").strip()
+    if not league:
+        raise HTTPException(status_code=400, detail="league_required")
+    return league
+
+
 class TradeSearchRequest(BaseModel):
     mode: Literal["exact", "upgrade", "weighted_upgrade"]
     item: Item
@@ -58,9 +65,10 @@ async def trade_search(
     tolerance = (
         body.tolerance_pct if body.tolerance_pct is not None else float(user.trade_tolerance_pct)
     )
+    league = _resolve_trade_league(body.league, user)
     await ensure_trade_stats_index(settings)
     if body.mode == "exact":
-        result = build_exact_search(body.item, tolerance_pct=tolerance, league=body.league)
+        result = build_exact_search(body.item, tolerance_pct=tolerance, league=league)
         enrich_trade_payload_stat_ids(result["payload"])
         search_id, _, _, _ = await submit_trade_search(
             settings, result["league"], result["payload"], redis=redis
@@ -78,7 +86,7 @@ async def trade_search(
             tolerance_pct=tolerance,
         )
     if body.mode == "upgrade":
-        result = build_upgrade_search(body.item, league=body.league)
+        result = build_upgrade_search(body.item, league=league)
         enrich_trade_payload_stat_ids(result["payload"])
         search_id, _, _, _ = await submit_trade_search(
             settings, result["league"], result["payload"], redis=redis
@@ -95,7 +103,7 @@ async def trade_search(
             payload=result["payload"],
         )
     if body.mode == "weighted_upgrade":
-        result = build_weighted_upgrade_search(body.item, league=body.league)
+        result = build_weighted_upgrade_search(body.item, league=league)
         enrich_trade_payload_stat_ids(result["payload"])
         fix_weight_group_floor(result["payload"])
         search_id, _, _, status_code = await submit_trade_search(
@@ -110,7 +118,7 @@ async def trade_search(
                 reason="ggg_400_too_complex",
                 league=result["league"],
             )
-            fallback = build_upgrade_search(body.item, league=body.league)
+            fallback = build_upgrade_search(body.item, league=league)
             enrich_trade_payload_stat_ids(fallback["payload"])
             search_id, _, _, _ = await submit_trade_search(
                 settings, fallback["league"], fallback["payload"], redis=redis

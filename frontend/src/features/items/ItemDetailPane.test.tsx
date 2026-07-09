@@ -222,7 +222,12 @@ describe("ItemDetailPane", () => {
 
   it("calls fetch when the exact trade button is clicked", async () => {
     const fetchMock = installFetchMock("");
-    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      closed: false,
+      location: { href: "" },
+      opener: window,
+      close: vi.fn(),
+    } as unknown as Window);
 
     const user = userEvent.setup();
     renderPane(testItem);
@@ -236,7 +241,54 @@ describe("ItemDetailPane", () => {
     const body = JSON.parse((tradeCall[1] as RequestInit)?.body as string);
     expect(body.mode).toBe("exact");
     expect(body.league).toBe("Dawn of the Hunt");
-    expect(openSpy).toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledWith("about:blank", "_blank");
+    await waitFor(() =>
+      expect(screen.getByText(/Opened PoE2 Trade and copied search JSON/i)).toBeInTheDocument(),
+    );
+  });
+
+  it("shows feedback when trade search fails", async () => {
+    const fetchMock = installFetchMock("");
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => {
+      const u = requestUrl(input);
+      if (u.includes("/api/trade/search")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: "league_required" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return baseImpl(input, init);
+    });
+    vi.spyOn(window, "open").mockReturnValue({
+      closed: false,
+      location: { href: "" },
+      opener: window,
+      close: vi.fn(),
+    } as unknown as Window);
+
+    const user = userEvent.setup();
+    renderPane(testItem);
+    await user.click(screen.getByRole("button", { name: /trade search/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Select a league in the app header first/i)).toBeInTheDocument(),
+    );
+  });
+
+  it("disables trade buttons when no league is selected", () => {
+    installFetchMock("");
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ItemDetailPane item={testItem} league={null} prefs={prefs} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: /trade search/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^upgrade$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /upgrade \(weighted\)/i })).toBeDisabled();
   });
 
   it("requests PoE2 item text from the API and shows a success message", async () => {

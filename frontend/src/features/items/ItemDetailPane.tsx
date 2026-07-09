@@ -25,7 +25,13 @@ import {
 } from "@/features/items/ItemModPresentation";
 import { paneBorderColor, RARITY_NAME_CLASS, isRuneforgedItem, runeforgedBorderClass } from "@/features/items/itemVisualStyles";
 import type { Item, ItemRarity, Prefs } from "@/api/types";
+import { ApiError } from "@/api/client";
 import { copyTextToClipboard } from "@/utils/clipboard";
+import {
+  closeExternalTab,
+  navigateExternalTab,
+  prepareExternalTab,
+} from "@/utils/openExternalTab";
 
 import {
   computeItemScore,
@@ -139,22 +145,63 @@ export function ItemDetailPane({
 
   const nameClass = RARITY_NAME_CLASS[item.rarity as ItemRarity] ?? "";
 
-  const onSearch = async (mode: "exact" | "upgrade" | "weighted_upgrade") => {
-    const result = await tradeSearch.mutateAsync({
-      mode,
-      item,
-      league,
-      tolerance_pct: mode === "exact" ? tolerance : undefined,
-    });
-    window.open(result.url, "_blank", "noopener,noreferrer");
-    try {
-      await copyTextToClipboard(JSON.stringify(result.payload, null, 2));
-      setCopyFeedback("search JSON copied to clipboard");
-    } catch {
-      setCopyFeedback("could not copy; see console");
-      console.info("trade search payload", result.payload);
+  const tradeSearchErrorMessage = (err: unknown): string => {
+    if (err instanceof ApiError) {
+      if (err.status === 401) return "Sign in again to run trade searches.";
+      if (err.status === 429) return "Trade API is rate-limited — try again shortly.";
+      const detail =
+        typeof err.body === "object" &&
+        err.body &&
+        "detail" in err.body &&
+        (err.body as { detail: unknown }).detail != null
+          ? String((err.body as { detail: unknown }).detail)
+          : null;
+      if (detail === "league_required") {
+        return "Select a league in the app header first.";
+      }
+      if (detail) return `Trade search failed: ${detail}`;
+      return `Trade search failed (HTTP ${err.status}).`;
     }
-    setTimeout(() => setCopyFeedback(null), 3500);
+    return "Trade search failed — check your connection and try again.";
+  };
+
+  const onSearch = async (mode: "exact" | "upgrade" | "weighted_upgrade") => {
+    if (!league?.trim()) {
+      setCopyFeedback("Select a league in the app header first.");
+      setTimeout(() => setCopyFeedback(null), 4000);
+      return;
+    }
+
+    const tab = prepareExternalTab();
+    try {
+      const result = await tradeSearch.mutateAsync({
+        mode,
+        item,
+        league,
+        tolerance_pct: mode === "exact" ? tolerance : undefined,
+      });
+      const opened = navigateExternalTab(tab, result.url);
+      try {
+        await copyTextToClipboard(JSON.stringify(result.payload, null, 2));
+        setCopyFeedback(
+          opened
+            ? "Opened PoE2 Trade and copied search JSON to clipboard"
+            : "Popup blocked — search JSON copied; paste URL from clipboard if needed",
+        );
+      } catch {
+        setCopyFeedback(
+          opened
+            ? "Opened PoE2 Trade (could not copy JSON to clipboard)"
+            : "Popup blocked — could not copy JSON; see console",
+        );
+        console.info("trade search payload", result.payload);
+        if (!opened) console.info("trade search url", result.url);
+      }
+    } catch (err) {
+      closeExternalTab(tab);
+      setCopyFeedback(tradeSearchErrorMessage(err));
+    }
+    setTimeout(() => setCopyFeedback(null), 4500);
   };
 
   const onPersistTolerance = () => {
@@ -635,8 +682,8 @@ export function ItemDetailPane({
               <button
                 type="button"
                 className="btn-primary inline-flex w-full items-center justify-center gap-2 text-center"
-                onClick={() => onSearch("exact")}
-                disabled={tradeSearch.isPending}
+                onClick={() => void onSearch("exact")}
+                disabled={tradeSearch.isPending || !league?.trim()}
               >
                 <IconSearchExact />
                 <span>Trade Search</span>
@@ -645,8 +692,8 @@ export function ItemDetailPane({
                 <button
                   type="button"
                   className="btn-ghost inline-flex flex-1 items-center justify-center gap-2 text-center"
-                  onClick={() => onSearch("upgrade")}
-                  disabled={tradeSearch.isPending}
+                  onClick={() => void onSearch("upgrade")}
+                  disabled={tradeSearch.isPending || !league?.trim()}
                   title="Hard min-value filters per stat (≥95% of current roll)"
                 >
                   <IconChevronsUp />
@@ -655,8 +702,8 @@ export function ItemDetailPane({
                 <button
                   type="button"
                   className="btn-ghost inline-flex flex-1 items-center justify-center gap-2 text-center"
-                  onClick={() => onSearch("weighted_upgrade")}
-                  disabled={tradeSearch.isPending}
+                  onClick={() => void onSearch("weighted_upgrade")}
+                  disabled={tradeSearch.isPending || !league?.trim()}
                   title="Weighted sum filter — T1 stats count more; finds items that are better overall"
                 >
                   <IconChevronsUp />
@@ -665,6 +712,9 @@ export function ItemDetailPane({
               </div>
             </div>
             {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}
+            {!league?.trim() && (
+              <p className="text-[11px] text-amber-200/90">Select a league in the app header to run trade searches.</p>
+            )}
             <p className="text-[11px] text-parchment-100/85">
               Opens PoE2 Trade for this league and copies the search JSON to your clipboard.
             </p>

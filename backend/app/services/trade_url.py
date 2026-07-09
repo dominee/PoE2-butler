@@ -234,8 +234,8 @@ def build_exact_search_with_stat_filters(
     payload["tolerance_pct"] = tolerance_pct
     return {
         "mode": "exact",
-        "league": league or item.inventory_id or "",
-        "url": build_trade_url(league or ""),
+        "league": (league or "").strip(),
+        "url": build_trade_url((league or "").strip()),
         "payload": payload,
     }
 
@@ -259,8 +259,8 @@ def build_exact_search(
     payload["tolerance_pct"] = tolerance_pct
     return {
         "mode": "exact",
-        "league": league or item.inventory_id or "",
-        "url": build_trade_url(league or ""),
+        "league": (league or "").strip(),
+        "url": build_trade_url((league or "").strip()),
         "payload": payload,
     }
 

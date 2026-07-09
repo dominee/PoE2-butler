@@ -356,6 +356,113 @@ async def test_trade_search_returns_payload_and_url(app_stack, monkeypatch) -> N
     }
 
 
+async def test_trade_search_uses_preferred_league_when_body_omits_league(
+    app_stack, monkeypatch
+) -> None:
+    seen: list[str] = []
+
+    async def _fake_ensure(_settings) -> None:
+        return None
+
+    async def _fake_submit(
+        _settings, league: str, payload: dict, **kwargs
+    ) -> tuple[str, dict | None, bool, int]:
+        seen.append(league)
+        assert "query" in payload
+        return ("FallbackSearchId", {"id": "FallbackSearchId", "result": [], "total": 0}, False, 200)
+
+    monkeypatch.setattr("app.api.trade.ensure_trade_stats_index", _fake_ensure)
+    monkeypatch.setattr("app.api.trade.submit_trade_search", _fake_submit)
+
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+    me = await client.get("/api/me")
+    preferred = me.json().get("preferred_league")
+    assert preferred
+
+    item = {
+        "id": "i",
+        "inventory_id": "Weapon",
+        "w": 2,
+        "h": 4,
+        "x": None,
+        "y": None,
+        "name": "Doom Horn",
+        "type_line": "Spine Bow",
+        "base_type": "Spine Bow",
+        "rarity": "Rare",
+        "ilvl": 82,
+        "identified": True,
+        "corrupted": False,
+        "properties": [],
+        "requirements": [],
+        "implicit_mods": [],
+        "explicit_mods": ["+100 to maximum Life"],
+        "rune_mods": [],
+        "enchant_mods": [],
+        "crafted_mods": [],
+        "sockets": [],
+        "stack_size": None,
+        "max_stack_size": None,
+        "icon": None,
+    }
+    resp = await client.post("/api/trade/search", json={"mode": "exact", "item": item})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["league"] == preferred
+    assert seen == [preferred]
+
+
+async def test_trade_search_requires_league_when_missing(app_stack, monkeypatch) -> None:
+    async def _fake_ensure(_settings) -> None:
+        return None
+
+    monkeypatch.setattr("app.api.trade.ensure_trade_stats_index", _fake_ensure)
+
+    _app, client, mock_app = app_stack
+    await _full_login(client, mock_app)
+
+    from sqlalchemy import update
+
+    from app.db.base import _session_factory
+    from app.db.models import User
+
+    session_factory = _session_factory()
+    async with session_factory() as session:
+        await session.execute(update(User).values(preferred_league=None))
+        await session.commit()
+
+    item = {
+        "id": "i",
+        "inventory_id": "Weapon",
+        "w": 2,
+        "h": 4,
+        "x": None,
+        "y": None,
+        "name": "Doom Horn",
+        "type_line": "Spine Bow",
+        "base_type": "Spine Bow",
+        "rarity": "Rare",
+        "ilvl": 82,
+        "identified": True,
+        "corrupted": False,
+        "properties": [],
+        "requirements": [],
+        "implicit_mods": [],
+        "explicit_mods": ["+100 to maximum Life"],
+        "rune_mods": [],
+        "enchant_mods": [],
+        "crafted_mods": [],
+        "sockets": [],
+        "stack_size": None,
+        "max_stack_size": None,
+        "icon": None,
+    }
+    resp = await client.post("/api/trade/search", json={"mode": "exact", "item": item})
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "league_required"
+
+
 async def test_prefs_patch_updates_tolerance_and_threshold(app_stack) -> None:
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)
