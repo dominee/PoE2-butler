@@ -1,5 +1,8 @@
 import type { CharacterDetail } from "@/api/types";
-import { filterNotableCharacterGems } from "@/features/characters/characterGemFilter";
+import {
+  collectCharacterSkillGemsForDisplay,
+  collectCharacterSupportGemsForDisplay,
+} from "@/features/characters/characterGemFilter";
 import { PaperDoll } from "@/features/characters/PaperDoll";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 import { ItemCard } from "@/features/items/ItemCard";
@@ -19,7 +22,8 @@ export function CharacterGearDisplay({
   readOnly = false,
 }: CharacterGearDisplayProps) {
   const click = readOnly ? undefined : onSelectItem;
-  const notableGems = filterNotableCharacterGems(detail.gems ?? []);
+  const skillGems = collectCharacterSkillGemsForDisplay(detail);
+  const supportGems = collectCharacterSupportGemsForDisplay(detail);
 
   return (
     <>
@@ -43,11 +47,26 @@ export function CharacterGearDisplay({
           </div>
         </div>
       )}
-      {notableGems.length > 0 && (
+      {skillGems.length > 0 && (
         <div className="mt-2">
           <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
           <div className="grid grid-cols-2 gap-1.5">
-            {notableGems.map((gem) => (
+            {skillGems.map((gem) => (
+              <ItemCard
+                key={gem.id}
+                item={gem}
+                selected={selectedItemId === gem.id}
+                onClick={click}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {supportGems.length > 0 && (
+        <div className="mt-2">
+          <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Support gems</h3>
+          <div className="grid grid-cols-2 gap-1.5">
+            {supportGems.map((gem) => (
               <ItemCard
                 key={gem.id}
                 item={gem}

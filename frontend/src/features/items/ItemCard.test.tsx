@@ -58,4 +58,15 @@ describe("ItemCard", () => {
     await user.click(screen.getByTestId("item-card"));
     expect(handle).toHaveBeenCalledWith(baseItem);
   });
+
+  it("shows price in the bottom-left corner when provided", () => {
+    render(
+      <ItemCard
+        item={baseItem}
+        price={{ chaos_equiv: 120, value: 120, unit: "chaos", source: "static", confidence: 1, note: null }}
+      />,
+    );
+    expect(screen.getByTestId("item-card-price")).toBeInTheDocument();
+    expect(screen.getByTestId("price-badge")).toHaveTextContent(/120/);
+  });
 });

@@ -11,12 +11,19 @@ export interface CharacterSnapshotTimelineProps {
   onSelect: (id: SnapshotSelection) => void;
 }
 
-function formatSnapshotTime(iso: string): string {
+function formatSnapshotDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString(undefined, {
+  return d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
+  });
+}
+
+function formatSnapshotTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -34,7 +41,7 @@ function isSelected(snap: CharacterSnapshotMeta, selectedId: SnapshotSelection):
 }
 
 function selectionLabel(snap: CharacterSnapshotMeta): string {
-  const when = formatSnapshotTime(snap.fetched_at);
+  const when = `${formatSnapshotDate(snap.fetched_at)} ${formatSnapshotTime(snap.fetched_at)}`;
   const summary = snap.changes.map((c) => `${changePrefix(c.kind)} ${c.label}`).join(", ");
   if (snap.is_current && !summary) return `Current gear (${when})`;
   return summary ? `${when}: ${summary}` : when;
@@ -42,6 +49,42 @@ function selectionLabel(snap: CharacterSnapshotMeta): string {
 
 function dotKey(snap: CharacterSnapshotMeta): string {
   return snap.is_current ? "current" : String(snap.id);
+}
+
+export type SnapshotChangeTier = "none" | "minimal" | "moderate" | "heavy" | "massive";
+
+/**
+ * Gear-change intensity for timeline dots.
+ *
+ * Buckets (character gear has few items, so counts stay low):
+ * - none: 0 changes
+ * - minimal: 1–2 changes (< 3; covers "less than 2" plus an adjacent single-slot swap)
+ * - moderate: 3–5 changes
+ * - heavy: 6–10 changes ("5 to 10" with 5 in moderate)
+ * - massive: 11+ changes
+ */
+export function snapshotChangeTier(changeCount: number): SnapshotChangeTier {
+  if (changeCount <= 0) return "none";
+  if (changeCount < 3) return "minimal";
+  if (changeCount <= 5) return "moderate";
+  if (changeCount <= 10) return "heavy";
+  return "massive";
+}
+
+/** Dot fill/border by gear change count (unselected state). Uses app rarity + ember tokens. */
+export function snapshotDotColorClass(changeCount: number): string {
+  switch (snapshotChangeTier(changeCount)) {
+    case "none":
+      return "border-ink-600 bg-ink-600";
+    case "minimal":
+      return "border-rarity-magic/60 bg-rarity-magic";
+    case "moderate":
+      return "border-rarity-rare/70 bg-rarity-rare";
+    case "heavy":
+      return "border-rarity-unique/80 bg-rarity-unique";
+    case "massive":
+      return "border-ember-400 bg-ember-500";
+  }
 }
 
 export function CharacterSnapshotTimeline({
@@ -83,22 +126,24 @@ export function CharacterSnapshotTimeline({
         </p>
       )}
       {snapshots.length > 0 && (
-        <div className="relative min-w-0 px-1 pt-1">
+        <div className="relative min-w-0 px-0.5 pt-1">
           <div
-            className="pointer-events-none absolute left-4 right-4 top-[0.65rem] h-px bg-ink-700/90"
+            className="pointer-events-none absolute left-3 right-3 top-[0.65rem] h-px bg-ink-700/90"
             aria-hidden
           />
           <ul
-            className="relative z-[1] flex min-w-0 gap-3 overflow-x-auto pb-1"
+            className="relative z-[1] flex min-w-0 gap-1 overflow-x-auto pb-1"
             role="tablist"
             aria-label="Gear snapshot timeline"
           >
             {snapshots.map((snap) => {
               const active = isSelected(snap, selectedId);
+              const changeColor = snapshotDotColorClass(snap.changes.length);
+              const changeTier = snapshotChangeTier(snap.changes.length);
               return (
                 <li
                   key={dotKey(snap)}
-                  className="flex min-w-[7.5rem] max-w-[10rem] shrink-0 flex-col items-center gap-1"
+                  className="flex min-w-[3.5rem] shrink-0 flex-col items-center gap-0.5"
                 >
                   <button
                     type="button"
@@ -111,15 +156,18 @@ export function CharacterSnapshotTimeline({
                       "h-3 w-3 shrink-0 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70",
                       active
                         ? "border-ember-300 bg-ember-400 ring-2 ring-ember-400/35"
-                        : "border-ink-600 bg-ink-600 hover:border-ink-500 hover:bg-ink-500",
+                        : `${changeColor} hover:border-ink-500`,
                     ].join(" ")}
                     data-testid={snap.is_current ? "snapshot-dot-current" : `snapshot-dot-${snap.id}`}
+                    data-change-count={snap.changes.length}
+                    data-change-tier={changeTier}
                   />
                   <time
-                    className="w-full text-center text-[10px] leading-tight text-parchment-200/80"
+                    className="w-full text-center text-[9px] leading-tight text-parchment-200/80"
                     dateTime={snap.fetched_at}
                   >
-                    {formatSnapshotTime(snap.fetched_at)}
+                    <span className="block">{formatSnapshotDate(snap.fetched_at)}</span>
+                    <span className="block">{formatSnapshotTime(snap.fetched_at)}</span>
                   </time>
                 </li>
               );

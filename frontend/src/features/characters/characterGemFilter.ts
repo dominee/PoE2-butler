@@ -1,4 +1,4 @@
-import type { Item } from "@/api/types";
+import type { CharacterDetail, Item } from "@/api/types";
 import { stripTags } from "@/utils/modText";
 
 /** Tiered generic supports: "Brutality I", "Overabundance II", etc. */
@@ -8,7 +8,8 @@ function propertyText(item: Item): string {
   return item.properties.map((p) => stripTags(p.name)).join(" ").toLowerCase();
 }
 
-function isLineageSupport(item: Item): boolean {
+/** Lineage support gems (e.g. Rakiata's Flow) — priced and shown in Support gems. */
+export function isLineageSupportGem(item: Item): boolean {
   return propertyText(item).includes("lineage");
 }
 
@@ -22,20 +23,84 @@ function isTieredGenericSupport(item: Item): boolean {
   return TIERED_SUPPORT_RE.test(item.type_line.trim());
 }
 
-/**
- * Character gem panel: show active skills, ascendancy gems, and special supports
- * (Lineage, etc.) — hide common tiered supports socketed in skill links.
- */
-export function isNotableCharacterGem(item: Item): boolean {
+function isHiddenSocketSupport(item: Item): boolean {
+  return item.rarity === "Gem" && (isGenericSupport(item) || isTieredGenericSupport(item));
+}
+
+/** Active skill gems (including ascendancy and item-granted), not supports. */
+export function isCharacterSkillGem(item: Item): boolean {
   if (item.inventory_id === "AscendancySkills" || item.inventory_id === "DefaultAttackSkills") {
     return true;
   }
-  if (isLineageSupport(item)) return true;
+  if (isLineageSupportGem(item)) return false;
   if (isTieredGenericSupport(item)) return false;
   if (isGenericSupport(item)) return false;
   return item.rarity === "Gem";
 }
 
+/** Skill gems section — active skills only. */
+export function isDisplayedInSkillGemsSection(item: Item): boolean {
+  return isCharacterSkillGem(item);
+}
+
+/** Support gems section — Lineage supports only. */
+export function isDisplayedInSupportGemsSection(item: Item): boolean {
+  return isLineageSupportGem(item);
+}
+
+/** Only Lineage supports count toward character gear total and Apprise. */
+export function shouldIncludeCharacterGemInPricing(item: Item): boolean {
+  return isLineageSupportGem(item);
+}
+
+/** @deprecated Prefer isDisplayedInSkillGemsSection or isDisplayedInSupportGemsSection */
+export function isNotableCharacterGem(item: Item): boolean {
+  return isDisplayedInSkillGemsSection(item) || isDisplayedInSupportGemsSection(item);
+}
+
 export function filterNotableCharacterGems(gems: Item[]): Item[] {
   return gems.filter(isNotableCharacterGem);
+}
+
+export function filterCharacterGemsForPricing(gems: Item[]): Item[] {
+  return gems.filter(shouldIncludeCharacterGemInPricing);
+}
+
+function collectGemsFromBuckets(
+  detail: Pick<CharacterDetail, "gems" | "inventory">,
+  predicate: (item: Item) => boolean,
+): Item[] {
+  const seen = new Set<string>();
+  const out: Item[] = [];
+  for (const item of [...(detail.gems ?? []), ...(detail.inventory ?? [])]) {
+    if (!predicate(item)) continue;
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}
+
+export function collectCharacterSkillGemsForDisplay(
+  detail: Pick<CharacterDetail, "gems" | "inventory">,
+): Item[] {
+  return collectGemsFromBuckets(detail, isDisplayedInSkillGemsSection);
+}
+
+export function collectCharacterSupportGemsForDisplay(
+  detail: Pick<CharacterDetail, "gems" | "inventory">,
+): Item[] {
+  return collectGemsFromBuckets(detail, isDisplayedInSupportGemsSection);
+}
+
+export function collectCharacterOtherInventory(
+  detail: Pick<CharacterDetail, "inventory" | "gems">,
+): Item[] {
+  const displayedGemIds = new Set([
+    ...collectCharacterSkillGemsForDisplay(detail).map((i) => i.id),
+    ...collectCharacterSupportGemsForDisplay(detail).map((i) => i.id),
+  ]);
+  return (detail.inventory ?? []).filter(
+    (item) => !displayedGemIds.has(item.id) && !isHiddenSocketSupport(item),
+  );
 }

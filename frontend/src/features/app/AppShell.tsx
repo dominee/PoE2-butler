@@ -28,7 +28,12 @@ import {
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 import { CharacterTable } from "@/features/characters/CharacterTable";
-import { filterNotableCharacterGems, isNotableCharacterGem } from "@/features/characters/characterGemFilter";
+import {
+  collectCharacterOtherInventory,
+  collectCharacterSkillGemsForDisplay,
+  collectCharacterSupportGemsForDisplay,
+  isCharacterSkillGem,
+} from "@/features/characters/characterGemFilter";
 import {
   collectCharacterGearPricingItems,
   computeGearEstimate,
@@ -96,6 +101,19 @@ export function AppShell() {
   const gearDetail =
     effectiveSnapshotId === "current" ? characterQ.data : historicCharacterQ.data;
 
+  const skillGemsForDisplay = useMemo(
+    () => (gearDetail ? collectCharacterSkillGemsForDisplay(gearDetail) : []),
+    [gearDetail],
+  );
+  const supportGemsForDisplay = useMemo(
+    () => (gearDetail ? collectCharacterSupportGemsForDisplay(gearDetail) : []),
+    [gearDetail],
+  );
+  const otherInventory = useMemo(
+    () => (gearDetail ? collectCharacterOtherInventory(gearDetail) : []),
+    [gearDetail],
+  );
+
   const gearPricingItems = useMemo(
     () => (gearDetail ? collectCharacterGearPricingItems(gearDetail) : []),
     [gearDetail],
@@ -114,6 +132,20 @@ export function AppShell() {
     () => formatGearEstimateLabel(gearEstimate, currencyChaos),
     [gearEstimate, currencyChaos],
   );
+  const gearPrices = useMemo(
+    () => gearPriceQ.data?.prices ?? {},
+    [gearPriceQ.data?.prices],
+  );
+  const valuableThreshold = prefsQ.data?.valuable_threshold_chaos;
+
+  const itemCardPriceProps = (item: Item) =>
+    isCharacterSkillGem(item)
+      ? {}
+      : {
+          price: gearPrices[item.id] ?? null,
+          valuableThreshold,
+          currencyChaos,
+        };
 
   useEffect(() => {
     setSelectedSnapshotId("current");
@@ -535,6 +567,9 @@ export function AppShell() {
                   equipped={collectPaperDollItems(gearDetail)}
                   selectedItemId={selectedItem?.id ?? null}
                   onSelectItem={setSelectedItem}
+                  prices={gearPrices}
+                  valuableThreshold={valuableThreshold}
+                  currencyChaos={currencyChaos}
                 />
                 {gearDetail.jewels?.length > 0 && (
                   <div className="mt-2">
@@ -546,40 +581,55 @@ export function AppShell() {
                           item={jewel}
                           selected={selectedItem?.id === jewel.id}
                           onClick={setSelectedItem}
+                          {...itemCardPriceProps(jewel)}
                         />
                       ))}
                     </div>
                   </div>
                 )}
-                {filterNotableCharacterGems(gearDetail.gems ?? []).length > 0 && (
+                {skillGemsForDisplay.length > 0 && (
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {filterNotableCharacterGems(gearDetail.gems ?? []).map((gem) => (
+                      {skillGemsForDisplay.map((gem) => (
                         <ItemCard
                           key={gem.id}
                           item={gem}
                           selected={selectedItem?.id === gem.id}
                           onClick={setSelectedItem}
+                          {...itemCardPriceProps(gem)}
                         />
                       ))}
                     </div>
                   </div>
                 )}
-                {(gearDetail.inventory ?? []).filter(
-                  (i) => i.rarity !== "Gem" || isNotableCharacterGem(i),
-                ).length > 0 && (
+                {supportGemsForDisplay.length > 0 && (
+                  <div className="mt-2">
+                    <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Support gems</h3>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {supportGemsForDisplay.map((gem) => (
+                        <ItemCard
+                          key={gem.id}
+                          item={gem}
+                          selected={selectedItem?.id === gem.id}
+                          onClick={setSelectedItem}
+                          {...itemCardPriceProps(gem)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {otherInventory.length > 0 && (
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Other</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {(gearDetail.inventory ?? [])
-                        .filter((i) => i.rarity !== "Gem" || isNotableCharacterGem(i))
-                        .map((item) => (
+                      {otherInventory.map((item) => (
                         <ItemCard
                           key={item.id}
                           item={item}
                           selected={selectedItem?.id === item.id}
                           onClick={setSelectedItem}
+                          {...itemCardPriceProps(item)}
                         />
                       ))}
                     </div>
@@ -590,11 +640,15 @@ export function AppShell() {
             {gearDetail && charLayout === "table" && (
               <CharacterTable
                 equipped={gearDetail.equipped}
-                gems={gearDetail.gems}
+                gems={skillGemsForDisplay}
+                supportGems={supportGemsForDisplay}
                 jewels={gearDetail.jewels}
-                other={gearDetail.inventory}
+                other={otherInventory}
                 selectedItemId={selectedItem?.id ?? null}
                 onSelect={setSelectedItem}
+                prices={gearPrices}
+                valuableThreshold={valuableThreshold}
+                currencyChaos={currencyChaos}
               />
             )}
           </section>

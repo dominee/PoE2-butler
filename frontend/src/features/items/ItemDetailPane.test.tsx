@@ -381,6 +381,52 @@ describe("ItemDetailPane", () => {
     expect(screen.getByRole("button", { name: /upgrade \(weighted\)/i })).toBeDisabled();
   });
 
+  it("disables refresh pricing for skill gems and skips price lookup", async () => {
+    const fetchMock = installFetchMock("");
+    const skillGem: Item = {
+      ...testItem,
+      id: "skill1",
+      inventory_id: "SkillSlots",
+      name: "",
+      type_line: "Ice Nova",
+      base_type: "Ice Nova",
+      rarity: "Gem",
+      properties: [{ name: "Spell, Cold", value: null }],
+    };
+    renderPane(skillGem);
+
+    expect(screen.getByText(/Pricing not available for skill gems/i)).toBeInTheDocument();
+    const refreshBtn = screen.getByRole("button", { name: /refresh pricing for this item/i });
+    expect(refreshBtn).toBeDisabled();
+
+    await waitFor(() => {
+      const lookupCalls = fetchMock.mock.calls.filter((c) =>
+        String(requestUrl(c[0]!)).includes("/api/pricing/lookup"),
+      );
+      expect(lookupCalls).toHaveLength(0);
+    });
+  });
+
+  it("allows refresh pricing for lineage support gems", async () => {
+    installFetchMock("");
+    const lineageGem: Item = {
+      ...testItem,
+      id: "lineage1",
+      inventory_id: "SkillSlots",
+      name: "",
+      type_line: "Rakiata's Flow",
+      base_type: "Rakiata's Flow",
+      rarity: "Gem",
+      properties: [{ name: "Support, Lineage", value: null }],
+    };
+    renderPane(lineageGem);
+
+    expect(screen.queryByText(/Pricing not available for skill gems/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /refresh pricing for this item/i })).not.toBeDisabled();
+    });
+  });
+
   it("requests PoE2 item text from the API and shows a success message", async () => {
     const itemText = "Rarity: Rare\nDoom Horn\n";
     const fetchMock = installFetchMock(itemText);

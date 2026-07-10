@@ -39,16 +39,30 @@ function item(id: string, slot: string | null = null): Item {
   };
 }
 
+function gem(id: string, typeLine: string, props: Item["properties"] = []): Item {
+  return {
+    ...item(id, "SkillSlots"),
+    rarity: "Gem",
+    type_line: typeLine,
+    base_type: typeLine,
+    properties: props,
+  };
+}
+
 describe("collectCharacterGearPricingItems", () => {
-  it("includes paper-doll items, jewels, and notable gems without duplicates", () => {
+  it("includes paper-doll items, jewels, and Lineage gems — not skill gems", () => {
     const detail: Pick<CharacterDetail, "equipped" | "gems" | "jewels" | "inventory"> = {
       equipped: [item("helm", "Helm"), item("body", "BodyArmour")],
-      gems: [{ ...item("gem1", "SkillSlots"), rarity: "Gem" as const, type_line: "Fireball" }],
+      gems: [
+        gem("skill1", "Fireball"),
+        gem("lineage1", "Rakiata's Flow", [{ name: "Support, Lineage", value: null }]),
+      ],
       jewels: [item("jewel1", "PassiveJewels")],
       inventory: [],
     };
     const ids = collectCharacterGearPricingItems(detail).map((i) => i.id);
-    expect(ids).toEqual(expect.arrayContaining(["helm", "body", "gem1", "jewel1"]));
+    expect(ids).toEqual(expect.arrayContaining(["helm", "body", "lineage1", "jewel1"]));
+    expect(ids).not.toContain("skill1");
     expect(ids).toHaveLength(4);
   });
 

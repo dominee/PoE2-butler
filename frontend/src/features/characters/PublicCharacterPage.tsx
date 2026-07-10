@@ -6,7 +6,10 @@ import { AppFooter } from "@/features/app/AppFooter";
 import { CharacterDetailedGearView } from "@/features/characters/CharacterDetailedGearView";
 import { CharacterGearDisplay } from "@/features/characters/CharacterGearDisplay";
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
-import { filterNotableCharacterGems } from "@/features/characters/characterGemFilter";
+import {
+  collectCharacterSkillGemsForDisplay,
+  collectCharacterSupportGemsForDisplay,
+} from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
@@ -48,7 +51,8 @@ export function PublicCharacterPage() {
 
   const { character, league, view_mode: viewMode } = q.data;
   const { summary } = character;
-  const notableGems = filterNotableCharacterGems(character.gems ?? []);
+  const skillGems = collectCharacterSkillGemsForDisplay(character);
+  const supportGems = collectCharacterSupportGemsForDisplay(character);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -87,7 +91,8 @@ export function PublicCharacterPage() {
           <CharacterDetailedGearView
             equipped={collectPaperDollItems(character)}
             jewels={character.jewels}
-            gems={notableGems}
+            gems={skillGems}
+            supportGems={supportGems}
           />
         )}
       </main>

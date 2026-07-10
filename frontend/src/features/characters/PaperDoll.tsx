@@ -1,5 +1,6 @@
-import type { Item } from "@/api/types";
+import type { Item, PriceEstimate } from "@/api/types";
 import { ItemCard } from "@/features/items/ItemCard";
+import type { CurrencyChaosPair } from "@/features/items/itemMetrics";
 
 const GRID_TEMPLATE_AREAS = `
   "weapon helm offhand"
@@ -37,6 +38,9 @@ function SideColumn({
   swapItem,
   selectedItemId,
   onSelectItem,
+  prices,
+  valuableThreshold,
+  currencyChaos,
 }: {
   gridArea: string;
   emptyLabel: string;
@@ -44,6 +48,9 @@ function SideColumn({
   swapItem?: Item;
   selectedItemId?: string | null;
   onSelectItem?: (item: Item) => void;
+  prices?: Record<string, PriceEstimate | null>;
+  valuableThreshold?: number;
+  currencyChaos?: CurrencyChaosPair | null;
 }) {
   const hasAny = Boolean(mainItem) || Boolean(swapItem);
 
@@ -59,6 +66,9 @@ function SideColumn({
               selected={selectedItemId === mainItem.id}
               onClick={onSelectItem}
               className="min-h-[68px]"
+              price={prices ? (prices[mainItem.id] ?? null) : undefined}
+              valuableThreshold={valuableThreshold}
+              currencyChaos={currencyChaos}
             />
           ) : (
             <EmptySlot label={emptyLabel} />
@@ -69,6 +79,9 @@ function SideColumn({
               selected={selectedItemId === swapItem.id}
               onClick={onSelectItem}
               className="min-h-[68px]"
+              price={prices ? (prices[swapItem.id] ?? null) : undefined}
+              valuableThreshold={valuableThreshold}
+              currencyChaos={currencyChaos}
             />
           ) : null}
         </>
@@ -81,9 +94,19 @@ export interface PaperDollProps {
   equipped: Item[];
   selectedItemId?: string | null;
   onSelectItem?: (item: Item) => void;
+  prices?: Record<string, PriceEstimate | null>;
+  valuableThreshold?: number;
+  currencyChaos?: CurrencyChaosPair | null;
 }
 
-export function PaperDoll({ equipped, selectedItemId, onSelectItem }: PaperDollProps) {
+export function PaperDoll({
+  equipped,
+  selectedItemId,
+  onSelectItem,
+  prices,
+  valuableThreshold,
+  currencyChaos,
+}: PaperDollProps) {
   const bySlot = new Map<string, Item>();
   for (const item of equipped) {
     if (item.inventory_id) bySlot.set(item.inventory_id, item);
@@ -110,6 +133,9 @@ export function PaperDoll({ equipped, selectedItemId, onSelectItem }: PaperDollP
         swapItem={weaponSwap}
         selectedItemId={selectedItemId}
         onSelectItem={onSelectItem}
+        prices={prices}
+        valuableThreshold={valuableThreshold}
+        currencyChaos={currencyChaos}
       />
 
       {CORE_SLOTS.slice(0, 2).map(({ id, label, gridArea }) => {
@@ -122,6 +148,9 @@ export function PaperDoll({ equipped, selectedItemId, onSelectItem }: PaperDollP
                 selected={selectedItemId === item.id}
                 onClick={onSelectItem}
                 className="h-full"
+                price={prices ? (prices[item.id] ?? null) : undefined}
+                valuableThreshold={valuableThreshold}
+                currencyChaos={currencyChaos}
               />
             ) : (
               <EmptySlot label={label} />
@@ -137,6 +166,9 @@ export function PaperDoll({ equipped, selectedItemId, onSelectItem }: PaperDollP
         swapItem={offSwap}
         selectedItemId={selectedItemId}
         onSelectItem={onSelectItem}
+        prices={prices}
+        valuableThreshold={valuableThreshold}
+        currencyChaos={currencyChaos}
       />
 
       {CORE_SLOTS.slice(2).map(({ id, label, gridArea }) => {
@@ -149,6 +181,9 @@ export function PaperDoll({ equipped, selectedItemId, onSelectItem }: PaperDollP
                 selected={selectedItemId === item.id}
                 onClick={onSelectItem}
                 className="h-full"
+                price={prices ? (prices[item.id] ?? null) : undefined}
+                valuableThreshold={valuableThreshold}
+                currencyChaos={currencyChaos}
               />
             ) : (
               <EmptySlot label={label} />

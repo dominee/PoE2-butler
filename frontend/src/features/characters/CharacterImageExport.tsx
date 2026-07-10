@@ -9,7 +9,10 @@ import {
 import { CharacterStatSummary } from "@/features/characters/CharacterStatSummary";
 import type { GearEstimate } from "@/features/characters/characterGearItems";
 import { formatGearEstimateLabel } from "@/features/characters/characterGearItems";
-import { filterNotableCharacterGems } from "@/features/characters/characterGemFilter";
+import {
+  collectCharacterSkillGemsForDisplay,
+  collectCharacterSupportGemsForDisplay,
+} from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 import { dataUrlToBlob } from "@/utils/pngExport";
 import type { CurrencyChaosPair } from "@/features/items/itemMetrics";
@@ -61,7 +64,8 @@ function CharacterExportSnapshot({
   currencyChaos,
 }: CharacterImageExportProps) {
   const { summary } = detail;
-  const notableGems = filterNotableCharacterGems(detail.gems ?? []);
+  const skillGems = collectCharacterSkillGemsForDisplay(detail);
+  const supportGems = collectCharacterSupportGemsForDisplay(detail);
   const dollItems = collectPaperDollItems(detail);
   const transparent = theme === "transparent";
   const epic = theme === "epic";
@@ -109,13 +113,15 @@ function CharacterExportSnapshot({
         <CharacterSimpleExportBody
           equipped={dollItems}
           jewels={detail.jewels}
-          gems={notableGems}
+          gems={skillGems}
+          supportGems={supportGems}
         />
       ) : (
         <CharacterDetailedGearView
           equipped={dollItems}
           jewels={detail.jewels}
-          gems={notableGems}
+          gems={skillGems}
+          supportGems={supportGems}
           layout="grid"
         />
       )}

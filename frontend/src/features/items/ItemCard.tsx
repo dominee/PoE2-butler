@@ -1,6 +1,7 @@
 import type { Item, ItemRarity, PriceEstimate } from "@/api/types";
 
 import { useIsItemPriceInflight } from "@/features/pricing/priceInflightContext";
+import type { CurrencyChaosPair } from "./itemMetrics";
 import { PriceBadge } from "./PriceBadge";
 import { itemIconDisplayUrl } from "./itemRarityFavicon";
 import { ModText } from "./ItemModPresentation";
@@ -35,6 +36,7 @@ export interface ItemCardProps {
   compact?: boolean;
   price?: PriceEstimate | null;
   valuableThreshold?: number;
+  currencyChaos?: CurrencyChaosPair | null;
   activityStatus?: ActivityStatus;
   className?: string;
 }
@@ -51,11 +53,13 @@ export function ItemCard({
   compact,
   price,
   valuableThreshold,
+  currencyChaos,
   activityStatus,
   className,
 }: ItemCardProps) {
   const runeforged = isRuneforgedItem(item);
   const priceInflight = useIsItemPriceInflight(item.id);
+  const showCornerPrice = price !== undefined && price != null;
   const rarityClass = runeforged
     ? runeforgedBorderClass
     : (RARITY_CLASSNAME[item.rarity] ?? RARITY_CLASSNAME.Normal);
@@ -74,6 +78,7 @@ export function ItemCard({
         "min-h-[72px] px-3 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400/70",
         "hover:border-ember-400/80",
         selected ? "ring-2 ring-ember-400" : "",
+        showCornerPrice || priceInflight ? "pb-7" : "",
         rarityClass,
         className ?? "",
       ]
@@ -85,14 +90,28 @@ export function ItemCard({
       {/* Activity status dot */}
       {activityStatus && (
         <span
-          className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ${ACTIVITY_DOT[activityStatus]}`}
+          className={`absolute right-1.5 top-1.5 z-[3] h-2 w-2 rounded-full ${ACTIVITY_DOT[activityStatus]}`}
           title={activityStatus === "new" ? "New item" : "Changed item"}
         />
       )}
+      {showCornerPrice && (
+        <div
+          className="pointer-events-none absolute bottom-1.5 right-1.5 z-[1] max-w-[calc(100%-0.75rem)]"
+          data-testid="item-card-price"
+        >
+          <PriceBadge
+            price={price}
+            threshold={valuableThreshold}
+            compact
+            currencyChaos={currencyChaos}
+          />
+        </div>
+      )}
       {priceInflight && (
         <span
-          className="absolute bottom-1.5 right-1.5 rounded border border-amber-500/40 bg-amber-500/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-200/95"
+          className="absolute bottom-1.5 right-1.5 z-[2] rounded border border-amber-500/40 bg-amber-500/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-200/95"
           title="Hybrid price estimate queued or running"
+          data-testid="item-card-updating"
         >
           Updating
         </span>
@@ -117,9 +136,6 @@ export function ItemCard({
           <div className="break-words text-xs text-parchment-100/80">{item.type_line}</div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] uppercase tracking-wide text-ui-muted">
-          {price !== undefined && (
-            <PriceBadge price={price ?? null} threshold={valuableThreshold} compact />
-          )}
           {item.ilvl != null && <span>ilvl {item.ilvl}</span>}
           {stack && <span>{stack}</span>}
           {item.corrupted && <span className="text-red-400">corrupted</span>}

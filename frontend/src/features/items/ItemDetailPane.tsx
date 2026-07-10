@@ -12,6 +12,7 @@ import {
   shareViewPath,
 } from "@/api/hooks";
 import { CharacterPaneGothicBackdrop } from "@/features/characters/CharacterPaneGothicBackdrop";
+import { isCharacterSkillGem } from "@/features/characters/characterGemFilter";
 import { useIsItemPriceInflight } from "@/features/pricing/priceInflightContext";
 import { ItemImageExportActions } from "@/features/items/ItemImageExport";
 import { splitExplicitMods, usefulProperties } from "@/features/items/itemPaneModel";
@@ -86,8 +87,12 @@ export function ItemDetailPane({
   // This prevents the POST effect in useRefinedPriceEstimate from firing for a new item before
   // the previous useEffect-based reset could take effect (they shared the same React flush).
   const pricingRerun = pricingRerunState.itemId === (item?.id ?? null) ? pricingRerunState.n : 0;
+  const skillGemNoPricing = Boolean(item && isCharacterSkillGem(item));
 
-  const priceQ = usePriceLookup(isApp ? league : null, isApp && item ? [item] : []);
+  const priceQ = usePriceLookup(
+    isApp ? league : null,
+    isApp && item && !skillGemNoPricing ? [item] : [],
+  );
   const price = isApp && item ? (priceQ.data?.prices?.[item.id] ?? null) : null;
   const priceInflight = useIsItemPriceInflight(isApp ? item?.id : undefined);
   const currencyRatesQ = useCurrencyRates(isApp ? league : null);
@@ -97,7 +102,7 @@ export function ItemDetailPane({
     isApp ? league : null,
     item,
     tradeTol,
-    Boolean(isApp && league && item),
+    Boolean(isApp && league && item && !skillGemNoPricing),
     pricingRerun,
     false,
   );
@@ -110,13 +115,15 @@ export function ItemDetailPane({
   const pricingBusy =
     priceQ.isFetching || currencyRatesQ.isFetching || refinedQ.isLoading || refinedPricingInProgress;
 
-  const refreshPricingTitle = refinedPricingInProgress
-    ? priceInflight
-      ? "Price update already queued or running for this item"
-      : "Pricing is already running or queued for this item"
-    : pricingBusy
-      ? "Refreshing…"
-      : "Refresh pricing (quick lookup, rates, and refined estimate)";
+  const refreshPricingTitle = skillGemNoPricing
+    ? "Pricing is not available for skill gems"
+    : refinedPricingInProgress
+      ? priceInflight
+        ? "Price update already queued or running for this item"
+        : "Pricing is already running or queued for this item"
+      : pricingBusy
+        ? "Refreshing…"
+        : "Refresh pricing (quick lookup, rates, and refined estimate)";
 
   if (!item) {
     return (
@@ -252,7 +259,7 @@ export function ItemDetailPane({
   };
 
   const onRefreshPricing = () => {
-    if (priceInflight || refinedPricingInProgress) return;
+    if (skillGemNoPricing || priceInflight || refinedPricingInProgress) return;
     void priceQ.refetch();
     void currencyRatesQ.refetch();
     setPricingRerunState((prev) => ({
@@ -335,13 +342,15 @@ export function ItemDetailPane({
                   threshold={prefs?.valuable_threshold_chaos}
                   currencyChaos={currencyChaos}
                 />
+              ) : skillGemNoPricing ? (
+                <span className="text-[11px] text-ui-muted">Pricing not available for skill gems</span>
               ) : (
                 <span className="text-[11px] text-ui-muted">No price available</span>
               )}
               <button
                 type="button"
                 onClick={onRefreshPricing}
-                disabled={pricingBusy}
+                disabled={skillGemNoPricing || pricingBusy}
                 className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-ink-600 bg-ink-900/80 text-parchment-200/90 transition hover:border-ember-500/50 hover:text-ember-200 disabled:cursor-not-allowed disabled:opacity-40"
                 title={refreshPricingTitle}
                 aria-label="Refresh pricing for this item"

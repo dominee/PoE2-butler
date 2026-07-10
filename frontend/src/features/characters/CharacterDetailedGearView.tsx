@@ -72,6 +72,7 @@ export interface CharacterDetailedGearViewProps {
   equipped: Item[];
   jewels?: Item[];
   gems?: Item[];
+  supportGems?: Item[];
   /** ``doll`` = paper-doll slots (web). ``grid`` = compact multi-column (PNG export). */
   layout?: "doll" | "grid";
 }
@@ -80,6 +81,7 @@ export function CharacterDetailedGearView({
   equipped,
   jewels = [],
   gems = [],
+  supportGems = [],
   layout = "doll",
 }: CharacterDetailedGearViewProps) {
   const bySlot = new Map<string, Item>();
@@ -87,7 +89,7 @@ export function CharacterDetailedGearView({
     if (item.inventory_id) bySlot.set(item.inventory_id, item);
   }
 
-  const allItems = [...equipped, ...jewels, ...gems];
+  const allItems = [...equipped, ...jewels, ...gems, ...supportGems];
 
   if (layout === "grid") {
     return (
@@ -168,6 +170,16 @@ export function CharacterDetailedGearView({
           </div>
         </div>
       )}
+      {supportGems.length > 0 && (
+        <div>
+          <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Support gems</h3>
+          <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
+            {supportGems.map((item) => (
+              <ItemExportSnapshot key={item.id} item={item} variant="compact" {...ITEM_CARD} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -177,12 +189,14 @@ export function CharacterSimpleExportBody({
   equipped,
   jewels = [],
   gems = [],
+  supportGems = [],
 }: {
   equipped: Item[];
   jewels?: Item[];
   gems?: Item[];
+  supportGems?: Item[];
 }) {
-  const sideItems = [...jewels, ...gems];
+  const sideItems = [...jewels, ...gems, ...supportGems];
   return (
     <div className="grid grid-cols-[minmax(320px,1fr)_minmax(0,1fr)] items-start gap-4">
       <CharacterDetailedGearView equipped={equipped} layout="doll" />
