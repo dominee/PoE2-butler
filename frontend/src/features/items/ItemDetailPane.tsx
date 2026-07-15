@@ -32,6 +32,7 @@ import {
   closeExternalTab,
   navigateExternalTab,
   prepareExternalTab,
+  showExternalTabLoading,
 } from "@/utils/openExternalTab";
 
 import {
@@ -181,6 +182,7 @@ export function ItemDetailPane({
     }
 
     const tab = prepareExternalTab();
+    showExternalTabLoading(tab, "Creating trade search…");
     try {
       const result = await tradeSearch.mutateAsync({
         mode,
@@ -726,6 +728,11 @@ export function ItemDetailPane({
                 </button>
               </div>
             </div>
+            {tradeSearch.isPending && (
+              <p className="text-[11px] text-parchment-100/60 animate-pulse" aria-live="polite">
+                Creating trade search…
+              </p>
+            )}
             {copyFeedback && <p className="text-xs text-ember-400">{copyFeedback}</p>}
             {!league?.trim() && (
               <p className="text-[11px] text-amber-200/90">Select a league in the app header to run trade searches.</p>

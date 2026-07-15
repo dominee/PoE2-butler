@@ -20,6 +20,8 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 ## Trade parity and relaxation
 
 - **Stat tolerance** matches the same “same item on trade” behaviour as `POST /api/trade/search` (`tolerance_pct`, same as user prefs; see [`backend/app/services/trade_url.py`](../backend/app/services/trade_url.py)).
+
+- **Socket count**: all trade and refined-pricing queries now include a socket count filter (`equipment_filters.rune_sockets` for gear, `misc_filters.gem_sockets` for skill gems; both confirmed from `GET /api/trade2/data/filters`). Exact-match mode pins `min = max = count`; upgrade mode sets `min = count` only. Items with 0 sockets omit the filter. This prevents comparing items with different socket counts, which are priced very differently (exceptional uncorrupted sockets are rare).
 - **Relaxation (overlay-style)**: if a search has **too few** comparable listings, relax by **dropping** stat filters in order: **crafted** → **enchant** → **rune** → **implicit** → **explicit**; within each group, **later** filters in the item’s mod list are dropped first. Stop when the reported `total` is at least a configured minimum (see `pricing_min_trade_listings`) or filters are exhausted.
 
 ## Tier C: listing ids and fetch (implementation)

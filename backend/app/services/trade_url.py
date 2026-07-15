@@ -178,7 +178,9 @@ def _stat_filters_for_upgrade(pairs: list[tuple[str, str]]) -> list[dict[str, An
     return filters
 
 
-def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
+def _query_shell(
+    item: Item, stats: list[dict[str, Any]], *, exact_sockets: bool = True
+) -> dict[str, Any]:
     """Build the GGG PoE2 trade query (``query`` + ``sort``).
 
     PoE2 expects base item name as a plain string in ``query["type"]``, not
@@ -194,6 +196,14 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
     “Buyout or Fixed Price”: GGG returns ``Invalid sale type``. Securable
     listings are already instant-buyout scope; omitting ``trade_filters`` keeps
     the payload valid.
+
+    Socket count filtering: ``exact_sockets=True`` (default, exact search) pins
+    ``min=max=count``; ``exact_sockets=False`` (upgrade search) sets ``min=count``
+    only.  Exceptional (uncorrupted) multi-socket items are rare and priced very
+    differently from corrupted ones, so matching the count avoids comparing unequal
+    populations.  Filter IDs confirmed from ``GET /api/trade2/data/filters``:
+    ``equipment_filters.rune_sockets`` for gear (field renamed "Augmentable Sockets"
+    in 0.4.0, id unchanged); ``misc_filters.gem_sockets`` for skill gems.
     """
     query: dict[str, Any] = {"status": {"option": "securable"}}
     if item.base_type:
@@ -212,6 +222,17 @@ def _query_shell(item: Item, stats: list[dict[str, Any]]) -> dict[str, Any]:
     mf_f = mf.setdefault("filters", {})
     mf_f["corrupted"] = {"option": "true" if item.corrupted else "false"}
     mf_f["twice_corrupted"] = {"option": "true" if item.double_corrupted else "false"}
+    socket_count = len(item.sockets)
+    if socket_count > 0:
+        socket_val: dict[str, int] = {"min": socket_count}
+        if exact_sockets:
+            socket_val["max"] = socket_count
+        if item.rarity == "Gem":
+            mf_f["gem_sockets"] = socket_val
+        else:
+            ef = filt.setdefault("equipment_filters", {})
+            ef["disabled"] = False
+            ef.setdefault("filters", {})["rune_sockets"] = socket_val
     if stats:
         query["stats"] = [{"type": "and", "filters": stats}]
     return {"query": query, "sort": {"price": "asc"}}
@@ -278,7 +299,7 @@ def build_upgrade_search(item: Item, *, league: str | None = None) -> dict[str, 
     an upgrade window.
     """
     stats = _stat_filters_for_upgrade(_bucketize(item))
-    payload = _query_shell(item, stats)
+    payload = _query_shell(item, stats, exact_sockets=False)
     payload["mode"] = "upgrade"
     return {
         "mode": "upgrade",
@@ -389,7 +410,7 @@ def build_weighted_upgrade_search(item: Item, *, league: str | None = None) -> d
     """
     triples = _bucketize_with_tiers(item)
     weight_filters, floor_val = _weighted_stat_filters(triples)
-    payload = _query_shell(item, [])
+    payload = _query_shell(item, [], exact_sockets=False)
     if weight_filters:
         payload["query"]["stats"] = [
             {"type": "weight", "filters": weight_filters, "value": {"min": floor_val}}

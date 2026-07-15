@@ -66,13 +66,34 @@ export function filterCharacterGemsForPricing(gems: Item[]): Item[] {
   return gems.filter(shouldIncludeCharacterGemInPricing);
 }
 
+/**
+ * Walk all gem candidates: top-level gems + inventory, plus supports nested in skill
+ * socketed_items (e.g. Her Declaration socketed inside Purity of Ice).
+ *
+ * Generic supports are still filtered by each predicate; this walker only broadens
+ * the candidate set so lineage gems nested in skill socketed_items are reachable.
+ */
+export function* walkCharacterGemCandidates(
+  detail: Pick<CharacterDetail, "gems" | "inventory">,
+): Generator<Item> {
+  for (const item of detail.gems ?? []) {
+    yield item;
+    if (isCharacterSkillGem(item)) {
+      for (const nested of item.socketed_items ?? []) yield nested;
+    }
+  }
+  for (const item of detail.inventory ?? []) {
+    yield item;
+  }
+}
+
 function collectGemsFromBuckets(
   detail: Pick<CharacterDetail, "gems" | "inventory">,
   predicate: (item: Item) => boolean,
 ): Item[] {
   const seen = new Set<string>();
   const out: Item[] = [];
-  for (const item of [...(detail.gems ?? []), ...(detail.inventory ?? [])]) {
+  for (const item of walkCharacterGemCandidates(detail)) {
     if (!predicate(item)) continue;
     if (seen.has(item.id)) continue;
     seen.add(item.id);

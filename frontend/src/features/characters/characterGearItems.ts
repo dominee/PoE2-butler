@@ -3,10 +3,13 @@ import {
   type CurrencyChaosPair,
   getChaosEquivDisplayParts,
 } from "@/features/items/itemMetrics";
-import { filterCharacterGemsForPricing } from "@/features/characters/characterGemFilter";
+import {
+  filterCharacterGemsForPricing,
+  walkCharacterGemCandidates,
+} from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 
-/** Paper-doll slots + Lineage support gems + jewels (gear estimate denominator). */
+/** Paper-doll slots + Lineage support gems (including those nested in skill socketed_items) + jewels. */
 export function collectCharacterGearPricingItems(
   detail: Pick<CharacterDetail, "equipped" | "gems" | "jewels" | "inventory">,
 ): Item[] {
@@ -14,7 +17,7 @@ export function collectCharacterGearPricingItems(
   const out: Item[] = [];
   for (const item of [
     ...collectPaperDollItems(detail),
-    ...filterCharacterGemsForPricing(detail.gems ?? []),
+    ...filterCharacterGemsForPricing([...walkCharacterGemCandidates(detail)]),
     ...(detail.jewels ?? []),
   ]) {
     if (!seen.has(item.id)) {

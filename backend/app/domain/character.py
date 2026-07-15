@@ -67,13 +67,25 @@ _JEWEL_SLOTS = {"PassiveJewels"}
 
 
 def _expand_nested_item_dicts(raw: object) -> list[dict[str, Any]]:
-    """Walk skill-gem trees (``allGems``, ``socketedItems``) from live or poe.ninja payloads."""
+    """Walk skill-gem trees (``allGems``, ``socketedItems``) from live or poe.ninja payloads.
+
+    Handles two shapes:
+
+    - Flat: ``{ id, typeLine, socketedItems: [...] }`` (poe.ninja top-level allGems)
+    - Wrapped: ``{ inventoryId, itemData: { …, socketedItems: [...] } }`` (live GGG skills)
+    """
     if not isinstance(raw, dict):
         return []
     out: list[dict[str, Any]] = [raw]
     for key in ("allGems", "socketedItems"):
         for child in raw.get(key) or []:
             out.extend(_expand_nested_item_dicts(child))
+    # Live GGG wraps skill gem data under itemData; also recurse into its gem lists
+    inner = raw.get("itemData")
+    if isinstance(inner, dict):
+        for key in ("allGems", "socketedItems"):
+            for child in inner.get(key) or []:
+                out.extend(_expand_nested_item_dicts(child))
     return out
 
 

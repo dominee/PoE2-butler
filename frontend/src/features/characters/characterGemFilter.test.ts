@@ -195,3 +195,61 @@ describe("collectCharacterOtherInventory", () => {
     expect(collectCharacterOtherInventory(detail).map((i) => i.id)).toEqual(["f1"]);
   });
 });
+
+describe("nested socketed_items (Her Declaration bug)", () => {
+  it("finds a lineage gem in skill.socketed_items via collectCharacterSupportGemsForDisplay", () => {
+    const lineage = gem({
+      id: "her-declaration",
+      type_line: "Her Declaration",
+      inventory_id: null,
+      properties: [{ name: "[SupportGem|Support], [LineageSupports|Lineage]", value: null }],
+    });
+    const skill = gem({
+      id: "purity-of-ice",
+      type_line: "Purity of Ice",
+      properties: [{ name: "Spell, AoE, Cold", value: null }],
+      socketed_items: [lineage],
+    });
+    const detail = { gems: [skill], inventory: [] };
+    const found = collectCharacterSupportGemsForDisplay(detail).map((g) => g.id);
+    expect(found).toContain("her-declaration");
+    expect(found).not.toContain("purity-of-ice");
+  });
+
+  it("does not surface generic supports nested in skill socketed_items", () => {
+    const genericSupport = gem({
+      id: "magnified-area",
+      type_line: "Magnified Area II",
+      inventory_id: null,
+      properties: [{ name: "[SupportGem|Support], [AoESkill|AoE]", value: null }],
+    });
+    const skill = gem({
+      id: "lightning-bolt",
+      type_line: "Lightning Bolt",
+      properties: [{ name: "Spell, Lightning", value: null }],
+      socketed_items: [genericSupport],
+    });
+    const detail = { gems: [skill], inventory: [] };
+    const skills = collectCharacterSkillGemsForDisplay(detail).map((g) => g.id);
+    const supports = collectCharacterSupportGemsForDisplay(detail).map((g) => g.id);
+    expect(skills).toContain("lightning-bolt");
+    expect(supports).not.toContain("magnified-area");
+  });
+
+  it("deduplicates when lineage appears both in inventory and skill.socketed_items", () => {
+    const lineage = gem({
+      id: "her-declaration",
+      type_line: "Her Declaration",
+      inventory_id: null,
+      properties: [{ name: "Support, Lineage", value: null }],
+    });
+    const skill = gem({
+      id: "skill1",
+      type_line: "Fireball",
+      socketed_items: [lineage],
+    });
+    const detail = { gems: [skill], inventory: [lineage] };
+    const found = collectCharacterSupportGemsForDisplay(detail);
+    expect(found.filter((g) => g.id === "her-declaration")).toHaveLength(1);
+  });
+});

@@ -649,6 +649,7 @@ export function AppShell() {
                 prices={gearPrices}
                 valuableThreshold={valuableThreshold}
                 currencyChaos={currencyChaos}
+                userId={me?.account_name ?? null}
               />
             )}
           </section>

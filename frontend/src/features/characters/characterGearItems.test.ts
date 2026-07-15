@@ -76,6 +76,25 @@ describe("collectCharacterGearPricingItems", () => {
     };
     expect(collectCharacterGearPricingItems(detail)).toHaveLength(1);
   });
+
+  it("includes lineage gems nested inside a skill gem's socketed_items (Her Declaration bug)", () => {
+    const lineage = gem("her-declaration", "Her Declaration", [
+      { name: "Support, Lineage", value: null },
+    ]);
+    const skill = {
+      ...gem("purity-of-ice", "Purity of Ice", [{ name: "Spell, AoE, Cold", value: null }]),
+      socketed_items: [lineage],
+    };
+    const detail: Pick<CharacterDetail, "equipped" | "gems" | "jewels" | "inventory"> = {
+      equipped: [],
+      gems: [skill],
+      jewels: [],
+      inventory: [],
+    };
+    const ids = collectCharacterGearPricingItems(detail).map((i) => i.id);
+    expect(ids).toContain("her-declaration");
+    expect(ids).not.toContain("purity-of-ice");
+  });
 });
 
 describe("computeGearEstimate", () => {

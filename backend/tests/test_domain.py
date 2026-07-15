@@ -770,3 +770,67 @@ def test_parse_item_granted_skills_from_properties_when_array_missing() -> None:
     }
     item = parse_item(raw)
     assert item.granted_skills == ["Sigil of Power (lvl 17)"]
+
+
+def test_collect_character_items_expands_lineage_gem_from_skill_socketed_items() -> None:
+    """Lineage supports nested in a skill gem's itemData.socketedItems must be collected.
+
+    Her Declaration (and similar lineage gems) appear as entries in `socketedItems`
+    inside a skill gem's `itemData` wrapper in the poe.ninja / live GGG payload shape.
+    They must survive flattening so that `parse_detail` classifies them correctly.
+    """
+    lineage_item = {
+        "id": "lineage-her-declaration",
+        "name": "Her Declaration",
+        "typeLine": "Her Declaration",
+        "baseType": "Her Declaration",
+        "frameType": 4,
+        "rarity": "Gem",
+        "ilvl": 0,
+        "inventoryId": None,
+        "properties": [
+            {
+                "name": "[SupportGem|Support], [LineageSupports|Lineage]",
+                "values": [],
+                "displayMode": 0,
+            }
+        ],
+        "identified": True,
+        "corrupted": False,
+        "sockets": [],
+        "socketedItems": [],
+    }
+    skill_skill = {
+        "inventoryId": "SkillSlots",
+        "itemData": {
+            "id": "purity-of-ice-skill",
+            "typeLine": "Purity of Ice",
+            "baseType": "Purity of Ice",
+            "frameType": 4,
+            "rarity": "Gem",
+            "ilvl": 0,
+            "sockets": [{"group": 0, "type": "gem"}],
+            "socketedItems": [lineage_item],
+        },
+    }
+    payload = {
+        "character": {
+            "id": "c1",
+            "name": "TestCharacter",
+            "class": "Monk",
+            "level": 90,
+            "league": "Standard",
+            "equipment": [],
+            "skills": [skill_skill],
+        },
+    }
+    items = collect_character_items(payload)
+    ids = {r.get("id") or (r.get("itemData") or {}).get("id") for r in items}
+    assert "lineage-her-declaration" in ids, "nested lineage gem must be collected"
+    assert "purity-of-ice-skill" in ids, "parent skill gem must still be collected"
+
+    detail = parse_detail(payload)
+    gem_ids = {g.id for g in detail.gems}
+    inv_ids = {i.id for i in detail.inventory}
+    assert "purity-of-ice-skill" in gem_ids, "skill gem goes to gems bucket"
+    assert "lineage-her-declaration" in inv_ids, "lineage gem (no inventoryId) goes to inventory"

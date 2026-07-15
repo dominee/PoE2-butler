@@ -544,3 +544,87 @@ def test_weighted_upgrade_keeps_base_type_and_rarity() -> None:
     assert q["type"] == "Spine Bow"
     assert q["status"]["option"] == "securable"
     assert q["filters"]["type_filters"]["filters"]["rarity"]["option"] == "rare"
+
+
+# --- socket filters -----------------------------------------------------------
+
+
+def _equipment_filters(q: dict) -> dict:
+    ef = q["filters"]["equipment_filters"]
+    assert ef["disabled"] is False
+    return ef["filters"]
+
+
+def test_exact_search_sets_rune_socket_min_and_max_for_gear_with_sockets() -> None:
+    """Exact search pins socket count precisely (min=max) for non-gem items."""
+    from app.domain.item import Socket
+
+    item = make_item(sockets=[Socket(group=0, type="rune"), Socket(group=1, type="rune")])
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    ef_f = _equipment_filters(q)
+    assert ef_f["rune_sockets"]["min"] == 2
+    assert ef_f["rune_sockets"]["max"] == 2
+
+
+def test_upgrade_search_sets_rune_socket_min_only_for_gear_with_sockets() -> None:
+    """Upgrade search sets min socket count but no max (better items can have more)."""
+    from app.domain.item import Socket
+
+    item = make_item(sockets=[Socket(group=0, type="rune"), Socket(group=1, type="rune")])
+    q = build_upgrade_search(item, league="Std")["payload"]["query"]
+    ef_f = _equipment_filters(q)
+    assert ef_f["rune_sockets"]["min"] == 2
+    assert "max" not in ef_f["rune_sockets"]
+
+
+def test_weighted_upgrade_search_sets_rune_socket_min_only() -> None:
+    from app.domain.item import Socket
+
+    item = make_item(sockets=[Socket(group=0, type="rune")])
+    q = build_weighted_upgrade_search(item)["payload"]["query"]
+    ef_f = _equipment_filters(q)
+    assert ef_f["rune_sockets"]["min"] == 1
+    assert "max" not in ef_f["rune_sockets"]
+
+
+def test_zero_sockets_omits_socket_filter() -> None:
+    item = make_item(sockets=[])
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    filt = q["filters"]
+    assert "equipment_filters" not in filt
+
+
+def test_gem_item_uses_misc_filters_gem_sockets() -> None:
+    """Skill gems use misc_filters.gem_sockets, not equipment_filters."""
+    from app.domain.item import Socket
+
+    item = make_item(
+        rarity="Gem",
+        base_type="Fireball",
+        sockets=[
+            Socket(group=0, type="gem"),
+            Socket(group=1, type="gem"),
+            Socket(group=2, type="gem"),
+        ],
+    )
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    mf_f = _misc_filters(q)
+    assert mf_f["gem_sockets"]["min"] == 3
+    assert mf_f["gem_sockets"]["max"] == 3
+    filt = q["filters"]
+    assert "equipment_filters" not in filt
+
+
+def test_socket_filter_present_alongside_corruption_filters() -> None:
+    """Socket filter must not displace corruption filters."""
+    from app.domain.item import Socket
+
+    item = make_item(
+        corrupted=True,
+        sockets=[Socket(group=0, type="rune")],
+    )
+    q = build_exact_search(item, tolerance_pct=10)["payload"]["query"]
+    mf_f = _misc_filters(q)
+    assert mf_f["corrupted"]["option"] == "true"
+    ef_f = _equipment_filters(q)
+    assert ef_f["rune_sockets"]["min"] == 1

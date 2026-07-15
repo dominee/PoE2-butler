@@ -381,6 +381,58 @@ describe("ItemDetailPane", () => {
     expect(screen.getByRole("button", { name: /upgrade \(weighted\)/i })).toBeDisabled();
   });
 
+  it("shows loading feedback and writes to the external tab while trade search is pending", async () => {
+    // Intercept fetch and delay the trade response so we can observe the pending state
+    let resolveTradeSearch!: (r: Response) => void;
+    const tradeSearchPromise = new Promise<Response>((res) => { resolveTradeSearch = res; });
+
+    const fetchMock = installFetchMock("");
+    const baseImpl = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((input, init) => {
+      if (requestUrl(input).includes("/api/trade/search")) return tradeSearchPromise;
+      return baseImpl(input, init);
+    });
+
+    const mockTabDoc = { open: vi.fn(), write: vi.fn(), close: vi.fn() };
+    const mockTab = {
+      closed: false,
+      opener: window,
+      location: { href: "" },
+      close: vi.fn(),
+      document: mockTabDoc,
+    } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(mockTab);
+
+    const user = userEvent.setup();
+    renderPane(testItem);
+    void user.click(screen.getByRole("button", { name: /trade search/i }));
+
+    // Loading indicator should appear while the request is in-flight
+    await waitFor(() =>
+      expect(screen.getByText(/creating trade search/i)).toBeInTheDocument(),
+    );
+    // The placeholder tab should have loading HTML written into it
+    await waitFor(() => expect(mockTabDoc.write).toHaveBeenCalled());
+    const writtenHtml = mockTabDoc.write.mock.calls[0][0] as string;
+    expect(writtenHtml).toContain("Creating trade search");
+
+    // Resolve the trade search and verify loading indicator goes away
+    resolveTradeSearch(
+      new Response(
+        JSON.stringify({
+          mode: "exact",
+          league: "Dawn of the Hunt",
+          url: "https://www.pathofexile.com/trade2/search/poe2/Dawn%20of%20the%20Hunt",
+          payload: {},
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText(/creating trade search/i)).not.toBeInTheDocument(),
+    );
+  });
+
   it("disables refresh pricing for skill gems and skips price lookup", async () => {
     const fetchMock = installFetchMock("");
     const skillGem: Item = {
