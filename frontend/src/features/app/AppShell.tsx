@@ -385,9 +385,10 @@ export function AppShell() {
           </button>
           {refreshNotice && (
             <span
-              className="max-w-[16rem] truncate text-[11px] text-parchment-200/85"
+              className="max-w-[16rem] cursor-help truncate text-[11px] text-parchment-200/85"
               role="status"
               aria-live="polite"
+              title={refreshNotice}
             >
               {refreshNotice}
             </span>

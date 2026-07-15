@@ -70,6 +70,8 @@ export function filterCharacterGemsForPricing(gems: Item[]): Item[] {
  * Walk all gem candidates: top-level gems + inventory, plus supports nested in skill
  * socketed_items (e.g. Her Declaration socketed inside Purity of Ice).
  *
+ * Recursion into socketed_items applies to both detail.gems and detail.inventory so that
+ * lineage gems are reachable regardless of which bucket the parent skill ended up in.
  * Generic supports are still filtered by each predicate; this walker only broadens
  * the candidate set so lineage gems nested in skill socketed_items are reachable.
  */
@@ -84,6 +86,9 @@ export function* walkCharacterGemCandidates(
   }
   for (const item of detail.inventory ?? []) {
     yield item;
+    if (isCharacterSkillGem(item)) {
+      for (const nested of item.socketed_items ?? []) yield nested;
+    }
   }
 }
 

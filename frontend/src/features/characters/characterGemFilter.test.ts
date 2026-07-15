@@ -252,4 +252,29 @@ describe("nested socketed_items (Her Declaration bug)", () => {
     const found = collectCharacterSupportGemsForDisplay(detail);
     expect(found.filter((g) => g.id === "her-declaration")).toHaveLength(1);
   });
+
+  it("finds a lineage gem in inventory skill socketed_items (skill in inventory, not gems)", () => {
+    // Regression: when a skill gem has inventory_id=null it lands in detail.inventory.
+    // walkCharacterGemCandidates must still recurse its socketed_items.
+    const lineage = gem({
+      id: "her-declaration",
+      type_line: "Her Declaration",
+      inventory_id: null,
+      properties: [{ name: "[SupportGem|Support], [LineageSupports|Lineage]", value: null }],
+    });
+    const skill = gem({
+      id: "purity-of-ice",
+      type_line: "Purity of Ice",
+      inventory_id: null,
+      properties: [{ name: "Spell, AoE, Cold", value: null }],
+      socketed_items: [lineage],
+    });
+    // skill is in inventory (not gems) — happens when inventoryId is null/missing
+    const detail = { gems: [], inventory: [skill] };
+    const found = collectCharacterSupportGemsForDisplay(detail).map((g) => g.id);
+    expect(found).toContain("her-declaration");
+    expect(found).not.toContain("purity-of-ice");
+    const skillGems = collectCharacterSkillGemsForDisplay(detail).map((g) => g.id);
+    expect(skillGems).toContain("purity-of-ice");
+  });
 });

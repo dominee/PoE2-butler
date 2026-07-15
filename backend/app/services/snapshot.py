@@ -293,14 +293,21 @@ async def refresh_user_snapshot(
             current = pick_current_league(parse_leagues(leagues_payload))
             if current:
                 user.preferred_league = current
+    except GGGError as exc:
+        # account:leagues is not granted in the current GGG OAuth approval (PoE2 grant
+        # covers profile + characters only).  403 is expected — log at info and carry on.
+        # Other HTTP errors are unexpected and surfaced to the user.
+        if exc.status_code in (401, 403):
+            log.info(
+                "snapshot.leagues_skipped",
+                error=str(exc),
+                note="preferred_league will be inferred from characters",
+            )
+        else:
+            log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
+            outcome.errors.append(f"leagues:{exc}")
     except Exception as exc:  # noqa: BLE001
-        # account:leagues scope may not be granted (e.g. GGG PoE2 grant is profile +
-        # characters only). Log at info level — it is expected when the scope is absent.
-        log.info(
-            "snapshot.leagues_skipped",
-            error=str(exc),
-            note="preferred_league will be inferred from characters",
-        )
+        log.error("snapshot.leagues_failed", error=str(exc), exc_info=True)
         outcome.errors.append(f"leagues:{exc}")
 
     # Stash list + tab payloads are fast against the mock; Poe.ninja ``revalidate=1`` on the
@@ -311,7 +318,16 @@ async def refresh_user_snapshot(
             await _refresh_stashes(
                 session, user=user, ggg=ggg, access=access, league=include_stashes_for_league
             )
+        except GGGError as exc:
+            # 404 = league stash not found (PoE2 stash scope unavailable); 403 = scope not
+            # granted.  Both are expected in UAT/prod until GGG provides a PoE2 stash scope.
+            if exc.status_code in (403, 404):
+                log.info("snapshot.stash_skipped", error=str(exc))
+            else:
+                log.error("snapshot.stash_failed", error=str(exc), exc_info=True)
+                outcome.errors.append(f"stashes:{exc}")
         except Exception as exc:  # noqa: BLE001
+            log.error("snapshot.stash_failed", error=str(exc), exc_info=True)
             outcome.errors.append(f"stashes:{exc}")
 
     try:

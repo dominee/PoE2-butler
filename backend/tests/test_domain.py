@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 from app.domain.character import (
     collect_character_items,
     normalize_character_class,
@@ -10,6 +13,9 @@ from app.domain.character import (
 )
 from app.domain.item import parse_item
 from app.domain.league import parse_leagues, pick_current_league
+
+# Allow importing mock-ggg helpers inside tests that need them.
+_MOCK_GGG_APP = Path(__file__).resolve().parents[2] / "mock-ggg" / "app"
 
 
 def test_parse_leagues_picks_non_hardcore_current() -> None:
@@ -834,3 +840,177 @@ def test_collect_character_items_expands_lineage_gem_from_skill_socketed_items()
     inv_ids = {i.id for i in detail.inventory}
     assert "purity-of-ice-skill" in gem_ids, "skill gem goes to gems bucket"
     assert "lineage-her-declaration" in inv_ids, "lineage gem (no inventoryId) goes to inventory"
+
+
+def test_ninja_convert_includes_skills_in_ggg_payload() -> None:
+    """ninja_convert must include charModel.skills so lineage support gems reach the backend.
+
+    Regression: char_model_to_ggg_payload() previously ignored charModel.skills entirely,
+    so ALL skill gems (active skills, regular supports, lineage supports) were absent from
+    the GGG-shaped payload sent to the backend.  This caused lineage gems to never appear
+    in CharacterDetail.inventory and therefore never display in the support gems section.
+    """
+    if str(_MOCK_GGG_APP) not in sys.path:
+        sys.path.insert(0, str(_MOCK_GGG_APP))
+    from ninja_convert import char_model_to_ggg_payload  # noqa: PLC0415
+
+    lineage_item_data = {
+        "id": "lineage-rakiata",
+        "name": "Rakiata's Flow",
+        "typeLine": "Rakiata's Flow",
+        "baseType": "Rakiata's Flow",
+        "frameType": 4,
+        "ilvl": 0,
+        "inventoryId": None,
+        "properties": [
+            {
+                "name": "[SupportGem|Support], [LineageSupports|Lineage]",
+                "values": [],
+                "displayMode": 0,
+            }
+        ],
+        "identified": True,
+        "corrupted": False,
+        "sockets": [],
+        "socketedItems": [],
+    }
+    skill_gem_item_data = {
+        "id": "ice-nova-skill",
+        "name": "Ice Nova",
+        "typeLine": "Ice Nova",
+        "baseType": "Ice Nova",
+        "frameType": 4,
+        "ilvl": 0,
+        "inventoryId": None,
+        "properties": [],
+        "identified": True,
+        "corrupted": False,
+        "sockets": [{"group": 0, "type": "gem"}],
+        "socketedItems": [lineage_item_data],
+    }
+    # poe.ninja charModel.skills format: allGems contains all gems in the skill group
+    cm = {
+        "name": "TestChar",
+        "class": "Monk",
+        "level": 90,
+        "league": "Standard",
+        "items": [],
+        "jewels": [],
+        "skills": [
+            {
+                "allGems": [
+                    {
+                        "name": "Ice Nova",
+                        "itemData": skill_gem_item_data,
+                        "level": 20,
+                        "quality": 20,
+                    },
+                    {
+                        "name": "Rakiata's Flow",
+                        "itemData": lineage_item_data,
+                        "level": 20,
+                        "quality": 20,
+                    },
+                ],
+                "dps": 12345.0,
+            }
+        ],
+    }
+    payload = char_model_to_ggg_payload(cm)
+
+    # character.skills must be populated as flat individual GGG-style entries (one per gem)
+    char = payload.get("character", {})
+    assert "skills" in char, "character.skills must be present in GGG payload"
+    # 2 entries: one for Ice Nova, one for Rakiata's Flow (flat, not grouped)
+    assert len(char["skills"]) == 2, (
+        "allGems must be flattened into individual skill entries, not kept as a group"
+    )
+    skill_inventory_ids = [s.get("inventoryId") for s in char["skills"]]
+    assert "SkillSlots" not in skill_inventory_ids, (
+        "ice-nova has inventoryId=None in test data; no SkillSlots entry expected"
+    )
+
+    items = collect_character_items(payload)
+    ids = {r.get("id") or (r.get("itemData") or {}).get("id") for r in items}
+    assert "lineage-rakiata" in ids, "lineage gem from allGems must be collected"
+    assert "ice-nova-skill" in ids, "active skill gem from allGems must be collected"
+
+    detail = parse_detail(payload)
+    inv_ids = {i.id for i in detail.inventory}
+    assert "lineage-rakiata" in inv_ids, "lineage gem must reach detail.inventory"
+
+    inv_lineage = [
+        i for i in detail.inventory
+        if any("lineage" in p.name.lower() for p in i.properties)
+    ]
+    assert len(inv_lineage) >= 1, "at least one lineage gem must be in detail.inventory"
+
+    # Validate no garbage items (skill groups should not appear as items)
+    garbage = [i for i in detail.inventory if not i.id]
+    assert len(garbage) == 0, "no garbage skill-group dicts in inventory"
+
+
+def test_collect_character_items_skips_empty_iid_container_dicts() -> None:
+    """Container dicts with no item id (e.g. live GGG skill-group wrappers) must be skipped.
+
+    Regression: add() in collect_character_items used to append every dict from
+    _expand_nested_item_dicts including group wrappers.  These created Item rows with id=""
+    that caused empty item_id=&… requests to the pricing estimate endpoint (422 errors).
+    """
+    payload = {
+        "character": {
+            "id": "c1",
+            "name": "TestChar",
+            "class": "Monk",
+            "level": 90,
+            "league": "Standard",
+            "equipment": [],
+            "skills": [
+                # Group wrapper: has no id itself but contains gems via the "gems" key
+                {
+                    "gems": [
+                        {
+                            "inventoryId": "SkillSlots",
+                            "itemData": {
+                                "id": "skill-abc",
+                                "typeLine": "Ice Nova",
+                                "rarity": "Gem",
+                                "frameType": 4,
+                            },
+                        },
+                        {
+                            "inventoryId": None,
+                            "itemData": {
+                                "id": "lineage-xyz",
+                                "typeLine": "Her Declaration",
+                                "rarity": "Gem",
+                                "frameType": 4,
+                                "properties": [
+                                    {
+                                        "name": "[SupportGem|Support], [LineageSupports|Lineage]",
+                                        "values": [],
+                                        "displayMode": 0,
+                                    }
+                                ],
+                            },
+                        },
+                    ]
+                }
+            ],
+        }
+    }
+    items = collect_character_items(payload)
+    ids = {r.get("id") or (r.get("itemData") or {}).get("id") or "" for r in items}
+
+    # Wrapper group dict (no id) must NOT appear
+    assert "" not in ids, "empty-id container dict must be skipped by add()"
+    assert "skill-abc" in ids, "active skill gem must be collected from nested gems"
+    assert "lineage-xyz" in ids, "lineage gem must be collected from nested gems"
+
+    detail = parse_detail(payload)
+    gem_ids = {g.id for g in detail.gems}
+    inv_ids = {i.id for i in detail.inventory}
+
+    assert "skill-abc" in gem_ids, "active skill gem goes to detail.gems"
+    assert "lineage-xyz" in inv_ids, "lineage gem (inventoryId=None) goes to detail.inventory"
+    assert all(i.id for i in detail.inventory), "no empty-id items in inventory"

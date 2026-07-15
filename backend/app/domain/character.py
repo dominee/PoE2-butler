@@ -67,23 +67,28 @@ _JEWEL_SLOTS = {"PassiveJewels"}
 
 
 def _expand_nested_item_dicts(raw: object) -> list[dict[str, Any]]:
-    """Walk skill-gem trees (``allGems``, ``socketedItems``) from live or poe.ninja payloads.
+    """Walk skill-gem trees from live GGG or poe.ninja payloads.
 
-    Handles two shapes:
+    Handles three shapes:
 
     - Flat: ``{ id, typeLine, socketedItems: [...] }`` (poe.ninja top-level allGems)
     - Wrapped: ``{ inventoryId, itemData: { …, socketedItems: [...] } }`` (live GGG skills)
+    - Grouped: ``{ gems: [{ inventoryId, itemData: {...} }, ...] }`` (live GGG skill groups)
+
+    Returns the raw dict itself plus all recursively found child item dicts.
+    Container/group dicts with no id of their own are included here; the caller's
+    ``add()`` function filters them out before storing.
     """
     if not isinstance(raw, dict):
         return []
     out: list[dict[str, Any]] = [raw]
-    for key in ("allGems", "socketedItems"):
+    for key in ("allGems", "gems", "socketedItems"):
         for child in raw.get(key) or []:
             out.extend(_expand_nested_item_dicts(child))
     # Live GGG wraps skill gem data under itemData; also recurse into its gem lists
     inner = raw.get("itemData")
     if isinstance(inner, dict):
-        for key in ("allGems", "socketedItems"):
+        for key in ("allGems", "gems", "socketedItems"):
             for child in inner.get(key) or []:
                 out.extend(_expand_nested_item_dicts(child))
     return out
@@ -107,10 +112,14 @@ def collect_character_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
             or (inner.get("id") if isinstance(inner, dict) else None)
             or ""
         ).strip()
-        if iid:
-            if iid in seen:
-                return
-            seen.add(iid)
+        if not iid:
+            # Skip container/group dicts (e.g. live GGG skill-group wrappers) that
+            # carry no item ID.  Items with no ID cannot be priced, rendered, or
+            # deduplicated and produce empty item_id requests in the pricing API.
+            return
+        if iid in seen:
+            return
+        seen.add(iid)
         out.append(raw)
 
     for raw in payload.get("items") or []:

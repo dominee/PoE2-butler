@@ -438,7 +438,7 @@ export function usePersistedPriceEstimate(
       const d = await api.get<PriceJobState | undefined>(`/api/pricing/estimate/item?${q.toString()}`);
       return d ?? null;
     },
-    enabled: Boolean(enabled && league && item),
+    enabled: Boolean(enabled && league && item?.id),
     staleTime: 5 * 60_000,
     refetchOnMount: "always",
     refetchInterval: (q) => {

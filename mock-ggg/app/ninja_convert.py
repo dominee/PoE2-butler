@@ -118,6 +118,40 @@ def convert_item(wrapped: dict) -> dict:
     return item
 
 
+def convert_skill_group_to_entries(skill: dict) -> list[dict]:
+    """Flatten a poe.ninja charModel skill group into individual GGG-style skill entries.
+
+    poe.ninja ``charModel.skills[i]`` groups all gems (active skill + supports + lineage) under
+    ``allGems``::
+
+        { "allGems": [{ "name": "Ice Nova", "itemData": {..., "inventoryId": "SkillSlots"}, ... },
+                      { "name": "Rakiata's Flow", "itemData": {..., "inventoryId": null}, ... }], ... }
+
+    The live GGG API instead returns **one entry per gem**::
+
+        { "inventoryId": "SkillSlots", "itemData": { "id": "...", "typeLine": "Ice Nova", ... } }
+
+    This function converts the poe.ninja format to match the live GGG format so the backend's
+    ``collect_character_items`` path is identical for both data sources.  The active skill keeps its
+    ``inventoryId: "SkillSlots"`` (authoritative for ``detail.gems`` classification); supports have
+    ``inventoryId: null`` and land in ``detail.inventory``.
+    """
+    all_gems = skill.get("allGems") or []
+    entries: list[dict] = []
+    for gem_entry in all_gems:
+        if not isinstance(gem_entry, dict):
+            continue
+        item_data = gem_entry.get("itemData")
+        if not isinstance(item_data, dict):
+            continue
+        converted = convert_item_data(item_data)
+        entries.append({
+            "inventoryId": converted.get("inventoryId"),
+            "itemData": converted,
+        })
+    return entries
+
+
 def pack_items(items: list[dict], grid_w: int = 12, grid_h: int = 12) -> list[dict]:
     grid: list[list[bool]] = [[False] * grid_w for _ in range(grid_h * 3)]
 
@@ -153,10 +187,14 @@ def pack_items(items: list[dict], grid_w: int = 12, grid_h: int = 12) -> list[di
 
 
 def char_model_to_ggg_payload(cm: dict[str, Any], *, id_key: str | None = None) -> dict[str, Any]:
-    """GGG-shaped ``{"character": ..., "items": ...}`` from a poe.ninja ``charModel`` dict."""
+    """GGG-shaped ``{"character": ..., "items": ...}`` from a poe.ninja ``charModel`` dict.
+
+    ``character.skills`` is populated from ``charModel.skills`` so skill gems (active skills,
+    supports, and lineage supports) reach the backend's ``collect_character_items`` path.
+    """
     name = str(cm["name"])
     key = id_key if id_key is not None else name
-    character = {
+    character: dict[str, Any] = {
         "id": stable_id(key),
         "name": name,
         "realm": "pc",
@@ -165,6 +203,12 @@ def char_model_to_ggg_payload(cm: dict[str, Any], *, id_key: str | None = None) 
         "league": cm["league"],
         "experience": 0,
     }
+    skill_entries: list[dict] = []
+    for s in cm.get("skills", []) or []:
+        if isinstance(s, dict):
+            skill_entries.extend(convert_skill_group_to_entries(s))
+    if skill_entries:
+        character["skills"] = skill_entries
     gear = [convert_item(raw) for raw in cm.get("items", []) or []]
     jewels = [convert_item(raw) for raw in cm.get("jewels", []) or []]
     return {"character": character, "items": gear + jewels}
