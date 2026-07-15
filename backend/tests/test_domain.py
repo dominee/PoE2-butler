@@ -507,6 +507,40 @@ def test_parse_item_runeforged_runemastered() -> None:
     assert item.frame_type_id == "RunicUnique"
 
 
+def test_strip_runeforged_prefix_item_round_trip() -> None:
+    """parse_item → strip_runeforged_prefix_item produces a non-runeforged item with bare base_type.
+
+    GGG field layout: name="Crown of Eyes", typeLine/baseType="Runemastered Vermeil Circlet".
+    The combined display "Crown of Eyes Runemastered Vermeil Circlet" is a UI string; it is
+    NOT what GGG stores in typeLine.
+    """
+    from app.domain.item import strip_runeforged_prefix_item
+
+    item = parse_item(
+        {
+            "id": "r2",
+            "name": "Crown of Eyes",
+            "typeLine": "Runemastered Vermeil Circlet",
+            "baseType": "Runemastered Vermeil Circlet",
+            "rarity": "Unique",
+            "frameType": 14,
+        }
+    )
+    assert item.runeforged is True
+    assert item.base_type == "Runemastered Vermeil Circlet"
+    assert item.type_line == "Runemastered Vermeil Circlet"
+
+    fb = strip_runeforged_prefix_item(item)
+    assert fb is not None
+    assert fb.base_type == "Vermeil Circlet"
+    assert fb.type_line == "Vermeil Circlet"
+    assert fb.name == "Crown of Eyes"
+    assert fb.runeforged is False
+    # Original item must be unchanged (model_copy is non-destructive)
+    assert item.base_type == "Runemastered Vermeil Circlet"
+    assert item.runeforged is True
+
+
 def test_parse_detail_weapon_slot_from_item_slot_and_outer_wrapper() -> None:
     """Live GGG may omit string inventoryId on weapons; wrapper slot metadata must win."""
     base_char = {

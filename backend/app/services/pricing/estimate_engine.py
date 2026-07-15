@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.config import Settings
-from app.domain.item import Item, coerce_item_dict
+from app.domain.item import Item, coerce_item_dict, strip_runeforged_prefix_item
 from app.logging import get_logger
 from app.services.pricing.estimate_state import PriceJobState, save_job_state
 from app.services.pricing.matcher import match_item
@@ -154,26 +154,25 @@ async def run_hybrid_price_estimate(  # noqa: PLR0912,PLR0915
         await release_price_estimate_slot(redis, slot_token)
 
 
-async def _run_trade_hybrid_tail(  # noqa: PLR0912,PLR0915
+async def _relaxation_search(  # noqa: PLR0912,PLR0915
     settings: Settings,
-    redis,
-    st: PriceJobState,
-    job_id: str,
     item: Item,
     league: str,
     tolerance_pct: float,
-    ag: PriceEstimate | None,
-    key,
-    price_svc: PricingService,
-) -> PriceEstimate | None:
-    st.step = "ggg_trade"
-    st.message = "Resolving trade stats and sampling listings"
-    await save_job_state(redis, job_id, st)
-    await ensure_trade_stats_index(settings)
+    chaos_map: dict[str, float],
+    redis,
+    st: PriceJobState,
+    job_id: str,
+) -> tuple[float, int, int]:
+    """Run the stat-relaxation trade-search loop for *item*.
+
+    Tries each relaxation step (dropping one stat filter at a time) until a
+    price median is found with enough listings, or all steps are exhausted.
+
+    Returns ``(chosen_median, chosen_n, used_steps)``.
+    """
     full = stat_filters_for_exact_item(item, tolerance_pct)
     order = stat_filter_drop_indices(full)
-    chaos_map = await build_chaos_currency_map(settings, league)
-
     chosen_median = 0.0
     chosen_n = 0
     used_steps = 0
@@ -235,6 +234,48 @@ async def _run_trade_hybrid_tail(  # noqa: PLR0912,PLR0915
             or chosen_n >= settings.pricing_min_trade_listings
         ):
             break
+    return chosen_median, chosen_n, used_steps
+
+
+async def _run_trade_hybrid_tail(  # noqa: PLR0912,PLR0915
+    settings: Settings,
+    redis,
+    st: PriceJobState,
+    job_id: str,
+    item: Item,
+    league: str,
+    tolerance_pct: float,
+    ag: PriceEstimate | None,
+    key,
+    price_svc: PricingService,
+) -> PriceEstimate | None:
+    st.step = "ggg_trade"
+    st.message = "Resolving trade stats and sampling listings"
+    await save_job_state(redis, job_id, st)
+    await ensure_trade_stats_index(settings)
+    chaos_map = await build_chaos_currency_map(settings, league)
+
+    chosen_median, chosen_n, used_steps = await _relaxation_search(
+        settings, item, league, tolerance_pct, chaos_map, redis, st, job_id
+    )
+
+    # Runeforged items (e.g. "Runemastered Vermeil Circlet") are rare and may
+    # have zero listings.  Fall back to the base-type (non-runemastered) search
+    # so we can still return an indicative price.
+    if chosen_median == 0:
+        fallback_item = strip_runeforged_prefix_item(item)
+        if fallback_item is not None:
+            log.info(
+                "price_estimate.runeforged_fallback",
+                item_id=str(item.id),
+                original_base_type=item.base_type,
+                fallback_base_type=fallback_item.base_type,
+            )
+            st.message = "No runemastered listings — trying base-type search"
+            await save_job_state(redis, job_id, st)
+            chosen_median, chosen_n, used_steps = await _relaxation_search(
+                settings, fallback_item, league, tolerance_pct, chaos_map, redis, st, job_id
+            )
 
     if chosen_median > 0:
         v, u = _value_display_units(chosen_median, chaos_map)

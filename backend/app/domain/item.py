@@ -682,6 +682,32 @@ def _is_runeforged_item(
     return bool(_RUNEFORGED_NAME_RE.match(label.strip()))
 
 
+def strip_runeforged_prefix_item(item: Item) -> Item | None:
+    """Return a copy of *item* with the Runemastered/Runeforged prefix stripped.
+
+    Used as a trade-search fallback when the runeforged variant yields no
+    listings — the base-type search may match more results on the trade site.
+
+    Returns ``None`` if:
+    - ``item.runeforged`` is ``False``, OR
+    - ``item.base_type`` does not start with a recognised prefix.
+
+    The returned item has ``runeforged=False`` and both ``base_type`` and
+    ``type_line`` stripped of the prefix so that ``_query_shell`` builds
+    ``query.type`` from the bare base type.
+    """
+    if not item.runeforged:
+        return None
+    src = (item.base_type or item.type_line or "").strip()
+    stripped_base = _RUNEFORGED_NAME_RE.sub("", src).strip()
+    if not stripped_base or stripped_base == src:
+        return None  # prefix not present in base_type/type_line
+    stripped_tl = _RUNEFORGED_NAME_RE.sub("", (item.type_line or "")).strip()
+    return item.model_copy(
+        update={"base_type": stripped_base, "type_line": stripped_tl, "runeforged": False}
+    )
+
+
 _FRAME_TO_RARITY = {
     0: "Normal",
     1: "Magic",

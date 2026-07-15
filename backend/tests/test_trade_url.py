@@ -628,3 +628,91 @@ def test_socket_filter_present_alongside_corruption_filters() -> None:
     assert mf_f["corrupted"]["option"] == "true"
     ef_f = _equipment_filters(q)
     assert ef_f["rune_sockets"]["min"] == 1
+
+
+# ---------------------------------------------------------------------------
+# strip_runeforged_prefix_item helpers
+# ---------------------------------------------------------------------------
+
+
+def test_strip_runeforged_prefix_item_runemastered() -> None:
+    """Runemastered prefix is stripped from base_type and type_line.
+
+    GGG field layout for a runeforged unique:
+      name      = "Crown of Eyes"            (unique flavour name)
+      type_line = "Runemastered Vermeil Circlet"  (base type with prefix)
+      base_type = "Runemastered Vermeil Circlet"  (same)
+    The combined display "Crown of Eyes Runemastered Vermeil Circlet" is a UI
+    concatenation; it is NOT stored in type_line.
+    """
+    from app.domain.item import strip_runeforged_prefix_item
+
+    item = make_item(
+        name="Crown of Eyes",
+        base_type="Runemastered Vermeil Circlet",
+        type_line="Runemastered Vermeil Circlet",
+        rarity="Unique",
+        runeforged=True,
+    )
+    result = strip_runeforged_prefix_item(item)
+    assert result is not None
+    assert result.base_type == "Vermeil Circlet"
+    assert result.type_line == "Vermeil Circlet"
+    assert result.runeforged is False
+    assert result.name == "Crown of Eyes"  # unchanged
+
+
+def test_strip_runeforged_prefix_item_runeforged_prefix() -> None:
+    """Runeforged prefix (alternative spelling) is also stripped."""
+    from app.domain.item import strip_runeforged_prefix_item
+
+    item = make_item(
+        base_type="Runeforged Heavy Belt",
+        type_line="Runeseeker's Runeforged Heavy Belt",
+        runeforged=True,
+    )
+    result = strip_runeforged_prefix_item(item)
+    assert result is not None
+    assert result.base_type == "Heavy Belt"
+
+
+def test_strip_runeforged_prefix_item_non_runeforged_returns_none() -> None:
+    """Returns None when item is not runeforged."""
+    from app.domain.item import strip_runeforged_prefix_item
+
+    item = make_item(base_type="Vermeil Circlet", runeforged=False)
+    assert strip_runeforged_prefix_item(item) is None
+
+
+def test_strip_runeforged_prefix_item_preserves_original() -> None:
+    """The original item is not mutated."""
+    from app.domain.item import strip_runeforged_prefix_item
+
+    item = make_item(
+        base_type="Runemastered Vermeil Circlet",
+        type_line="Runemastered Vermeil Circlet",
+        runeforged=True,
+    )
+    strip_runeforged_prefix_item(item)
+    assert item.base_type == "Runemastered Vermeil Circlet"
+    assert item.runeforged is True
+
+
+def test_exact_search_uses_stripped_base_type_for_fallback() -> None:
+    """build_exact_search on a stripped item uses the bare base type in query.type."""
+    from app.domain.item import strip_runeforged_prefix_item
+
+    original = make_item(
+        name="Crown of Eyes",
+        base_type="Runemastered Vermeil Circlet",
+        type_line="Runemastered Vermeil Circlet",
+        rarity="Unique",
+        runeforged=True,
+    )
+    fallback = strip_runeforged_prefix_item(original)
+    assert fallback is not None
+
+    result = build_exact_search(fallback, tolerance_pct=10, league="Dawn of the Hunt")
+    q = result["payload"]["query"]
+    assert q["type"] == "Vermeil Circlet"
+    assert q["name"] == "Crown of Eyes"
