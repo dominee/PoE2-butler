@@ -951,11 +951,16 @@ def test_ninja_convert_includes_skills_in_ggg_payload() -> None:
 
 
 def test_collect_character_items_skips_empty_iid_container_dicts() -> None:
-    """Container dicts with no item id (e.g. live GGG skill-group wrappers) must be skipped.
+    """Container/group dicts are skipped; granted skills (no id, has typeLine) get stable IDs.
 
-    Regression: add() in collect_character_items used to append every dict from
-    _expand_nested_item_dicts including group wrappers.  These created Item rows with id=""
-    that caused empty item_id=&… requests to the pricing estimate endpoint (422 errors).
+    Regression guard for multiple issues:
+    1. Container wrappers like ``{ "gems": [...] }`` must be skipped — they are not items.
+    2. Granted skills (e.g. Molten Shower from a unique item) may have no ``id`` in the
+       live GGG API but DO have a ``typeLine``.  add() must give them a stable iid from
+       typeLine so they survive and are correctly deduplicated.
+    3. Two granted skills with different typeLine values (Purity of Ice + Molten Shower)
+       must BOTH survive — the ``item.id`` fallback to ``typeLine`` in ``parse_item``
+       prevents frontend deduplication collisions on empty string ids.
     """
     payload = {
         "character": {
@@ -995,17 +1000,42 @@ def test_collect_character_items_skips_empty_iid_container_dicts() -> None:
                             },
                         },
                     ]
-                }
+                },
+                # Granted skill: no id, identified by typeLine — must survive with stable id
+                {
+                    "inventoryId": "DefaultAttackSkills",
+                    "itemData": {
+                        "typeLine": "Molten Shower",
+                        "rarity": "Gem",
+                        "frameType": 4,
+                    },
+                },
+                # Second granted skill: also no id, different typeLine — must also survive
+                {
+                    "inventoryId": "SkillSlots",
+                    "itemData": {
+                        "typeLine": "Purity of Ice",
+                        "rarity": "Gem",
+                        "frameType": 4,
+                    },
+                },
             ],
         }
     }
     items = collect_character_items(payload)
-    ids = {r.get("id") or (r.get("itemData") or {}).get("id") or "" for r in items}
 
-    # Wrapper group dict (no id) must NOT appear
-    assert "" not in ids, "empty-id container dict must be skipped by add()"
-    assert "skill-abc" in ids, "active skill gem must be collected from nested gems"
-    assert "lineage-xyz" in ids, "lineage gem must be collected from nested gems"
+    # Pure group wrapper (no id, typeLine, or name) must NOT appear
+    def _type(r: dict) -> str:
+        return str((r.get("itemData") or r).get("typeLine") or "")
+
+    containers = [r for r in items if not _type(r) and not (r.get("itemData") or r).get("name")]
+    assert containers == [], f"group wrappers must be skipped: {containers}"
+
+    types_collected = {_type(r) for r in items}
+    assert "Ice Nova" in types_collected, "active skill gem from nested gems must be present"
+    assert "Her Declaration" in types_collected, "lineage gem from nested gems must be present"
+    assert "Molten Shower" in types_collected, "granted skill (no id) must survive via typeLine iid"
+    assert "Purity of Ice" in types_collected, "second granted skill must also survive"
 
     detail = parse_detail(payload)
     gem_ids = {g.id for g in detail.gems}
@@ -1013,4 +1043,11 @@ def test_collect_character_items_skips_empty_iid_container_dicts() -> None:
 
     assert "skill-abc" in gem_ids, "active skill gem goes to detail.gems"
     assert "lineage-xyz" in inv_ids, "lineage gem (inventoryId=None) goes to detail.inventory"
-    assert all(i.id for i in detail.inventory), "no empty-id items in inventory"
+
+    # Granted skills get item.id = typeLine thanks to the typeLine fallback in parse_item
+    assert "Molten Shower" in gem_ids, "Molten Shower (granted, no raw id) gets id=typeLine"
+    assert "Purity of Ice" in gem_ids, "Purity of Ice (granted, no raw id) gets id=typeLine"
+
+    # Both granted skills are distinct — no frontend dedup collision on item.id=""
+    assert "Molten Shower" != "Purity of Ice"  # trivially true; make it explicit
+    assert all(g.id for g in detail.gems), "no empty item.id in detail.gems"

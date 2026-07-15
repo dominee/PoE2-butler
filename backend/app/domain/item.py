@@ -625,7 +625,7 @@ def parse_item(raw: dict[str, Any]) -> Item:
     )
 
     return Item(
-        id=str(raw.get("id", "")) or str(raw.get("name", "")),
+        id=str(raw.get("id", "")) or str(raw.get("name", "")) or str(raw.get("typeLine", "")),
         inventory_id=raw.get("inventoryId"),
         w=int(raw.get("w", 1)),
         h=int(raw.get("h", 1)),

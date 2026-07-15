@@ -107,15 +107,22 @@ def collect_character_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(raw, dict):
             return
         inner = raw.get("itemData")
+        _inner = inner if isinstance(inner, dict) else {}
+        # Resolve the best available stable identity for this item dict.
+        # Live GGG may omit "id" for granted skills; fall back to typeLine so
+        # that items with the same type are still correctly deduplicated.
         iid = str(
             raw.get("id")
-            or (inner.get("id") if isinstance(inner, dict) else None)
+            or _inner.get("id")
+            or raw.get("typeLine")
+            or _inner.get("typeLine")
+            or raw.get("name")
+            or _inner.get("name")
             or ""
         ).strip()
         if not iid:
-            # Skip container/group dicts (e.g. live GGG skill-group wrappers) that
-            # carry no item ID.  Items with no ID cannot be priced, rendered, or
-            # deduplicated and produce empty item_id requests in the pricing API.
+            # Pure container/group dicts (e.g. { "gems": [...] }) have no id,
+            # typeLine, or name — skip them entirely; they are not items.
             return
         if iid in seen:
             return
