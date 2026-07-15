@@ -135,6 +135,8 @@ def league_name_from_url_slug(slug: str) -> str:
     s = (slug or "").lower()
     if s == "vaal":
         return "Fate of the Vaal"
+    if s == "runesofaldur":
+        return "Runes of Aldur"
     return slug
 
 

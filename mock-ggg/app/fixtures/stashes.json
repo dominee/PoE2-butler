@@ -18300,5 +18300,82 @@
         "items": []
       }
     }
+  },
+  "Runes of Aldur": {
+    "tabs": [
+      {
+        "id": "runes-of-aldur-gear",
+        "name": "Gear Dump",
+        "type": "NormalStash",
+        "index": 0,
+        "colour": {
+          "r": 64,
+          "g": 96,
+          "b": 128
+        },
+        "selected": false,
+        "metadata": {
+          "public": false,
+          "folder": false,
+          "colour": "#406080"
+        }
+      },
+      {
+        "id": "runes-of-aldur-currency",
+        "name": "Currency",
+        "type": "CurrencyStash",
+        "index": 1,
+        "colour": {
+          "r": 96,
+          "g": 64,
+          "b": 128
+        },
+        "selected": false,
+        "metadata": {
+          "public": false,
+          "folder": false,
+          "colour": "#604080"
+        }
+      },
+      {
+        "id": "runes-of-aldur-new",
+        "name": "New Loot",
+        "type": "NormalStash",
+        "index": 2,
+        "colour": {
+          "r": 64,
+          "g": 128,
+          "b": 64
+        },
+        "selected": false,
+        "metadata": {
+          "public": false,
+          "folder": false,
+          "colour": "#408040"
+        }
+      }
+    ],
+    "contents": {
+      "runes-of-aldur-gear": {
+        "items": []
+      },
+      "runes-of-aldur-currency": {
+        "items": []
+      },
+      "runes-of-aldur-new": {
+        "items": []
+      }
+    },
+    "prev_contents": {
+      "runes-of-aldur-gear": {
+        "items": []
+      },
+      "runes-of-aldur-currency": {
+        "items": []
+      },
+      "runes-of-aldur-new": {
+        "items": []
+      }
+    }
   }
 }

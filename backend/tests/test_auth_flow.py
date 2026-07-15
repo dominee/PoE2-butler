@@ -241,20 +241,19 @@ async def test_characters_endpoint_after_login(app_stack) -> None:
     assert resp.status_code == 200
     data = resp.json()
     names = [c["name"] for c in data["characters"]]
-    assert "Catticiaan" in names
-    assert "NextWizardKing" in names
-    assert "IamGothmog" in names
-    assert "release_it_already" in names
+    # TOML-derived characters for dominee_9275 (poe_ninja_characters.toml)
+    assert "OracleElevenG" in names
+    assert "BringTheRainz" in names
 
 
 async def test_character_detail_after_login(app_stack) -> None:
     """Smoke: GET /api/characters/{name} completes (exercise snapshot + mock detail path)."""
     _app, client, mock_app = app_stack
     await _full_login(client, mock_app)
-    resp = await client.get("/api/characters/Catticiaan")
+    resp = await client.get("/api/characters/OracleElevenG")
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body.get("summary", {}).get("name") == "Catticiaan"
+    assert body.get("summary", {}).get("name") == "OracleElevenG"
     assert isinstance(body.get("equipped"), list)
 
 
@@ -558,14 +557,16 @@ async def test_stash_refresh_and_list(app_stack) -> None:
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")
 
+    # dominee_9275 characters are in "Runes of Aldur" (TOML slug: runesofaldur)
+    league = "Runes of Aldur"
     resp = await client.post(
         "/api/stashes/refresh",
-        json={"league": "Fate of the Vaal"},
+        json={"league": league},
         headers={"X-CSRF-Token": csrf},
     )
     assert resp.status_code == 200, resp.text
 
-    resp = await client.get("/api/stashes", params={"league": "Fate of the Vaal"})
+    resp = await client.get("/api/stashes", params={"league": league})
     assert resp.status_code == 200
     body = resp.json()
     names = [t["name"] for t in body["tabs"]]
@@ -573,10 +574,13 @@ async def test_stash_refresh_and_list(app_stack) -> None:
     assert "Currency" in names
 
     tab_id = body["tabs"][0]["id"]
-    resp = await client.get(f"/api/stashes/{tab_id}", params={"league": "Fate of the Vaal"})
+    resp = await client.get(f"/api/stashes/{tab_id}", params={"league": league})
     assert resp.status_code == 200
     tab = resp.json()
     assert tab["tab"]["name"] == "Gear Dump"
+    # Items come from OracleElevenG's equipped gear (Agony Beads amulet fixture).
+    assert isinstance(tab["items"], list)
+    assert len(tab["items"]) > 0, "expected at least one equipped item from OracleElevenG fixture"
     assert tab["items"][0]["name"] == "Agony Beads"
 
 

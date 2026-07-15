@@ -2173,7 +2173,7 @@
         "sockets": [],
         "id": "ea9b6e22b04cf21d150c3e4d4b0734d8096e5a228d3b2473cfdfc2e632253493",
         "inventoryId": "PassiveJewels",
-        "name": "Maelström Pause",
+        "name": "Maelstr\u00f6m Pause",
         "frameType": 2,
         "ilvl": 50,
         "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL0VtZXJhbGRKZXdlbCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/0df7b1d23b/EmeraldJewel.png",
@@ -5969,7 +5969,7 @@
         "sockets": [],
         "id": "d47f56acc8d88975f4913caeeed103895f6b360ddf46cdf86502e21199bb9830",
         "inventoryId": "PassiveJewels",
-        "name": "Maelström Solace",
+        "name": "Maelstr\u00f6m Solace",
         "frameType": 2,
         "ilvl": 81,
         "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL1J1YnlKZXdlbCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/8ef1a48ec8/RubyJewel.png",
@@ -6012,7 +6012,7 @@
         "sockets": [],
         "id": "8b6513e0e3b7dc1b02201c244c98d1cdc975a4782db18754e753df970f9d4aa3",
         "inventoryId": "PassiveJewels",
-        "name": "Maelström Curio",
+        "name": "Maelstr\u00f6m Curio",
         "frameType": 2,
         "ilvl": 80,
         "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL1J1YnlKZXdlbCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/8ef1a48ec8/RubyJewel.png",
@@ -6095,5 +6095,94 @@
         "socketedItems": []
       }
     ]
+  },
+  "OracleElevenG": {
+    "character": {
+      "id": "oracle-eleven-g-fixture",
+      "name": "OracleElevenG",
+      "realm": "poe2",
+      "class": "Witch",
+      "level": 91,
+      "league": "Runes of Aldur",
+      "experience": 0
+    },
+    "items": [
+      {
+        "sockets": [],
+        "id": "oracle-amulet-fixture-001",
+        "inventoryId": "Amulet",
+        "name": "Agony Beads",
+        "frameType": 2,
+        "ilvl": 82,
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQW11bGV0cy9CYXNldHlwZXMvU3RlbGxhckFtdWxldCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/a44db4cd4a/StellarAmulet.png",
+        "w": 1,
+        "h": 1,
+        "x": 0,
+        "y": 0,
+        "typeLine": "Stellar Amulet",
+        "baseType": "Stellar Amulet",
+        "identified": true,
+        "corrupted": false,
+        "implicitMods": [
+          "+7 to all [Attributes|Attributes]"
+        ],
+        "explicitMods": [
+          "+171 to [Accuracy|Accuracy] Rating",
+          "+14 to maximum Mana",
+          "+49 to [Spirit|Spirit]",
+          "+3 to Level of all [Projectile] Skills",
+          "+30 to [Intelligence|Intelligence]",
+          "24% of Damage taken [Recoup|Recouped] as Life"
+        ],
+        "craftedMods": [],
+        "enchantMods": [
+          "Allocates [attack46|Imbibed Power]"
+        ],
+        "properties": [
+          {
+            "name": "Amulet",
+            "values": [],
+            "displayMode": 0,
+            "progress": null,
+            "type": null,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "requirements": [
+          {
+            "name": "Level",
+            "values": [
+              [
+                "63",
+                0
+              ]
+            ],
+            "displayMode": 0,
+            "progress": null,
+            "type": 62,
+            "suffix": null,
+            "icon": null
+          }
+        ],
+        "league": "Runes of Aldur",
+        "realm": "poe2",
+        "verified": false,
+        "rarity": "Rare",
+        "socketedItems": []
+      }
+    ]
+  },
+  "BringTheRainz": {
+    "character": {
+      "id": "bring-the-rainz-fixture",
+      "name": "BringTheRainz",
+      "realm": "poe2",
+      "class": "Ranger",
+      "level": 85,
+      "league": "Runes of Aldur",
+      "experience": 0
+    },
+    "items": []
   }
 }
