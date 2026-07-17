@@ -15,7 +15,7 @@ from redis.asyncio import Redis
 
 from app.config import Settings, get_settings
 from app.db.models import User
-from app.deps import get_current_user, get_redis
+from app.deps import get_current_user_any, get_redis
 from app.domain.item import Item, strip_runeforged_prefix_item
 from app.logging import get_logger
 from app.services.trade_listings import trade_listing_ids_from_search_post
@@ -103,7 +103,7 @@ class TradeSearchResponse(BaseModel):
 @router.post("/search", summary="Build a trade search payload + URL")
 async def trade_search(
     body: TradeSearchRequest = Body(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     settings: Settings = Depends(get_settings),
     redis: Redis = Depends(get_redis),
 ) -> TradeSearchResponse:

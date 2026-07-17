@@ -6,6 +6,8 @@ import { api } from "./client";
 import { useUIStore } from "@/store/uiStore";
 import type {
   ActivityResponse,
+  ApiKeyCreated,
+  ApiKeyStatus,
   AppriseQueued,
   CharacterDetail,
   CharacterSnapshotsResponse,
@@ -581,6 +583,42 @@ export function useLogout() {
       // Avoid carrying a persisted character across sessions (detail keys / roster can drift).
       useUIStore.setState({ selectedCharacter: null, selectedTab: null });
       window.location.href = "/";
+    },
+  });
+}
+
+// ── API key management ────────────────────────────────────────────────────────
+
+export function useApiKey() {
+  return useQuery<ApiKeyStatus>({
+    queryKey: ["api-key"],
+    queryFn: () => api.get<ApiKeyStatus>("/api/me/api-key"),
+    retry: (count, err) => {
+      if (err instanceof Error && "status" in err && (err as { status?: number }).status === 404) {
+        return false;
+      }
+      return count < 2;
+    },
+  });
+}
+
+export function useCreateApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name?: string) =>
+      api.post<ApiKeyCreated>("/api/me/api-key", name ? { name } : {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["api-key"] });
+    },
+  });
+}
+
+export function useRevokeApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<void>("/api/me/api-key"),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["api-key"] });
     },
   });
 }

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
 from app.db.models import ItemShare, User
-from app.deps import get_current_user, get_redis, require_csrf
+from app.deps import get_current_user_mutate, get_redis
 from app.domain.item import coerce_item_dict
 from app.services.share_ratelimit import enforce_share_create_limit
 
@@ -33,11 +33,10 @@ class CreateShareResponse(BaseModel):
     "",
     status_code=status.HTTP_201_CREATED,
     summary="Create a public item share link",
-    dependencies=[Depends(require_csrf)],
 )
 async def create_share(
     body: CreateShareRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     db: AsyncSession = Depends(get_session),
     redis: Any = Depends(get_redis),
 ) -> CreateShareResponse:
@@ -61,11 +60,10 @@ async def create_share(
     "/{share_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Revoke a share link",
-    dependencies=[Depends(require_csrf)],
 )
 async def delete_share(
     share_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     db: AsyncSession = Depends(get_session),
 ) -> Response:
     try:

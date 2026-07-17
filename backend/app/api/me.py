@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.config import Settings, get_settings
 from app.db.models import User
-from app.deps import get_current_user
+from app.deps import get_current_user_any
 from app.domain.capabilities import Capabilities, capabilities_from_settings
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -24,7 +24,7 @@ class MeResponse(BaseModel):
 
 @router.get("", summary="Current user")
 async def me(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     settings: Settings = Depends(get_settings),
 ) -> MeResponse:
     return MeResponse(

@@ -130,6 +130,11 @@ class Settings(BaseSettings):
     # Empty disables ``/api/admin/*`` routes.
     admin_internal_secret: SecretStr = SecretStr("")
 
+    # Per-user API key settings (for Discord bot / machine access).
+    api_key_rate_limit_per_minute: int = 60
+    # When True, /docs and /openapi.json are publicly accessible (recommended for all envs).
+    expose_docs: bool = True
+
     @property
     def ggg_scope_set(self) -> frozenset[str]:
         return frozenset(s.strip() for s in self.ggg_scopes.split() if s.strip())

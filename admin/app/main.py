@@ -21,6 +21,7 @@ from admin.app.db import (
     count_character_history,
     count_user_snapshots_by_kind,
     enrich_price_queue_rows,
+    get_user_active_api_key,
     get_user_by_id,
     get_user_token_meta,
     list_user_price_estimates,
@@ -238,6 +239,7 @@ def _register_routes(app: FastAPI) -> None:
         notice = request.query_params.get("notice")
         token_meta = await get_user_token_meta(user_id)
         redis_state = await user_redis_state(user_id)
+        api_key_meta = await get_user_active_api_key(user_id)
         return TEMPLATES.TemplateResponse(
             request,
             "user_detail.html",
@@ -246,6 +248,7 @@ def _register_routes(app: FastAPI) -> None:
                 "active": "users",
                 "user": user,
                 "token": token_meta,
+                "api_key": api_key_meta,
                 "redis_state": redis_state,
                 "snapshot_counts": await count_user_snapshots_by_kind(user_id),
                 "snapshots": await list_user_snapshots(user_id),
@@ -313,6 +316,25 @@ def _register_routes(app: FastAPI) -> None:
             detail=f"share_id={share_id} user_id={user_id} status={status} body={body[:200]}",
         )
         notice = "revoke_ok" if status < 300 else "revoke_failed"
+        return RedirectResponse(
+            url=f"/admin/users/{user_id}?notice={notice}", status_code=303
+        )
+
+    @app.post("/admin/users/{user_id}/api-key/revoke")
+    async def user_api_key_revoke_action(
+        request: Request,
+        user_id: str,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        status, body = await post_admin_action(f"/api/admin/users/{user_id}/api-key/revoke")
+        audit_action(
+            actor=session.username,
+            action="api_key_revoke",
+            detail=f"user_id={user_id} status={status} body={body[:200]}",
+        )
+        notice = "api_key_revoke_ok" if status < 300 else "api_key_revoke_failed"
         return RedirectResponse(
             url=f"/admin/users/{user_id}?notice={notice}", status_code=303
         )

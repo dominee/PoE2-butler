@@ -9,10 +9,12 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import select
+
 from app.clients.ggg import GGGClient
 from app.config import Settings, get_settings
 from app.db.base import get_session
-from app.db.models import CharacterShare, ItemShare, User
+from app.db.models import CharacterShare, ItemShare, User, UserApiKey
 from app.deps import get_cipher, get_ggg_client, get_session_store
 from app.security.crypto import TokenCipher
 from app.security.sessions import SessionStore
@@ -140,4 +142,31 @@ async def admin_revoke_character_share(
     if row.revoked_at is None:
         row.revoked_at = datetime.now(UTC)
         await db.commit()
+    return AdminActionResponse(ok=True, detail="revoked")
+
+
+@router.post(
+    "/users/{user_id}/api-key/revoke",
+    summary="Revoke the active API key for a user (operator)",
+    dependencies=[Depends(require_admin_secret)],
+)
+async def admin_revoke_api_key(
+    user_id: str,
+    db: AsyncSession = Depends(get_session),
+) -> AdminActionResponse:
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid_user_id") from exc
+    result = await db.execute(
+        select(UserApiKey).where(
+            UserApiKey.user_id == uid,
+            UserApiKey.revoked_at.is_(None),
+        )
+    )
+    key = result.scalar_one_or_none()
+    if key is None:
+        return AdminActionResponse(ok=True, detail="no_active_key")
+    key.revoked_at = datetime.now(UTC)
+    await db.commit()
     return AdminActionResponse(ok=True, detail="revoked")

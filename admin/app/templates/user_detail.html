@@ -18,6 +18,10 @@
   <p class="notice-banner notice-ok">Share revoked.</p>
   {% elif notice == "revoke_failed" %}
   <p class="notice-banner error-banner">Share revoke failed.</p>
+  {% elif notice == "api_key_revoke_ok" %}
+  <p class="notice-banner notice-ok">API key revoked.</p>
+  {% elif notice == "api_key_revoke_failed" %}
+  <p class="notice-banner error-banner">API key revoke failed.</p>
   {% endif %}
 
   <div class="cards-grid">
@@ -53,6 +57,26 @@
         <dt>Share rate limit (sec)</dt><dd>{{ redis_state.share_rate_limit_ttl_sec }}</dd>
         <dt>OAuth pending keys (scan)</dt><dd>{{ redis_state.oauth_pending_keys_scanned }}</dd>
       </dl>
+    </div>
+    <div class="card">
+      <h3>API key (bot)</h3>
+      {% if api_key %}
+      <dl class="kv">
+        <dt>Prefix</dt><dd><code>hob_{{ api_key.key_prefix }}_…</code></dd>
+        <dt>Name</dt><dd>{{ api_key.name or "—" }}</dd>
+        <dt>Created</dt><dd>{{ api_key.created_at }}</dd>
+        <dt>Last used</dt><dd>{{ api_key.last_used_at or "Never" }}</dd>
+      </dl>
+      {% if ops_enabled %}
+      <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
+      <form method="post" action="/admin/users/{{ user.id }}/api-key/revoke" class="inline-form" style="margin-top:0.75rem" onsubmit="return confirm('Revoke this API key? The bot will lose access immediately.');">
+        <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+        <button type="submit" class="danger small">Revoke key</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <p class="muted">No active API key.</p>
+      {% endif %}
     </div>
   </div>
 

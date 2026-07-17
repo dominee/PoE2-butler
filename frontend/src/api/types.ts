@@ -368,3 +368,18 @@ export interface ActivityResponse {
   /** Character gear diffs — one entry per character with equipped item changes. */
   gear_entries: ActivityEntry[];
 }
+
+// ── API key management (Discord bot / machine access) ─────────────────────────
+
+export interface ApiKeyStatus {
+  id: string;
+  prefix: string;
+  name: string | null;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface ApiKeyCreated extends ApiKeyStatus {
+  /** The full secret key — shown once and never stored. Copy it immediately. */
+  full_key: string;
+}

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient, GGGError, ggg_error_implies_reauth
 from app.db.base import get_session
 from app.db.models import SnapshotKind, User
-from app.deps import get_cipher, get_current_user, get_ggg_client
+from app.deps import get_cipher, get_current_user_any, get_ggg_client
 from app.domain.character import (
     CharacterDetail,
     CharacterSummary,
@@ -54,7 +54,7 @@ class CharacterSnapshotsResponse(BaseModel):
 @router.get("", summary="List characters for a league")
 async def list_characters(
     league: str | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> CharactersResponse:
     snap = await get_latest_snapshot(db, user.id, SnapshotKind.CHARACTERS)
@@ -69,7 +69,7 @@ async def list_characters(
 @router.get("/{name}/snapshots", summary="Timeline metadata for character gear snapshots")
 async def list_character_snapshot_timeline(
     name: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> CharacterSnapshotsResponse:
     meta = await list_character_snapshots(db, user_id=user.id, character_name=name)
@@ -96,7 +96,7 @@ async def list_character_snapshot_timeline(
 async def get_historic_character(
     name: str,
     history_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> CharacterDetail:
     row = await get_character_snapshot_history(
@@ -116,7 +116,7 @@ async def get_historic_character(
 @router.get("/{name}", summary="Character detail with equipped items")
 async def get_character(
     name: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
     ggg: GGGClient = Depends(get_ggg_client),
     cipher: TokenCipher = Depends(get_cipher),

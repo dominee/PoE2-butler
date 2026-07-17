@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
 from app.db.models import Snapshot, SnapshotKind, User
-from app.deps import get_current_user
+from app.deps import get_current_user_any
 from app.domain.item import Item
 from app.domain.snapshot_diff import ChangedItem, diff_payloads
 
@@ -52,7 +52,7 @@ class ActivityResponse(BaseModel):
 @router.get("", summary="Activity log: item changes since last refresh")
 async def get_activity(
     league: str | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> ActivityResponse:
     effective_league = league or user.preferred_league or ""

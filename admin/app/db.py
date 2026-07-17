@@ -359,6 +359,39 @@ async def count_character_history(user_id: str) -> int:
         return int(row._mapping["n"]) if row else 0
 
 
+async def get_user_active_api_key(user_id: str) -> dict | None:
+    """Return metadata for the active (non-revoked) API key of a user, or None."""
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT id, key_prefix, name, created_at, last_used_at "
+                    "FROM user_api_keys "
+                    "WHERE user_id = CAST(:id AS uuid) AND revoked_at IS NULL "
+                    "LIMIT 1"
+                ),
+                {"id": user_id},
+            )
+        ).first()
+        return dict(row._mapping) if row else None
+
+
+async def count_users_with_active_api_keys() -> int:
+    """Total users with at least one non-revoked API key."""
+    engine = get_engine()
+    async with engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT COUNT(DISTINCT user_id) AS n FROM user_api_keys "
+                    "WHERE revoked_at IS NULL"
+                )
+            )
+        ).first()
+        return int(row._mapping["n"]) if row else 0
+
+
 async def user_headline_stats() -> dict[str, int]:
     """Headline user counts for the Users dashboard (PostgreSQL)."""
     engine = get_engine()

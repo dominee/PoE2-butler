@@ -14,6 +14,7 @@ import {
   usePrefs,
   useRefresh,
 } from "@/api/hooks";
+import { ApiKeySettings } from "@/features/app/ApiKeySettings";
 import { ApiError } from "@/api/client";
 import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
@@ -68,6 +69,7 @@ export function AppShell() {
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<SnapshotSelection>("current");
   const [appriseNotice, setAppriseNotice] = useState<string | null>(null);
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
+  const [showApiKeySettings, setShowApiKeySettings] = useState(false);
 
   useEffect(() => {
     if (!selectedLeague) {
@@ -439,11 +441,23 @@ export function AppShell() {
               {appriseNotice}
             </span>
           )}
+          <button
+            type="button"
+            className="btn-ghost text-sm"
+            title="Manage API key for Discord bot / machine access"
+            onClick={() => setShowApiKeySettings(true)}
+          >
+            Bot key
+          </button>
           <button type="button" className="btn-ghost text-sm" onClick={() => logout.mutate()}>
             Logout
           </button>
         </div>
       </header>
+
+      {showApiKeySettings && (
+        <ApiKeySettings onClose={() => setShowApiKeySettings(false)} />
+      )}
 
       {view === "characters" ? (
         <main className="flex min-h-0 flex-1 overflow-hidden">

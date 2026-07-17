@@ -25,6 +25,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -61,6 +62,7 @@ class User(Base):
     ggg_uuid: Mapped[str | None] = mapped_column(String(64), nullable=True)
     realm: Mapped[str] = mapped_column(String(16), default="pc")
     preferred_league: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    preferred_character_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     trade_tolerance_pct: Mapped[int] = mapped_column(default=10)
     valuable_threshold_chaos: Mapped[int] = mapped_column(default=100)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -85,6 +87,9 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     activity_events: Mapped[list[UserActivityEvent]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    api_keys: Mapped[list[UserApiKey]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -254,3 +259,38 @@ class UserActivityEvent(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="activity_events")
+
+
+class UserApiKey(Base):
+    """Per-user machine API key for Discord bot and other integrations.
+
+    Only one non-revoked key is allowed per user (enforced via partial unique index).
+    The secret is never stored — only its HMAC-SHA256 digest with a server-side pepper.
+    Key format: ``hob_<prefix12>_<secret32>``; prefix stored plaintext for O(1) lookup.
+    """
+
+    __tablename__ = "user_api_keys"
+    __table_args__ = (
+        # Partial unique index: one non-revoked key per user (service layer also enforces this).
+        Index(
+            "uq_user_api_keys_active_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+            sqlite_where=text("revoked_at IS NULL"),
+        ),
+        Index("ix_user_api_keys_prefix", "key_prefix"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    key_prefix: Mapped[str] = mapped_column(String(16))
+    key_hash: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="api_keys")

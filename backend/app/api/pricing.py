@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings, get_settings
 from app.db.base import get_session
 from app.db.models import User
-from app.deps import get_current_user, get_pricing_service, get_redis, require_csrf
+from app.deps import get_current_user_any, get_current_user_mutate, get_pricing_service, get_redis
 from app.domain.item import Item
 from app.services.price_queue import get_arq_pool
 from app.services.pricing.currency_rates import resolve_currency_rates
@@ -52,7 +52,7 @@ class PricingResponse(BaseModel):
 
 @router.get("/currency-rates", summary="Divine/Exalted chaos values and ex-per-div for UI")
 async def get_currency_rates(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     settings: Settings = Depends(get_settings),
     league: str = Query(..., min_length=1),
 ) -> CurrencyRatesResponse:
@@ -71,7 +71,7 @@ async def get_currency_rates(
 @router.post("/lookup", summary="Bulk price estimate for items")
 async def lookup_prices(
     body: PricingRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     pricing: PricingService = Depends(get_pricing_service),
     db: AsyncSession = Depends(get_session),
 ) -> PricingResponse:
@@ -111,7 +111,7 @@ class PriceEstimateEnqueued(BaseModel):
     response_model=None,
 )
 async def get_persisted_item_estimate(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     session: AsyncSession = Depends(get_session),
     redis=Depends(get_redis),
     league: str = Query(..., min_length=1),
@@ -142,7 +142,7 @@ async def get_persisted_item_estimate(
 @router.get("/estimate/{job_id}", summary="Status of a hybrid price estimate job")
 async def get_price_estimate_job(
     job_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     redis=Depends(get_redis),
 ) -> PriceJobState:
     st = await load_job_state(redis, job_id)
@@ -156,11 +156,11 @@ async def get_price_estimate_job(
 @router.post(
     "/estimate",
     summary="Start hybrid price estimate (async; poll GET /estimate/{id})",
-    dependencies=[Depends(require_csrf)],
+    tags=["bot-api"],
 )
 async def start_price_estimate(
     body: PriceEstimateRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     redis=Depends(get_redis),
 ) -> PriceEstimateEnqueued:
     if not body.league.strip():
@@ -217,7 +217,7 @@ class InflightPriceJobsResponse(BaseModel):
 
 @router.get("/inflight", summary="Queued/running hybrid price jobs for the current user")
 async def list_inflight_price_jobs(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     redis=Depends(get_redis),
     league: str = Query(..., min_length=1),
 ) -> InflightPriceJobsResponse:
@@ -242,10 +242,10 @@ async def list_inflight_price_jobs(
 @router.post(
     "/apprise",
     summary="Queue stash hybrid price estimates (missing DB rows first; capped)",
-    dependencies=[Depends(require_csrf)],
+    tags=["bot-api"],
 )
 async def apprise_stash_prices(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     league: str | None = Query(
         default=None,
         description="League id; defaults to the signed-in user's preferred league.",

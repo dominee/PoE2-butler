@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient
 from app.db.base import get_session
 from app.db.models import Snapshot, SnapshotKind, User
-from app.deps import get_cipher, get_current_user, get_ggg_client, require_csrf
+from app.deps import get_cipher, get_current_user_any, get_current_user_mutate, get_ggg_client
 from app.domain.item import parse_item
 from app.domain.stash import StashTab, StashTabSummary, parse_tab, parse_tab_list
 from app.security.crypto import TokenCipher
@@ -29,7 +29,7 @@ class StashListResponse(BaseModel):
 @router.get("", summary="List stash tabs for a league")
 async def list_stashes(
     league: str = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> StashListResponse:
     snap = await get_latest_snapshot(db, user.id, SnapshotKind.STASH_LIST, key=league)
@@ -62,7 +62,7 @@ class StashSearchResponse(BaseModel):
 async def search_stash(
     league: str = Query(...),
     q: str = Query(..., min_length=2),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> StashSearchResponse:
     """Case-insensitive substring search across all cached stash-tab snapshots."""
@@ -137,7 +137,7 @@ async def search_stash(
 async def get_stash_tab(
     tab_id: str,
     league: str = Query(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_any),
     db: AsyncSession = Depends(get_session),
 ) -> StashTab:
     list_snap = await get_latest_snapshot(db, user.id, SnapshotKind.STASH_LIST, key=league)
@@ -166,11 +166,11 @@ class RefreshStashesRequest(BaseModel):
 @router.post(
     "/refresh",
     summary="Refresh stash snapshot for a league",
-    dependencies=[Depends(require_csrf)],
+    tags=["bot-api"],
 )
 async def refresh_stash_tabs(
     body: RefreshStashesRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     db: AsyncSession = Depends(get_session),
     ggg: GGGClient = Depends(get_ggg_client),
     cipher: TokenCipher = Depends(get_cipher),

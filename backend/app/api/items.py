@@ -6,7 +6,7 @@ from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel
 
 from app.db.models import User
-from app.deps import get_current_user
+from app.deps import get_current_user_any
 from app.domain.item import Item
 from app.domain.item_text import format_item_text
 
@@ -28,6 +28,6 @@ class ItemTextResponse(BaseModel):
 )
 async def post_item_text(
     body: ItemTextRequest = Body(...),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(get_current_user_any),
 ) -> ItemTextResponse:
     return ItemTextResponse(text=format_item_text(body.item))

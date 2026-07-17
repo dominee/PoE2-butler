@@ -12,10 +12,9 @@ from app.db.base import get_session
 from app.db.models import User
 from app.deps import (
     get_cipher,
-    get_current_user,
+    get_current_user_mutate,
     get_ggg_client,
     get_refresh_cooldown,
-    require_csrf,
 )
 from app.security.crypto import TokenCipher
 from app.security.sessions import RefreshCooldown
@@ -38,7 +37,7 @@ class RefreshResponse(BaseModel):
 @router.post(
     "",
     summary="Refresh snapshot data (no pricing jobs)",
-    dependencies=[Depends(require_csrf)],
+    tags=["bot-api"],
 )
 async def refresh(
     league: str | None = Query(
@@ -49,7 +48,7 @@ async def refresh(
             "and GET /api/activity?league=… stay aligned."
         ),
     ),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     db: AsyncSession = Depends(get_session),
     ggg: GGGClient = Depends(get_ggg_client),
     cipher: TokenCipher = Depends(get_cipher),

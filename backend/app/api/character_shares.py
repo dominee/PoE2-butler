@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clients.ggg import GGGClient
 from app.db.base import get_session
 from app.db.models import CharacterShare, CharacterShareViewMode, User
-from app.deps import get_cipher, get_current_user, get_ggg_client, get_redis, require_csrf
+from app.deps import get_cipher, get_current_user_mutate, get_ggg_client, get_redis
 from app.services.character_share import resolve_character_detail_for_share
 from app.services.share_ratelimit import enforce_character_share_create_limit
 
@@ -36,11 +36,11 @@ class CreateCharacterShareResponse(BaseModel):
     "",
     status_code=status.HTTP_201_CREATED,
     summary="Create a public character share link",
-    dependencies=[Depends(require_csrf)],
+    tags=["bot-api"],
 )
 async def create_character_share(
     body: CreateCharacterShareRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     db: AsyncSession = Depends(get_session),
     redis: Any = Depends(get_redis),
     ggg: GGGClient = Depends(get_ggg_client),
@@ -75,11 +75,10 @@ async def create_character_share(
     "/{share_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Revoke a character share link",
-    dependencies=[Depends(require_csrf)],
 )
 async def delete_character_share(
     share_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_mutate),
     db: AsyncSession = Depends(get_session),
 ) -> Response:
     try:
