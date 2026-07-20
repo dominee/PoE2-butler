@@ -26,7 +26,7 @@ export function ApiKeySettings({ onClose }: ApiKeySettingsProps) {
   const activeKey = keyQ.data;
 
   async function handleCreate() {
-    const result = await createMutation.mutateAsync();
+    const result = await createMutation.mutateAsync(undefined);
     setNewKey(result);
     setCopied(false);
     setConfirmRevoke(false);
