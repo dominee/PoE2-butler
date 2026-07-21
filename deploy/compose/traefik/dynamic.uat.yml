@@ -21,6 +21,14 @@ http:
       priority: 100
       tls: {}
 
+    uat-app-docs-01:
+      rule: Host(`app.uat.hideoutbutler.com`) && (Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
+      entryPoints:
+        - websecure
+      service: uat-app-api
+      priority: 50
+      tls: {}
+
     uat-app-spa-01:
       rule: Host(`app.uat.hideoutbutler.com`)
       entryPoints:

@@ -16,6 +16,12 @@ http:
         - web
       service: api
       priority: 100
+    app-docs:
+      rule: Host(`app.dev.hideoutbutler.com`) && (Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
+      entryPoints:
+        - web
+      service: api
+      priority: 50
     app:
       rule: Host(`app.dev.hideoutbutler.com`)
       entryPoints:

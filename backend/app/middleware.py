@@ -26,11 +26,32 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
+_DOCS_PATHS = frozenset({"/docs", "/redoc", "/docs/oauth2-redirect"})
+
+# FastAPI hard-codes this inline init script in its generated /docs HTML.
+# Using the hash avoids blanket unsafe-inline while still matching FastAPI's
+# exact script content. Update if FastAPI changes the snippet.
+_SWAGGER_SCRIPT_HASH = "sha256-QOOQu4W1oxGqd2nbXbxiA1Di6OHQOLQD+o+G9oWL8YY="
+
+_DOCS_CSP = (
+    "default-src 'none'; "
+    f"script-src 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: https://fastapi.tiangolo.com; "
+    "connect-src 'self'; "
+    "font-src https://cdn.jsdelivr.net; "
+    "frame-ancestors 'none'"
+)
+
+_API_CSP = "default-src 'none'; frame-ancestors 'none'"
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Apply baseline security headers to every response.
 
-    CSP is intentionally strict for API responses. The frontend origin
-    sets its own stricter CSP via its static hosting layer.
+    CSP is strict for API responses. Docs paths (/docs, /redoc) get a relaxed
+    policy that allows the Swagger UI and ReDoc CDN assets to load.
+    The frontend origin sets its own CSP via its static hosting layer.
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -42,10 +63,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Permissions-Policy",
             "geolocation=(), microphone=(), camera=()",
         )
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "default-src 'none'; frame-ancestors 'none'",
-        )
+        csp = _DOCS_CSP if request.url.path in _DOCS_PATHS else _API_CSP
+        response.headers.setdefault("Content-Security-Policy", csp)
         response.headers.setdefault(
             "Strict-Transport-Security",
             "max-age=31536000; includeSubDomains",

@@ -22,6 +22,14 @@ http:
       priority: 100
       tls: {}
 
+    prod-app-docs:
+      rule: Host(`app.hideoutbutler.com`) && (Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
+      entryPoints:
+        - websecure
+      service: prod-app-api
+      priority: 50
+      tls: {}
+
     prod-app-spa:
       rule: Host(`app.hideoutbutler.com`)
       entryPoints:
