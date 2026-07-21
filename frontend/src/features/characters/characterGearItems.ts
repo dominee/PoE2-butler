@@ -9,16 +9,32 @@ import {
 } from "@/features/characters/characterGemFilter";
 import { collectPaperDollItems } from "@/features/characters/paperDollItems";
 
-/** Paper-doll slots + Lineage support gems (including those nested in skill socketed_items) + jewels. */
+/** Return true when an item is a charm (unique or normal). */
+export function isCharmItem(item: Item): boolean {
+  return item.inventory_id === "Charm" || item.is_charm === true;
+}
+
+/** Return true when a charm should be included in pricing (unique charms only). */
+export function isUniqueCharm(item: Item): boolean {
+  return isCharmItem(item) && item.rarity === "Unique";
+}
+
+/**
+ * Paper-doll slots + Lineage support gems (including those nested in skill socketed_items) +
+ * jewels + unique charms.
+ * Normal charms are intentionally excluded from price checks.
+ */
 export function collectCharacterGearPricingItems(
   detail: Pick<CharacterDetail, "equipped" | "gems" | "jewels" | "inventory">,
 ): Item[] {
   const seen = new Set<string>();
   const out: Item[] = [];
+  const uniqueCharms = (detail.equipped ?? []).filter(isUniqueCharm);
   for (const item of [
     ...collectPaperDollItems(detail),
     ...filterCharacterGemsForPricing([...walkCharacterGemCandidates(detail)]),
     ...(detail.jewels ?? []),
+    ...uniqueCharms,
   ]) {
     if (!seen.has(item.id)) {
       seen.add(item.id);

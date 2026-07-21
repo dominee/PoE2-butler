@@ -36,6 +36,7 @@ const SLOT_LABELS: Record<string, string> = {
   Ring2: "Ring (R)",
   Belt: "Belt",
   Boots: "Boots",
+  Charm: "Charm",
   PassiveJewels: "Jewel",
   SkillSlots: "Skill gem",
   AscendancySkills: "Ascendancy skill",
@@ -59,6 +60,7 @@ export interface CharacterTableProps {
   gems: Item[];
   supportGems?: Item[];
   jewels: Item[];
+  charms?: Item[];
   other: Item[];
   selectedItemId: string | null;
   onSelect: (item: Item) => void;
@@ -73,6 +75,7 @@ export function CharacterTable({
   gems,
   supportGems = [],
   jewels,
+  charms = [],
   other,
   selectedItemId,
   onSelect,
@@ -102,9 +105,10 @@ export function CharacterTable({
     push(gems, "skill");
     push(supportGems, "support");
     push(jewels, "jewel");
+    push(charms, "charm");
     push(other, "other");
     return rows;
-  }, [equipped, gems, supportGems, jewels, other, prices, currencyChaos]);
+  }, [equipped, gems, supportGems, jewels, charms, other, prices, currencyChaos]);
 
   // Filter
   const filteredRows = useMemo(() => {

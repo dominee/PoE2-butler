@@ -32,7 +32,7 @@ export interface ColumnDef {
   display: (row: TableRow) => string;
 }
 
-export type RowCategory = "equipped" | "skill" | "support" | "jewel" | "other";
+export type RowCategory = "equipped" | "skill" | "support" | "jewel" | "charm" | "other";
 
 export interface TableRow {
   item: Item;

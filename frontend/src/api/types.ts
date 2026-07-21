@@ -86,6 +86,8 @@ export interface Item {
   frame_type_id?: string | null;
   /** Runemastered / Runeforged league item (light blue in-game outline). */
   runeforged?: boolean;
+  /** True when the item is a PoE2 charm (base_type ends with "Charm"; inventoryId remapped to "Charm"). */
+  is_charm?: boolean;
   /** Normalized from the API (GGG `flavourText` / US `flavorText` parsed in the backend). */
   flavour_text?: string | null;
   /**

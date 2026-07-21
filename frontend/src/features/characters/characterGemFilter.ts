@@ -127,6 +127,10 @@ export function collectCharacterOtherInventory(
     ...collectCharacterSupportGemsForDisplay(detail).map((i) => i.id),
   ]);
   return (detail.inventory ?? []).filter(
-    (item) => !displayedGemIds.has(item.id) && !isHiddenSocketSupport(item),
+    (item) =>
+      !displayedGemIds.has(item.id) &&
+      !isHiddenSocketSupport(item) &&
+      item.inventory_id !== "Charm" &&
+      !item.is_charm,
   );
 }

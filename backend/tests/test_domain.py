@@ -541,6 +541,54 @@ def test_strip_runeforged_prefix_item_round_trip() -> None:
     assert item.runeforged is True
 
 
+def test_parse_item_charm_is_charm_and_reclassified() -> None:
+    """Charm items set is_charm=True and their inventoryId is remapped Flask→Charm."""
+    item = parse_item(
+        {
+            "id": "charm-001",
+            "typeLine": "Antidote Charm",
+            "baseType": "Antidote Charm",
+            "rarity": "Normal",
+            "inventoryId": "Flask",
+            "ilvl": 55,
+        }
+    )
+    assert item.is_charm is True
+    assert item.inventory_id == "Charm", "Flask slot must be remapped to Charm for charm items"
+
+
+def test_parse_item_unique_charm_is_charm() -> None:
+    """Unique charms also set is_charm=True regardless of rarity."""
+    item = parse_item(
+        {
+            "id": "ucharm-001",
+            "name": "Doedre's Elixir",
+            "typeLine": "Staunching Charm",
+            "baseType": "Staunching Charm",
+            "rarity": "Unique",
+            "inventoryId": "Flask",
+            "ilvl": 60,
+        }
+    )
+    assert item.is_charm is True
+    assert item.inventory_id == "Charm"
+
+
+def test_parse_item_flask_is_not_charm() -> None:
+    """Regular flasks keep inventoryId=Flask and is_charm=False."""
+    item = parse_item(
+        {
+            "id": "flask-001",
+            "typeLine": "Divine Life Flask",
+            "baseType": "Divine Life Flask",
+            "rarity": "Normal",
+            "inventoryId": "Flask",
+        }
+    )
+    assert item.is_charm is False
+    assert item.inventory_id == "Flask"
+
+
 def test_parse_detail_weapon_slot_from_item_slot_and_outer_wrapper() -> None:
     """Live GGG may omit string inventoryId on weapons; wrapper slot metadata must win."""
     base_char = {

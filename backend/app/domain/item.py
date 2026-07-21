@@ -364,6 +364,7 @@ class Item(BaseModel):
     icon: str | None = None
     frame_type_id: str | None = None
     runeforged: bool = False
+    is_charm: bool = False
     raw: dict[str, Any] | None = None
 
 
@@ -624,9 +625,16 @@ def parse_item(raw: dict[str, Any]) -> Item:
         frame_type=raw.get("frameType"),
     )
 
+    # Charms share the Flask inventoryId/itemSlot in GGG payloads; reclassify
+    # them under their own "Charm" slot so UI can display them separately.
+    is_charm = _is_charm_base(base_type)
+    raw_inventory_id: str | None = raw.get("inventoryId")
+    if is_charm and raw_inventory_id == "Flask":
+        raw_inventory_id = "Charm"
+
     return Item(
         id=str(raw.get("id", "")) or str(raw.get("name", "")) or str(raw.get("typeLine", "")),
-        inventory_id=raw.get("inventoryId"),
+        inventory_id=raw_inventory_id,
         w=int(raw.get("w", 1)),
         h=int(raw.get("h", 1)),
         x=raw.get("x"),
@@ -660,11 +668,18 @@ def parse_item(raw: dict[str, Any]) -> Item:
         icon=raw.get("icon"),
         frame_type_id=frame_type_id_str,
         runeforged=runeforged,
+        is_charm=is_charm,
         raw=None,
     )
 
 
 _RUNEFORGED_NAME_RE = re.compile(r"^(Runemastered|Runeforged)\s", re.IGNORECASE)
+_CHARM_BASE_RE = re.compile(r"\bcharm$", re.IGNORECASE)
+
+
+def _is_charm_base(base_type: str) -> bool:
+    """Return True when *base_type* identifies a PoE2 charm item."""
+    return bool(_CHARM_BASE_RE.search(base_type))
 
 
 def _is_runeforged_item(

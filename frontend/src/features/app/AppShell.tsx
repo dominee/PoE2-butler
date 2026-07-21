@@ -41,7 +41,7 @@ import {
   formatGearEstimateLabel,
 } from "@/features/characters/characterGearItems";
 import { PaperDoll } from "@/features/characters/PaperDoll";
-import { collectPaperDollItems } from "@/features/characters/paperDollItems";
+import { collectPaperDollItems, collectCharmItems } from "@/features/characters/paperDollItems";
 import { currencyRatesToChaosPair } from "@/features/items/itemMetrics";
 import { PriceInflightProvider } from "@/features/pricing/PriceInflightProvider";
 import { ItemCard } from "@/features/items/ItemCard";
@@ -113,6 +113,10 @@ export function AppShell() {
   );
   const otherInventory = useMemo(
     () => (gearDetail ? collectCharacterOtherInventory(gearDetail) : []),
+    [gearDetail],
+  );
+  const charmItems = useMemo(
+    () => (gearDetail ? collectCharmItems(gearDetail) : []),
     [gearDetail],
   );
 
@@ -580,6 +584,7 @@ export function AppShell() {
               <>
                 <PaperDoll
                   equipped={collectPaperDollItems(gearDetail)}
+                  charms={charmItems}
                   selectedItemId={selectedItem?.id ?? null}
                   onSelectItem={setSelectedItem}
                   prices={gearPrices}
@@ -654,10 +659,11 @@ export function AppShell() {
             )}
             {gearDetail && charLayout === "table" && (
               <CharacterTable
-                equipped={gearDetail.equipped}
+                equipped={gearDetail.equipped.filter((i) => !i.is_charm && i.inventory_id !== "Charm")}
                 gems={skillGemsForDisplay}
                 supportGems={supportGemsForDisplay}
                 jewels={gearDetail.jewels}
+                charms={charmItems}
                 other={otherInventory}
                 selectedItemId={selectedItem?.id ?? null}
                 onSelect={setSelectedItem}

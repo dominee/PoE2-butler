@@ -4,7 +4,7 @@ import {
   collectCharacterSupportGemsForDisplay,
 } from "@/features/characters/characterGemFilter";
 import { PaperDoll } from "@/features/characters/PaperDoll";
-import { collectPaperDollItems } from "@/features/characters/paperDollItems";
+import { collectPaperDollItems, collectCharmItems } from "@/features/characters/paperDollItems";
 import { ItemCard } from "@/features/items/ItemCard";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
@@ -29,6 +29,7 @@ export function CharacterGearDisplay({
     <>
       <PaperDoll
         equipped={collectPaperDollItems(detail)}
+        charms={collectCharmItems(detail)}
         selectedItemId={selectedItemId}
         onSelectItem={click}
       />

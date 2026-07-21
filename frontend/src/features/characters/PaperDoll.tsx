@@ -23,6 +23,9 @@ const CORE_SLOTS: CoreSlotDef[] = [
   { id: "Boots", label: "Boots", gridArea: "boots" },
 ];
 
+/** Maximum number of charm slots shown (PoE2 belt implicit caps at 4). */
+const MAX_CHARM_SLOTS = 4;
+
 function EmptySlot({ label }: { label: string }) {
   return (
     <div className="panel grid h-full min-h-[68px] place-items-center border border-dashed border-ink-700 text-xs text-ui-muted">
@@ -92,6 +95,7 @@ function SideColumn({
 
 export interface PaperDollProps {
   equipped: Item[];
+  charms?: Item[];
   selectedItemId?: string | null;
   onSelectItem?: (item: Item) => void;
   prices?: Record<string, PriceEstimate | null>;
@@ -101,6 +105,7 @@ export interface PaperDollProps {
 
 export function PaperDoll({
   equipped,
+  charms = [],
   selectedItemId,
   onSelectItem,
   prices,
@@ -117,80 +122,109 @@ export function PaperDoll({
   const offMain = bySlot.get("Offhand");
   const offSwap = bySlot.get("Offhand2");
 
+  // Show only the charms that are equipped; no padding with empty slots.
+  const charmSlots = charms.slice(0, MAX_CHARM_SLOTS);
+
   return (
-    <div
-      className="grid gap-3"
-      style={{
-        gridTemplateAreas: GRID_TEMPLATE_AREAS,
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gridAutoRows: "minmax(68px, auto)",
-      }}
-    >
-      <SideColumn
-        gridArea="weapon"
-        emptyLabel="Main hand"
-        mainItem={weaponMain}
-        swapItem={weaponSwap}
-        selectedItemId={selectedItemId}
-        onSelectItem={onSelectItem}
-        prices={prices}
-        valuableThreshold={valuableThreshold}
-        currencyChaos={currencyChaos}
-      />
+    <div className="flex flex-col gap-3">
+      <div
+        className="grid gap-3"
+        style={{
+          gridTemplateAreas: GRID_TEMPLATE_AREAS,
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gridAutoRows: "minmax(68px, auto)",
+        }}
+      >
+        <SideColumn
+          gridArea="weapon"
+          emptyLabel="Main hand"
+          mainItem={weaponMain}
+          swapItem={weaponSwap}
+          selectedItemId={selectedItemId}
+          onSelectItem={onSelectItem}
+          prices={prices}
+          valuableThreshold={valuableThreshold}
+          currencyChaos={currencyChaos}
+        />
 
-      {CORE_SLOTS.slice(0, 2).map(({ id, label, gridArea }) => {
-        const item = bySlot.get(id);
-        return (
-          <div key={id} style={{ gridArea }} className="min-h-[68px]">
-            {item ? (
+        {CORE_SLOTS.slice(0, 2).map(({ id, label, gridArea }) => {
+          const item = bySlot.get(id);
+          return (
+            <div key={id} style={{ gridArea }} className="min-h-[68px]">
+              {item ? (
+                <ItemCard
+                  item={item}
+                  selected={selectedItemId === item.id}
+                  onClick={onSelectItem}
+                  className="h-full"
+                  price={prices ? (prices[item.id] ?? null) : undefined}
+                  valuableThreshold={valuableThreshold}
+                  currencyChaos={currencyChaos}
+                />
+              ) : (
+                <EmptySlot label={label} />
+              )}
+            </div>
+          );
+        })}
+
+        <SideColumn
+          gridArea="offhand"
+          emptyLabel="Off hand"
+          mainItem={offMain}
+          swapItem={offSwap}
+          selectedItemId={selectedItemId}
+          onSelectItem={onSelectItem}
+          prices={prices}
+          valuableThreshold={valuableThreshold}
+          currencyChaos={currencyChaos}
+        />
+
+        {CORE_SLOTS.slice(2).map(({ id, label, gridArea }) => {
+          const item = bySlot.get(id);
+          return (
+            <div key={id} style={{ gridArea }} className="min-h-[68px]">
+              {item ? (
+                <ItemCard
+                  item={item}
+                  selected={selectedItemId === item.id}
+                  onClick={onSelectItem}
+                  className="h-full"
+                  price={prices ? (prices[item.id] ?? null) : undefined}
+                  valuableThreshold={valuableThreshold}
+                  currencyChaos={currencyChaos}
+                />
+              ) : (
+                <EmptySlot label={label} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Charms strip — only shown when the character has charms equipped. */}
+      {charmSlots.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="text-[10px] uppercase tracking-widest text-ui-muted">Charms</p>
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${charmSlots.length}, 1fr)` }}
+          >
+            {charmSlots.map((charm) => (
               <ItemCard
-                item={item}
-                selected={selectedItemId === item.id}
+                key={charm.id}
+                item={charm}
+                selected={selectedItemId === charm.id}
                 onClick={onSelectItem}
-                className="h-full"
-                price={prices ? (prices[item.id] ?? null) : undefined}
+                className="min-h-[56px]"
+                price={prices ? (prices[charm.id] ?? null) : undefined}
                 valuableThreshold={valuableThreshold}
                 currencyChaos={currencyChaos}
               />
-            ) : (
-              <EmptySlot label={label} />
-            )}
+            ))}
           </div>
-        );
-      })}
-
-      <SideColumn
-        gridArea="offhand"
-        emptyLabel="Off hand"
-        mainItem={offMain}
-        swapItem={offSwap}
-        selectedItemId={selectedItemId}
-        onSelectItem={onSelectItem}
-        prices={prices}
-        valuableThreshold={valuableThreshold}
-        currencyChaos={currencyChaos}
-      />
-
-      {CORE_SLOTS.slice(2).map(({ id, label, gridArea }) => {
-        const item = bySlot.get(id);
-        return (
-          <div key={id} style={{ gridArea }} className="min-h-[68px]">
-            {item ? (
-              <ItemCard
-                item={item}
-                selected={selectedItemId === item.id}
-                onClick={onSelectItem}
-                className="h-full"
-                price={prices ? (prices[item.id] ?? null) : undefined}
-                valuableThreshold={valuableThreshold}
-                currencyChaos={currencyChaos}
-              />
-            ) : (
-              <EmptySlot label={label} />
-            )}
-          </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 }

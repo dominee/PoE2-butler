@@ -5,9 +5,11 @@ import {
   collectCharacterGearPricingItems,
   computeGearEstimate,
   formatGearEstimateLabel,
+  isCharmItem,
+  isUniqueCharm,
 } from "./characterGearItems";
 
-function item(id: string, slot: string | null = null): Item {
+function item(id: string, slot: string | null = null, extra: Partial<Item> = {}): Item {
   return {
     id,
     inventory_id: slot,
@@ -36,6 +38,7 @@ function item(id: string, slot: string | null = null): Item {
     stack_size: null,
     max_stack_size: null,
     icon: null,
+    ...extra,
   };
 }
 
@@ -115,5 +118,48 @@ describe("formatGearEstimateLabel", () => {
       { chaosPerDivine: 36, chaosPerExalted: 1 },
     );
     expect(label).toBe("100div (3600ex) [4/25 items]");
+  });
+});
+
+describe("isCharmItem / isUniqueCharm", () => {
+  it("identifies charm by inventory_id === 'Charm'", () => {
+    const charm = item("c1", "Charm");
+    expect(isCharmItem(charm)).toBe(true);
+    expect(isUniqueCharm(charm)).toBe(false); // Rare, not Unique
+  });
+
+  it("identifies charm by is_charm flag", () => {
+    const charm = item("c2", "Flask", { is_charm: true });
+    expect(isCharmItem(charm)).toBe(true);
+  });
+
+  it("identifies unique charm", () => {
+    const ucharm = item("uc1", "Charm", { rarity: "Unique" });
+    expect(isUniqueCharm(ucharm)).toBe(true);
+  });
+
+  it("non-charm items are not charms", () => {
+    const ring = item("r1", "Ring");
+    expect(isCharmItem(ring)).toBe(false);
+    expect(isUniqueCharm(ring)).toBe(false);
+  });
+});
+
+describe("collectCharacterGearPricingItems — charm handling", () => {
+  it("includes unique charms but not normal/magic charms", () => {
+    const normalCharm = item("nc1", "Charm", { rarity: "Normal", is_charm: true });
+    const magicCharm = item("mc1", "Charm", { rarity: "Magic", is_charm: true });
+    const uniqueCharm = item("uc1", "Charm", { rarity: "Unique", is_charm: true });
+    const detail: Pick<CharacterDetail, "equipped" | "gems" | "jewels" | "inventory"> = {
+      equipped: [item("helm", "Helm"), normalCharm, magicCharm, uniqueCharm],
+      gems: [],
+      jewels: [],
+      inventory: [],
+    };
+    const ids = collectCharacterGearPricingItems(detail).map((i) => i.id);
+    expect(ids).toContain("helm");
+    expect(ids).toContain("uc1");
+    expect(ids).not.toContain("nc1");
+    expect(ids).not.toContain("mc1");
   });
 });

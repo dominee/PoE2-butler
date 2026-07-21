@@ -1,6 +1,6 @@
 import type { CharacterDetail, Item } from "@/api/types";
 
-/** Equipment slots rendered on the paper doll (matches backend ``_EQUIPPED_SLOTS`` minus flask). */
+/** Equipment slots rendered on the paper doll (matches backend ``_EQUIPPED_SLOTS`` minus flask/charm). */
 export const PAPER_DOLL_SLOT_IDS = new Set([
   "Weapon",
   "Weapon2",
@@ -31,4 +31,19 @@ export function collectPaperDollItems(
     }
   }
   return [...bySlot.values()];
+}
+
+/**
+ * Collect charm items from equipped (inventory_id === "Charm" or is_charm === true).
+ * Sorted by x-position so they appear in flask-bar order.
+ */
+export function collectCharmItems(
+  detail: Pick<CharacterDetail, "equipped" | "inventory">,
+): Item[] {
+  const charms = [
+    ...(detail.equipped ?? []),
+    ...(detail.inventory ?? []),
+  ].filter((item) => item.inventory_id === "Charm" || item.is_charm);
+  // Sort by x so charms appear left-to-right in their flask bar position.
+  return charms.slice().sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
 }

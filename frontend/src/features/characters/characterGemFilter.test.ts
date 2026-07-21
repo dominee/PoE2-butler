@@ -194,6 +194,19 @@ describe("collectCharacterOtherInventory", () => {
     const detail = { gems: [lineage], inventory: [granted, flask] };
     expect(collectCharacterOtherInventory(detail).map((i) => i.id)).toEqual(["f1"]);
   });
+
+  it("excludes charm items from otherInventory (charms shown in their own section)", () => {
+    const normalItem = gem({ id: "ring1", type_line: "Iron Ring", inventory_id: null });
+    const charm = {
+      ...gem({ id: "c1", type_line: "Antidote Charm" }),
+      inventory_id: "Charm" as const,
+      is_charm: true,
+    };
+    const detail = { gems: [], inventory: [normalItem, charm] };
+    const other = collectCharacterOtherInventory(detail);
+    expect(other.map((i) => i.id)).not.toContain("c1");
+    expect(other.map((i) => i.id)).toContain("ring1");
+  });
 });
 
 describe("nested socketed_items (Her Declaration bug)", () => {

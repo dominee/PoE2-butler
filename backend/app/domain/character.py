@@ -60,6 +60,7 @@ _EQUIPPED_SLOTS = {
     "Ring2",
     "Belt",
     "Flask",
+    "Charm",
 }
 
 _GEM_SLOTS = {"SkillSlots", "AscendancySkills", "DefaultAttackSkills"}
@@ -186,6 +187,10 @@ def parse_detail(payload: dict[str, Any]) -> CharacterDetail:
             continue
         item = parse_item(raw)
         iid = resolve_item_inventory_id(raw) or item.inventory_id
+        # Charm items share the Flask inventoryId in GGG payloads; preserve the
+        # "Charm" remapping that parse_item already applied.
+        if item.is_charm and iid == "Flask":
+            iid = "Charm"
         if iid and item.inventory_id != iid:
             item = item.model_copy(update={"inventory_id": iid})
         if iid in _EQUIPPED_SLOTS:
