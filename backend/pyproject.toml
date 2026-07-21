@@ -62,8 +62,9 @@ ignore = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "-ra --strict-markers -m 'not live_ggg'"
+addopts = "-ra --strict-markers -m 'not live_ggg and not live_api'"
 testpaths = ["tests"]
 markers = [
     "live_ggg: integration tests that call the real GGG API (require credentials; skipped in CI)",
+    "live_api: integration tests that call a real running server via Bearer key (skipped in CI; set BOT_API_BASE_URL + BOT_API_KEY to opt in)",
 ]
