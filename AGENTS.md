@@ -262,6 +262,7 @@ class Snapshot(Base):
 | Frontend lint | `npm run lint || true` (non-blocking today) |
 | Dependency audits | `pip-audit` and `npm audit` run with `|| true` (informational) |
 | Pre-push expectation | Run backend + frontend tests locally before pushing (same commands as README); optional `make test-all-docker` for full parity |
+| **⚠ No host npm** | `npm` / `node` are **not installed on this machine**. All frontend test, lint, and audit commands (`npm test`, `npm run lint`, `npm audit`) **must** be run via Docker — use `make test-all-docker` or a `docker run ... node:22` command. Never attempt bare `npm` calls. |
 
 ### Security review workflow plan (stored context)
 
@@ -413,7 +414,7 @@ The mock login form lists OAuth users in dict insertion order: optional `static_
 - **Bcrypt hashes in env files**: `$` must be escaped as `$$` in docker-compose `--env-file` files.
 - **Traefik dev / UAT / prod app host**: **file** provider routes for the SPA host (`dynamic.dev.yml` / `dynamic.uat.yml` / **`dynamic.prod.yml`** for `app.hideoutbutler.com`). **Prod** also uses the **Docker** provider for **`api.`** and **`admin.`** hosts only. **Prod requires Traefik v3.6.1+** (repo pins v3.7.1): Docker Engine 29+ rejects the Docker API client in Traefik v3.1 (`client version 1.24 is too old`). UAT is unaffected because it does not mount the Docker socket.
 - **Admin templates**: for dicts passed to Jinja, avoid a key named `keys` (use e.g. `key_count`); `{{ d.keys }}` prints the method object, not a count.
-- **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`.
+- **Frontend unit test scope**: `npm test` runs Vitest unit tests and excludes `frontend/e2e/**`; run Playwright via `npm run test:e2e`. **`npm` is not on this machine — always use Docker** (`make test-all-docker` or `docker run ... node:22 sh -c "npm ..."`).
 - **Frontend CI cache key**: `actions/cache` uses `frontend/package.json` (no root lockfile in repo for npm).
 - **UAT → PROD parity rule**: any bug found in UAT must be verified against production config/code paths too. Fixes should either (a) apply to both environments, or (b) be intentionally environment-scoped with an explicit note explaining why prod is unaffected.
 - **GGG weight group (trade2)**: GGG's server-side trade2 API rejects `weight`-type stat groups from unauthenticated (non-browser-session) callers with HTTP 400 "Query is too complex". The `weight` group has a high base complexity that exceeds the anonymous budget regardless of filter count — `and` groups with 6 filters (complexity 14) succeed while `weight` groups with even 3 filters fail. `submit_trade_search` now returns a 4-tuple `(search_id, data, rate_limited, status_code)`; callers check `status_code == 400` to distinguish this from other errors. The `weighted_upgrade` handler in `trade.py` automatically retries as a regular `upgrade` search on 400. Future fix: attach the user's GGG OAuth access token to the request — authenticated users get a higher complexity limit on the GGG trade site ("Logging in will increase this limit").

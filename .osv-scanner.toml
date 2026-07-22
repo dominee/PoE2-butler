@@ -26,3 +26,11 @@ reason = "js-yaml: dev-only transitive dep (eslint); not in the production bundl
 [[IgnoredVulns]]
 id = "GHSA-96hv-2xvq-fx4p"
 reason = "ws: dev-only transitive dep; not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-3jxr-9vmj-r5cp"
+reason = "brace-expansion: dev-only transitive dep; not included in the production bundle. npm audit --omit=dev reports 0 vulnerabilities."
+
+[[IgnoredVulns]]
+id = "GHSA-52cp-r559-cp3m"
+reason = "js-yaml: dev-only transitive dep (eslint/vite toolchain); not in the production bundle."
