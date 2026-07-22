@@ -3,7 +3,9 @@
 Key format: ``hob_<prefix12>_<secret32>``
 
 - ``hob_`` — fixed discriminator, makes keys identifiable in logs / pastes.
-- ``prefix12`` — 12 URL-safe characters stored **plaintext** in the DB for O(1) lookup.
+- ``prefix12`` — 12 **hex** characters stored **plaintext** in the DB for O(1) lookup.
+  Hex is used (not URL-safe base64) so the prefix never contains ``_`` or ``-``,
+  which would corrupt ``split("_", 2)`` parsing.
 - ``secret32`` — 32 URL-safe random characters; never stored, only its HMAC-SHA256 digest.
 
 The hash stored in the DB is ``HMAC-SHA256(full_key, pepper)`` where ``pepper`` is derived
@@ -16,6 +18,7 @@ import hmac
 import secrets
 from hashlib import sha256
 
+_PREFIX_BYTES = 6   # 6 bytes → 12 hex chars
 _PREFIX_LEN = 12
 _SECRET_LEN = 32
 _KEY_DISCRIMINATOR = "hob"
@@ -32,7 +35,9 @@ def generate_api_key(app_secret: str) -> tuple[str, str, str]:
     ``full_key`` is shown to the user **once** and never stored.
     ``prefix`` and ``key_hash`` are persisted in ``user_api_keys``.
     """
-    prefix = secrets.token_urlsafe(_PREFIX_LEN)[:_PREFIX_LEN]
+    # Use token_hex for the prefix so it only contains [0-9a-f], guaranteeing
+    # no underscores that would break ``split("_", 2)`` in extract_prefix.
+    prefix = secrets.token_hex(_PREFIX_BYTES)   # always exactly 12 hex chars
     secret = secrets.token_urlsafe(_SECRET_LEN)[:_SECRET_LEN]
     full_key = f"{_KEY_DISCRIMINATOR}_{prefix}_{secret}"
     key_hash = _compute_hash(full_key, app_secret)

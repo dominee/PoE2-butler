@@ -7,9 +7,8 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ggg import GGGClient
 from app.config import Settings, get_settings

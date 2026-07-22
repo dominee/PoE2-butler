@@ -196,7 +196,7 @@ describe("collectCharacterOtherInventory", () => {
   });
 
   it("excludes charm items from otherInventory (charms shown in their own section)", () => {
-    const normalItem = gem({ id: "ring1", type_line: "Iron Ring", inventory_id: null });
+    const normalItem = gem({ id: "ring1", type_line: "Iron Ring", inventory_id: null, rarity: "Normal" });
     const charm = {
       ...gem({ id: "c1", type_line: "Antidote Charm" }),
       inventory_id: "Charm" as const,

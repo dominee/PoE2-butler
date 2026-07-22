@@ -42,11 +42,24 @@ def _load_mock_ggg_app():
 @pytest.fixture
 async def app_stack(monkeypatch, tmp_path):
     monkeypatch.setenv("MOCK_GGG_SKIP_POE_NINJA", "1")
-    # In-memory SQLite for hermetic tests. The model types use
-    # ``with_variant`` so JSON/UUID map cleanly on either dialect.
+    # File-based SQLite for hermetic tests.  The model types use ``with_variant``
+    # so JSON/UUID map cleanly on either dialect.
+    #
+    # We use a per-test temp file (via tmp_path) rather than ":memory:" with
+    # StaticPool.  aiosqlite runs each connection on its own OS thread; StaticPool
+    # hands out the *same* sqlite3.Connection to multiple aiosqlite wrappers on
+    # different threads, which is not thread-safe and causes non-deterministic
+    # read/write races (committed rows appear missing on the very next SELECT).
+    # A file-based DB avoids shared connection objects while still persisting
+    # committed data across the multiple SQLAlchemy sessions a single request
+    # chain creates (login → create_api_key → _resolve_api_key).
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    db_file = tmp_path / "test.db"
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{db_file}",
+        connect_args={"check_same_thread": False},
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -69,8 +82,12 @@ async def app_stack(monkeypatch, tmp_path):
 
     settings = Settings(
         environment="test",
-        app_secret_key=SecretStr("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
-        session_signing_key=SecretStr("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
+        # Use the same default secret as config.py so the lru_cache-populated real
+        # Settings and the test Settings always share the same app_secret_key.  This
+        # prevents non-deterministic 401 "invalid_api_key" failures when the
+        # dependency_overrides path is bypassed (e.g. via a direct get_settings() call).
+        app_secret_key=SecretStr("dev-only-change-me-dev-only-change-me-dev-only="),
+        session_signing_key=SecretStr("dev-only-sign-me-dev-only-sign-me-dev-only-sig="),
         ggg_oauth_base_url="http://ggg-mock",
         ggg_api_base_url="http://ggg-mock",
         ggg_client_id="test-client",
@@ -80,6 +97,17 @@ async def app_stack(monkeypatch, tmp_path):
     )
 
     from app import config as app_config
+
+    # Capture the original get_settings callable (the lru_cache wrapper) BEFORE
+    # monkeypatching so we can register it in dependency_overrides.  FastAPI's
+    # Depends(get_settings) stores this exact function object at import time;
+    # monkeypatching module names does not update what Depends already captured.
+    _original_get_settings = app_config.get_settings
+    # Clear the lru_cache now so that any direct get_settings() call during this
+    # test creates a fresh Settings from env vars (the default keys match our
+    # test settings below, guaranteeing consistent API key hashing).
+    if hasattr(_original_get_settings, "cache_clear"):
+        _original_get_settings.cache_clear()
 
     monkeypatch.setattr(app_config, "get_settings", lambda: settings)
     monkeypatch.setattr(app_deps, "get_settings", lambda: settings)
@@ -101,6 +129,8 @@ async def app_stack(monkeypatch, tmp_path):
 
     app = create_app()
     app.dependency_overrides[app_deps.get_ggg_client] = _ggg_client_override
+    # Override get_settings for all route dependencies that inject Settings via Depends.
+    app.dependency_overrides[_original_get_settings] = lambda: settings
 
     try:
         transport = ASGITransport(app=app)
@@ -114,8 +144,9 @@ async def app_stack(monkeypatch, tmp_path):
             db_base.get_engine.cache_clear()
         if hasattr(db_base._session_factory, "cache_clear"):
             db_base._session_factory.cache_clear()
-        if hasattr(app_config.get_settings, "cache_clear"):
-            app_config.get_settings.cache_clear()
+        # Use the captured reference (not the monkeypatched lambda) to clear cache.
+        if hasattr(_original_get_settings, "cache_clear"):
+            _original_get_settings.cache_clear()
         if hasattr(app_deps._cipher_singleton, "cache_clear"):
             app_deps._cipher_singleton.cache_clear()
         if hasattr(app_deps._redis_singleton, "cache_clear"):

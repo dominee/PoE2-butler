@@ -13,17 +13,11 @@ Coverage:
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
-
-import pytest
-
-from app.security.api_keys import extract_prefix, generate_api_key, verify_api_key
-
 # Capture the original get_settings function before any fixture can monkeypatch it.
 # This is needed so dependency_overrides uses the same function reference that
 # admin_ops.py stored in its Depends(get_settings) at import time.
-from app.config import get_settings as _ORIGINAL_GET_SETTINGS
+from app.config import get_settings as original_get_settings
+from app.security.api_keys import extract_prefix, generate_api_key, verify_api_key
 
 # ── Unit tests: security module ───────────────────────────────────────────────
 
@@ -152,8 +146,9 @@ async def test_get_key_status_no_key_returns_404(app_stack) -> None:
 
 async def test_bearer_auth_on_me_endpoint(app_stack) -> None:
     _app, client, mock_app = app_stack
+    from httpx import AsyncClient
+
     from tests.test_auth_flow import _full_login
-    from httpx import AsyncClient, ASGITransport
 
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")
@@ -174,8 +169,9 @@ async def test_bearer_auth_on_me_endpoint(app_stack) -> None:
 
 async def test_bearer_invalid_key_rejected(app_stack) -> None:
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
     from httpx import AsyncClient
+
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
 
@@ -191,8 +187,9 @@ async def test_bearer_invalid_key_rejected(app_stack) -> None:
 
 async def test_bearer_revoked_key_rejected(app_stack) -> None:
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
     from httpx import AsyncClient
+
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")
@@ -216,8 +213,9 @@ async def test_bearer_revoked_key_rejected(app_stack) -> None:
 
 async def test_bearer_can_call_refresh_without_csrf(app_stack) -> None:
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
     from httpx import AsyncClient
+
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")
@@ -260,8 +258,9 @@ async def test_csrf_required_for_session_mutation(app_stack) -> None:
 
 async def test_rate_limit_exceeded_returns_429(app_stack, monkeypatch) -> None:
     """When the rate limit service raises 429, the endpoint propagates it."""
-    from app import deps as app_deps
     from fastapi import HTTPException
+
+    from app import deps as app_deps
 
     async def _always_429(redis, prefix, limit):
         raise HTTPException(status_code=429, detail="api_key_rate_limited")
@@ -269,8 +268,9 @@ async def test_rate_limit_exceeded_returns_429(app_stack, monkeypatch) -> None:
     monkeypatch.setattr(app_deps._api_key_ratelimit_mod, "enforce_api_key_rate_limit", _always_429)
 
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
     from httpx import AsyncClient
+
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")
@@ -290,9 +290,10 @@ async def test_rate_limit_exceeded_returns_429(app_stack, monkeypatch) -> None:
 
 async def test_admin_revoke_api_key(app_stack) -> None:
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
-    from app import config as app_config
     from pydantic import SecretStr
+
+    from app import config as app_config
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")
@@ -307,7 +308,7 @@ async def test_admin_revoke_api_key(app_stack) -> None:
     patched = base_settings.model_copy(
         update={"admin_internal_secret": SecretStr("test-admin-secret")}
     )
-    _app.dependency_overrides[_ORIGINAL_GET_SETTINGS] = lambda: patched
+    _app.dependency_overrides[original_get_settings] = lambda: patched
 
     try:
         me_resp = await client.get("/api/me")
@@ -320,7 +321,7 @@ async def test_admin_revoke_api_key(app_stack) -> None:
         assert revoke_resp.status_code == 200, revoke_resp.text
         assert revoke_resp.json()["ok"] is True
     finally:
-        del _app.dependency_overrides[_ORIGINAL_GET_SETTINGS]
+        del _app.dependency_overrides[original_get_settings]
 
     # Key no longer works.
     from httpx import AsyncClient
@@ -335,9 +336,10 @@ async def test_admin_revoke_api_key(app_stack) -> None:
 
 async def test_admin_revoke_api_key_no_key_returns_ok(app_stack) -> None:
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
-    from app import config as app_config
     from pydantic import SecretStr
+
+    from app import config as app_config
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
 
@@ -345,7 +347,7 @@ async def test_admin_revoke_api_key_no_key_returns_ok(app_stack) -> None:
     patched = base_settings.model_copy(
         update={"admin_internal_secret": SecretStr("test-admin-secret")}
     )
-    _app.dependency_overrides[_ORIGINAL_GET_SETTINGS] = lambda: patched
+    _app.dependency_overrides[original_get_settings] = lambda: patched
 
     try:
         me_resp = await client.get("/api/me")
@@ -358,7 +360,7 @@ async def test_admin_revoke_api_key_no_key_returns_ok(app_stack) -> None:
         assert resp.status_code == 200
         assert resp.json()["detail"] == "no_active_key"
     finally:
-        del _app.dependency_overrides[_ORIGINAL_GET_SETTINGS]
+        del _app.dependency_overrides[original_get_settings]
 
 
 # ── Integration tests: prefs with preferred_character_name ────────────────────
@@ -387,8 +389,9 @@ async def test_prefs_set_preferred_character(app_stack) -> None:
 
 async def test_prefs_set_preferred_character_via_bearer(app_stack) -> None:
     _app, client, mock_app = app_stack
-    from tests.test_auth_flow import _full_login
     from httpx import AsyncClient
+
+    from tests.test_auth_flow import _full_login
 
     await _full_login(client, mock_app)
     csrf = client.cookies.get("poe2b_csrf")

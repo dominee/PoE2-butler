@@ -35,7 +35,7 @@ _SWAGGER_SCRIPT_HASH = "sha256-QOOQu4W1oxGqd2nbXbxiA1Di6OHQOLQD+o+G9oWL8YY="
 
 _DOCS_CSP = (
     "default-src 'none'; "
-    f"script-src 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "script-src 'unsafe-inline' https://cdn.jsdelivr.net; "
     "style-src 'unsafe-inline' https://cdn.jsdelivr.net; "
     "img-src 'self' data: https://fastapi.tiangolo.com; "
     "connect-src 'self'; "
