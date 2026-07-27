@@ -29,6 +29,22 @@ def strip_item_mod_text(text: str) -> str:
     return _strip_tags(text)
 
 
+def _decode_mod_entry(entry: Any) -> str:
+    """Normalise a single mod-list entry from the GGG character/stash API.
+
+    Since patch 0.5.4d GGG wraps mod text in an object:
+    ``{"description": "+50 to Spirit"}``
+    instead of the previous plain-string format ``"+50 to Spirit"``.
+
+    This helper handles both formats so the rest of the parsing pipeline is
+    unaffected by the API change.  All other keys on the new object are
+    intentionally ignored.
+    """
+    if isinstance(entry, dict):
+        return str(entry.get("description", ""))
+    return str(entry)
+
+
 # Poe.ninja / live GGG character payloads may expose slot as numeric ``itemSlot`` only.
 _GGG_ITEM_SLOT_TO_INVENTORY_ID: dict[int, str] = {
     1: "Helm",
@@ -220,11 +236,11 @@ class ItemProperty(BaseModel):
 
     @classmethod
     def from_ggg(cls, raw: dict[str, Any]) -> ItemProperty:
-        name = _strip_tags(str(raw.get("name", "")))
+        name = _strip_tags(_decode_mod_entry(raw.get("name", "")))
         values = raw.get("values") or []
         value = None
         if values and isinstance(values[0], list) and values[0]:
-            value = str(values[0][0])
+            value = str(_decode_mod_entry(values[0][0]))
         return cls(name=name, value=value)
 
 
@@ -580,8 +596,8 @@ def parse_item(raw: dict[str, Any]) -> Item:
                 mod_range_hints = [h for h in raw_hints if isinstance(h, dict)]
 
     implicit_mod_details, explicit_mod_details = _parse_mod_details_from_extended(ext)
-    implicit_mods_list = [strip_item_mod_text(str(m)) for m in raw.get("implicitMods") or []]
-    explicit_mods_list = [strip_item_mod_text(str(m)) for m in raw.get("explicitMods") or []]
+    implicit_mods_list = [strip_item_mod_text(_decode_mod_entry(m)) for m in raw.get("implicitMods") or []]
+    explicit_mods_list = [strip_item_mod_text(_decode_mod_entry(m)) for m in raw.get("explicitMods") or []]
 
     # For non-Unique items where GGG extended.mods is absent, infer ModDetail
     # entries from plain mod text using the tag_index in mod_ranges.json.
@@ -659,9 +675,9 @@ def parse_item(raw: dict[str, Any]) -> Item:
         explicit_mod_details=explicit_mod_details,
         explicit_mod_range_hints=explicit_mod_range_hints,
         socketed_items=socketed_items,
-        rune_mods=[strip_item_mod_text(str(m)) for m in raw.get("runeMods") or []],
-        enchant_mods=[strip_item_mod_text(str(m)) for m in raw.get("enchantMods") or []],
-        crafted_mods=[strip_item_mod_text(str(m)) for m in raw.get("craftedMods") or []],
+        rune_mods=[strip_item_mod_text(_decode_mod_entry(m)) for m in raw.get("runeMods") or []],
+        enchant_mods=[strip_item_mod_text(_decode_mod_entry(m)) for m in raw.get("enchantMods") or []],
+        crafted_mods=[strip_item_mod_text(_decode_mod_entry(m)) for m in raw.get("craftedMods") or []],
         sockets=sockets,
         stack_size=raw.get("stackSize"),
         max_stack_size=raw.get("maxStackSize"),
