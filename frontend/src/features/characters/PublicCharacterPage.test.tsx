@@ -10,10 +10,7 @@ vi.mock("@/api/hooks", () => ({
   usePublicCharacter: (...args: unknown[]) => mockUsePublicCharacter(...args),
 }));
 
-const routerFuture = {
-  v7_startTransition: true,
-  v7_relativeSplatPath: true,
-} as const;
+// v7_startTransition and v7_relativeSplatPath are default in react-router v7 — no future flags needed.
 
 describe("PublicCharacterPage", () => {
   it("renders simple character gear view", () => {
@@ -73,7 +70,7 @@ describe("PublicCharacterPage", () => {
     });
 
     render(
-      <MemoryRouter future={routerFuture} initialEntries={["/c/abc"]}>
+      <MemoryRouter initialEntries={["/c/abc"]}>
         <Routes>
           <Route path="/c/:shareId" element={<PublicCharacterPage />} />
         </Routes>
@@ -142,7 +139,7 @@ describe("PublicCharacterPage", () => {
     });
 
     render(
-      <MemoryRouter future={routerFuture} initialEntries={["/c/abc"]}>
+      <MemoryRouter initialEntries={["/c/abc"]}>
         <Routes>
           <Route path="/c/:shareId" element={<PublicCharacterPage />} />
         </Routes>

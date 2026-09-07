@@ -63,6 +63,7 @@ export type SnapshotChangeTier = "none" | "minimal" | "moderate" | "heavy" | "ma
  * - heavy: 6–10 changes ("5 to 10" with 5 in moderate)
  * - massive: 11+ changes
  */
+// eslint-disable-next-line react-refresh/only-export-components -- utility used in tests and CharacterTable; co-located for domain cohesion
 export function snapshotChangeTier(changeCount: number): SnapshotChangeTier {
   if (changeCount <= 0) return "none";
   if (changeCount < 3) return "minimal";
@@ -72,6 +73,7 @@ export function snapshotChangeTier(changeCount: number): SnapshotChangeTier {
 }
 
 /** Dot fill/border by gear change count (unselected state). Uses app rarity + ember tokens. */
+// eslint-disable-next-line react-refresh/only-export-components -- utility used in tests; co-located for domain cohesion
 export function snapshotDotColorClass(changeCount: number): string {
   switch (snapshotChangeTier(changeCount)) {
     case "none":
