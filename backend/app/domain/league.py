@@ -93,16 +93,32 @@ _PERMANENT_LEAGUES = frozenset(
 )
 
 
-def pick_league_from_characters(summaries: list[CharacterSummary]) -> str | None:
+def pick_league_from_characters(
+    summaries: list[CharacterSummary],
+    default_league: str | None = None,
+) -> str | None:
     """Infer the preferred league from character summaries.
 
     Used when ``account:leagues`` scope is unavailable (e.g. not granted by GGG).
     Prefers the most common non-permanent (challenge) league; falls back to the
     first league present in the character list if all are permanent.
+
+    When two or more challenge leagues tie in character count, ``default_league``
+    (typically ``settings.ggg_default_league``) is used as a tie-breaker so that
+    fresh alts in a new parallel league (e.g. Forbidden Rites) do not arbitrarily
+    stay on the previous one (e.g. Runes of Aldur).
     """
     leagues: list[str] = [c.league for c in summaries if c.league]
     if not leagues:
         return None
     non_perm = [lg for lg in leagues if lg.lower() not in _PERMANENT_LEAGUES]
     candidates = non_perm if non_perm else leagues
-    return Counter(candidates).most_common(1)[0][0]
+    counts = Counter(candidates)
+    top_count = counts.most_common(1)[0][1]
+    top_tied = [lg for lg, cnt in counts.items() if cnt == top_count]
+    if len(top_tied) == 1:
+        return top_tied[0]
+    # Break tie: prefer default_league if it appears among the tied leaders.
+    if default_league and default_league in top_tied:
+        return default_league
+    return top_tied[0]

@@ -11,7 +11,7 @@ from app.domain.character import (
     parse_detail,
     parse_summaries,
 )
-from app.domain.item import parse_item
+from app.domain.item import _decode_mod_entry, parse_item
 from app.domain.league import parse_leagues, pick_current_league
 
 # Allow importing mock-ggg helpers inside tests that need them.
@@ -1133,3 +1133,124 @@ def test_collect_character_items_skips_empty_iid_container_dicts() -> None:
     # Both granted skills are distinct — no frontend dedup collision on item.id=""
     assert "Molten Shower" != "Purity of Ice"  # trivially true; make it explicit
     assert all(g.id for g in detail.gems), "no empty item.id in detail.gems"
+
+
+# ── _decode_mod_entry: GGG 0.5.4d+ dict-wrapped mod text ──────────────────────
+
+
+def test_decode_mod_entry_passthrough_string() -> None:
+    """Legacy plain-string mods are returned unchanged."""
+    assert _decode_mod_entry("+50 to Spirit") == "+50 to Spirit"
+    assert _decode_mod_entry("") == ""
+
+
+def test_decode_mod_entry_unwraps_description_dict() -> None:
+    """Since 0.5.4d GGG wraps mod text as {'description': '...'}."""
+    assert _decode_mod_entry({"description": "+50 to Spirit"}) == "+50 to Spirit"
+
+
+def test_decode_mod_entry_empty_dict() -> None:
+    """Missing description key returns empty string, not a crash."""
+    assert _decode_mod_entry({}) == ""
+
+
+def test_parse_item_dict_explicit_mods() -> None:
+    """explicitMods with dict-wrapped entries are decoded to plain strings."""
+    raw = {
+        "id": "test-1",
+        "typeLine": "Iron Ring",
+        "baseType": "Iron Ring",
+        "rarity": "Normal",
+        "explicitMods": [{"description": "+10 to Strength"}, {"description": "+5 to maximum Life"}],
+        "implicitMods": [{"description": "+20% to Lightning Resistance"}],
+    }
+    item = parse_item(raw)
+    assert item.explicit_mods == ["+10 to Strength", "+5 to maximum Life"]
+    assert item.implicit_mods == ["+20% to Lightning Resistance"]
+
+
+def test_parse_item_dict_rune_and_enchant_mods() -> None:
+    """runeMods and enchantMods with dict-wrapped entries are decoded."""
+    raw = {
+        "id": "test-2",
+        "typeLine": "War Hammer",
+        "baseType": "War Hammer",
+        "rarity": "Normal",
+        "runeMods": [{"description": "Adds 5 to 10 Physical Damage"}],
+        "enchantMods": [{"description": "+2 to Level of Socketed Gems"}],
+        "craftedMods": [{"description": "10% increased Attack Speed"}],
+    }
+    item = parse_item(raw)
+    assert item.rune_mods == ["Adds 5 to 10 Physical Damage"]
+    assert item.enchant_mods == ["+2 to Level of Socketed Gems"]
+    assert item.crafted_mods == ["10% increased Attack Speed"]
+
+
+def test_parse_item_dict_property_name_and_value() -> None:
+    """Property name and values wrapped as dicts are decoded."""
+    raw = {
+        "id": "gem-1",
+        "typeLine": "Fireball",
+        "baseType": "Fireball",
+        "rarity": "Gem",
+        "properties": [
+            {
+                "name": {"description": "Spell, AoE, Fire"},
+                "values": [[{"description": "20"}, 0]],
+            }
+        ],
+    }
+    item = parse_item(raw)
+    assert len(item.properties) == 1
+    assert item.properties[0].name == "Spell, AoE, Fire"
+    assert item.properties[0].value == "20"
+
+
+def test_parse_item_dict_flavour_text() -> None:
+    """flavourText list entries wrapped as dicts are decoded."""
+    raw = {
+        "id": "unique-1",
+        "name": "Starforge",
+        "typeLine": "Infernal Sword",
+        "baseType": "Infernal Sword",
+        "rarity": "Unique",
+        "flavourText": [
+            {"description": "The stars burn bright"},
+            {"description": "with the promise of war."},
+        ],
+    }
+    item = parse_item(raw)
+    assert item.flavour_text == "The stars burn bright\nwith the promise of war."
+
+
+def test_parse_item_dict_granted_skills() -> None:
+    """grantedSkills value entries wrapped as dicts are decoded."""
+    raw = {
+        "id": "staff-1",
+        "typeLine": "Prophecy Staff",
+        "baseType": "Prophecy Staff",
+        "rarity": "Unique",
+        "grantedSkills": [
+            {
+                "values": [[{"description": "Level 20 Ice Nova"}, 25]],
+            }
+        ],
+    }
+    item = parse_item(raw)
+    assert item.granted_skills == ["Ice Nova (lvl 20)"]
+
+
+def test_parse_item_mixed_old_new_format() -> None:
+    """Mixed old (string) and new (dict) entries in the same mod list both decode."""
+    raw = {
+        "id": "ring-2",
+        "typeLine": "Coral Ring",
+        "baseType": "Coral Ring",
+        "rarity": "Rare",
+        "explicitMods": [
+            "+45 to maximum Life",
+            {"description": "+30 to maximum Mana"},
+        ],
+    }
+    item = parse_item(raw)
+    assert item.explicit_mods == ["+45 to maximum Life", "+30 to maximum Mana"]

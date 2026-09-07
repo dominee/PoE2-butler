@@ -294,3 +294,64 @@ async def test_leagues_default_league_when_no_snapshots(app_stack, monkeypatch) 
     ]
     assert body["current"] == RUNES_OF_ALDUR
     assert body["preferred"] == RUNES_OF_ALDUR
+
+
+# ── pick_league_from_characters: dual-league and tie-break ─────────────────────
+
+
+def test_pick_league_single_winner() -> None:
+    """Standard case: one league has more characters than the other."""
+    summaries = parse_summaries(
+        _characters_payload(
+            ("A", "Forbidden Rites"),
+            ("B", "Forbidden Rites"),
+            ("C", RUNES_OF_ALDUR),
+        )
+    )
+    assert pick_league_from_characters(summaries) == "Forbidden Rites"
+
+
+def test_pick_league_tie_broken_by_default() -> None:
+    """When two leagues tie, the default_league is chosen as tie-breaker."""
+    summaries = parse_summaries(
+        _characters_payload(
+            ("A", RUNES_OF_ALDUR),
+            ("B", "Forbidden Rites"),
+        )
+    )
+    # Without default, ordering is indeterminate — just check it returns one of the two.
+    result_no_default = pick_league_from_characters(summaries)
+    assert result_no_default in (RUNES_OF_ALDUR, "Forbidden Rites")
+
+    # With Forbidden Rites as default, it should win the tie.
+    result_with_default = pick_league_from_characters(summaries, default_league="Forbidden Rites")
+    assert result_with_default == "Forbidden Rites"
+
+    # With Runes of Aldur as default, it wins instead.
+    result_roa = pick_league_from_characters(summaries, default_league=RUNES_OF_ALDUR)
+    assert result_roa == RUNES_OF_ALDUR
+
+
+def test_pick_league_default_not_in_tie_ignored() -> None:
+    """When the default league is not among the tied leaders, the first tied league is chosen."""
+    summaries = parse_summaries(
+        _characters_payload(
+            ("A", RUNES_OF_ALDUR),
+            ("B", "Forbidden Rites"),
+        )
+    )
+    result = pick_league_from_characters(summaries, default_league="Some Future League")
+    # Falls back to the first tied entry — implementation returns top_tied[0].
+    assert result in (RUNES_OF_ALDUR, "Forbidden Rites")
+
+
+def test_pick_league_dual_league_both_challenge() -> None:
+    """Characters in both parallel leagues are recognized; majority wins."""
+    summaries = parse_summaries(
+        _characters_payload(
+            ("A", RUNES_OF_ALDUR),
+            ("B", RUNES_OF_ALDUR),
+            ("C", "Forbidden Rites"),
+        )
+    )
+    assert pick_league_from_characters(summaries) == RUNES_OF_ALDUR

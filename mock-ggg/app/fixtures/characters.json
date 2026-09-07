@@ -6184,5 +6184,17 @@
       "experience": 0
     },
     "items": []
+  },
+  "FR_Witch_01": {
+    "character": {
+      "id": "char-fr-witch-01",
+      "name": "FR_Witch_01",
+      "realm": "pc",
+      "class": "Witch",
+      "level": 10,
+      "league": "Forbidden Rites",
+      "experience": 0
+    },
+    "items": []
   }
 }

@@ -338,7 +338,9 @@ async def refresh_user_snapshot(
         outcome.characters = True
         # Fallback: if account:leagues was unavailable, infer preferred_league from
         # the character list (each character carries its current league name).
-        inferred = pick_league_from_characters(parse_summaries(chars))
+        inferred = pick_league_from_characters(
+            parse_summaries(chars), default_league=get_settings().ggg_default_league
+        )
         if inferred and inferred != user.preferred_league:
             current_is_permanent = (user.preferred_league or "").lower() in _PERMANENT_LEAGUES
             if user.preferred_league is None or current_is_permanent:

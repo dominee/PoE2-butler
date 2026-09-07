@@ -18377,5 +18377,59 @@
         "items": []
       }
     }
+  },
+  "Forbidden Rites": {
+    "tabs": [
+      {
+        "id": "forbidden-rites-gear",
+        "name": "Gear Dump",
+        "type": "NormalStash",
+        "index": 0,
+        "colour": {
+          "r": 128,
+          "g": 32,
+          "b": 64
+        },
+        "selected": false,
+        "metadata": {
+          "public": false,
+          "folder": false,
+          "colour": "#802040"
+        }
+      },
+      {
+        "id": "forbidden-rites-currency",
+        "name": "Currency",
+        "type": "CurrencyStash",
+        "index": 1,
+        "colour": {
+          "r": 96,
+          "g": 32,
+          "b": 96
+        },
+        "selected": false,
+        "metadata": {
+          "public": false,
+          "folder": false,
+          "colour": "#602060"
+        }
+      }
+    ],
+    "contents": {
+      "forbidden-rites-gear": {
+        "items": []
+      },
+      "forbidden-rites-currency": {
+        "items": []
+      }
+    },
+    "prev_contents": {
+      "forbidden-rites-gear": {
+        "items": []
+      },
+      "forbidden-rites-currency": {
+        "items": []
+      }
+    }
   }
 }

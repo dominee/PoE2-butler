@@ -34,3 +34,75 @@ reason = "brace-expansion: dev-only transitive dep; not included in the producti
 [[IgnoredVulns]]
 id = "GHSA-52cp-r559-cp3m"
 reason = "js-yaml: dev-only transitive dep (eslint/vite toolchain); not in the production bundle."
+
+# ── new 2026-09 findings ──────────────────────────────────────────────────────
+
+[[IgnoredVulns]]
+id = "GHSA-qwm4-qh6w-59xr"
+reason = "pip: vulnerability in the pip installer itself, not a runtime/production dependency; affects only the build and package-install toolchain."
+
+[[IgnoredVulns]]
+id = "GHSA-mh99-v99m-4gvg"
+reason = "brace-expansion: dev-only transitive dep (Vite/Rollup toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-rgw5-rvv9-x895"
+reason = "brace-expansion: dev-only transitive dep (Vite/Rollup toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-73wf-gq98-2v4g"
+reason = "browserslist: dev-only transitive dep (build toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-c83g-rgw3-j3cx"
+reason = "browserslist: dev-only transitive dep (build toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-5p4m-2wfm-xmqj"
+reason = "js-yaml: dev-only transitive dep (eslint/vite toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-28wg-ghj8-5hjv"
+reason = "nanoid: dev-only transitive dep (Vite/Vitest); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-2v37-7h3g-55p8"
+reason = "nanoid: dev-only transitive dep (Vite/Vitest); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-xwg4-73v4-xw9w"
+reason = "nanoid: dev-only transitive dep (Vite/Vitest); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-6g55-p6wh-862q"
+reason = "postcss: dev-only transitive dep (Tailwind/Vite build toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-fxqj-rqcc-2cmp"
+reason = "postcss: dev-only transitive dep (Tailwind/Vite build toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-r28c-9q8g-f849"
+reason = "postcss: dev-only transitive dep (Tailwind/Vite build toolchain); not in the production bundle."
+
+[[IgnoredVulns]]
+id = "GHSA-w9m9-85wc-3x92"
+reason = "postcss-selector-parser: dev-only transitive dep (Tailwind/Vite build toolchain); not in the production bundle."
+
+# ── react-router Declarative Mode exemption ───────────────────────────────────
+# GHSA-337j-9hxr-rhxg, GHSA-wrjc-x8rr-h8h6, GHSA-jjmj-jmhj-qwj2 only affect
+# React Router Framework Mode and Data Mode applications doing manual SSR/hydration.
+# This app uses Declarative Mode (standard browser routing, no SSR) and is not affected.
+# Fix is in v7.18.0 which requires a breaking v6→v7 migration; tracked separately.
+
+[[IgnoredVulns]]
+id = "GHSA-337j-9hxr-rhxg"
+reason = "react-router: only affects Framework Mode / manual SSR hydration. This app uses Declarative Mode with no SSR — explicitly not affected per advisory. v6→v7 migration tracked separately."
+
+[[IgnoredVulns]]
+id = "GHSA-wrjc-x8rr-h8h6"
+reason = "react-router: only affects Framework Mode / manual SSR hydration. This app uses Declarative Mode with no SSR — explicitly not affected per advisory. v6→v7 migration tracked separately."
+
+[[IgnoredVulns]]
+id = "GHSA-jjmj-jmhj-qwj2"
+reason = "react-router-dom: only affects Framework Mode / manual SSR hydration. This app uses Declarative Mode with no SSR — explicitly not affected per advisory. v6→v7 migration tracked separately."

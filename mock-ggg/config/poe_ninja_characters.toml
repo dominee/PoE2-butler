@@ -1,6 +1,9 @@
 # Poe.ninja character page URLs (used by mock-ggg to fetch live charModel snapshots).
 # Account segment must match poe.ninja API paths (e.g. dominee-9275).
 # League slug in the URL path is arbitrary (``vaal``, ``vaalssf``, etc.); each entry must be a comma-separated string.
+#
+# Forbidden Rites (0.5.5) URLs: add poe.ninja character URLs here once economy goes live.
+# Example: "https://poe.ninja/poe2/profile/<account>/forbiddenrites/character/<name>"
 
 character_urls = [
   "https://poe.ninja/poe2/profile/dominee-9275/runesofaldur/character/OracleElevenG",

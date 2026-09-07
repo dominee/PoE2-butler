@@ -158,7 +158,7 @@ The UAT compose stack (`docker-compose.uat.yml`) no longer includes `mock-ggg`. 
 2. **TLS cert:** `deploy/compose/traefik/certs/cloudflare-origin.{pem,key}` must be present (Origin CA cert covering `*.uat.hideoutbutler.com`).
 3. **Credentials:** copy `.env.uat.example` to `.env.uat` and fill in `GGG_CLIENT_ID` / `GGG_CLIENT_SECRET`.
 4. **PoE2 paths:** set `GGG_API_REALM=poe2` so the backend calls `GET /character/poe2` (not PoE1 `/account/characters`, which returns 404).
-5. **Default league:** set `GGG_DEFAULT_LEAGUE=Runes of Aldur` (or the current challenge league) when `account:leagues` is not granted.
+5. **Default league:** set `GGG_DEFAULT_LEAGUE=Forbidden Rites` (or the current challenge league) when `account:leagues` is not granted.
 
 **Start the stack:**
 ```bash

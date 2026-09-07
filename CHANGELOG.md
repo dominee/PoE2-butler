@@ -4,7 +4,18 @@ Notable **user-facing behavior** and **visual/UI** updates for Hideout Butler. I
 
 ---
 
-## 2026-06-30
+## 2026-09-07
+
+### App · Forbidden Rites league support (patch 0.5.5)
+
+- **Forbidden Rites** is now the default league for new accounts and empty state (`GGG_DEFAULT_LEAGUE=Forbidden Rites`). The league runs **in parallel with Runes of Aldur** until the 1.0 release — existing Runes of Aldur players keep their active league and are not automatically migrated.
+- Dev mock updated to support both leagues simultaneously (Runes of Aldur and Forbidden Rites poe.ninja character profiles).
+
+### App · item display fix (GGG patch 0.5.4d / 0.5.5 format change)
+
+- Since patch **0.5.4d**, GGG wraps mod and property text as JSON objects (`{"description": "+50 to Spirit"}` instead of a plain string). All item mod lists, properties, flavour text, and granted skills are now decoded correctly — the raw dict string no longer appears in the item detail pane.
+
+
 
 ### App · production honesty (GGG scope limits)
 

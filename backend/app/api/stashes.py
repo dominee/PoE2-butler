@@ -13,7 +13,7 @@ from app.clients.ggg import GGGClient
 from app.db.base import get_session
 from app.db.models import Snapshot, SnapshotKind, User
 from app.deps import get_cipher, get_current_user_any, get_current_user_mutate, get_ggg_client
-from app.domain.item import parse_item
+from app.domain.item import _decode_mod_entry, parse_item
 from app.domain.stash import StashTab, StashTabSummary, parse_tab, parse_tab_list
 from app.security.crypto import TokenCipher
 from app.services.snapshot import get_latest_snapshot, refresh_stashes
@@ -106,9 +106,9 @@ async def search_stash(
                         raw.get("name", ""),
                         raw.get("typeLine", ""),
                         raw.get("baseType", ""),
-                        *(raw.get("explicitMods") or []),
-                        *(raw.get("implicitMods") or []),
-                        *(raw.get("craftedMods") or []),
+                        *(_decode_mod_entry(m) for m in (raw.get("explicitMods") or [])),
+                        *(_decode_mod_entry(m) for m in (raw.get("implicitMods") or [])),
+                        *(_decode_mod_entry(m) for m in (raw.get("craftedMods") or [])),
                     ],
                 )
             )
