@@ -89,20 +89,18 @@ reason = "postcss: dev-only transitive dep (Tailwind/Vite build toolchain); not 
 id = "GHSA-w9m9-85wc-3x92"
 reason = "postcss-selector-parser: dev-only transitive dep (Tailwind/Vite build toolchain); not in the production bundle."
 
-# ── react-router Declarative Mode exemption ───────────────────────────────────
-# GHSA-337j-9hxr-rhxg, GHSA-wrjc-x8rr-h8h6, GHSA-jjmj-jmhj-qwj2 only affect
-# React Router Framework Mode and Data Mode applications doing manual SSR/hydration.
-# This app uses Declarative Mode (standard browser routing, no SSR) and is not affected.
-# Fix is in v7.18.0 which requires a breaking v6→v7 migration; tracked separately.
-
+# ── vitest / @vitest/mocker (test runner, dev-only) ──────────────────────────
 [[IgnoredVulns]]
-id = "GHSA-337j-9hxr-rhxg"
-reason = "react-router: only affects Framework Mode / manual SSR hydration. This app uses Declarative Mode with no SSR — explicitly not affected per advisory. v6→v7 migration tracked separately."
+id = "GHSA-82fw-gwwq-j7x9"
+reason = "vitest/@vitest/mocker: path traversal via HMR WebSocket only exploitable on an exposed dev server. 'vitest run' (CI/docker) does not start an HMR server. Dev-only dep; not in the production bundle. Fix is in vitest 4.x (major upgrade, tracked separately)."
 
+# ── baseline-browser-mapping (build toolchain, dev-only) ─────────────────────
 [[IgnoredVulns]]
-id = "GHSA-wrjc-x8rr-h8h6"
-reason = "react-router: only affects Framework Mode / manual SSR hydration. This app uses Declarative Mode with no SSR — explicitly not affected per advisory. v6→v7 migration tracked separately."
+id = "GHSA-w5vr-8v7q-w6rv"
+reason = "baseline-browser-mapping: dev-only transitive dep (eslint-plugin-compat/browserslist toolchain); not in the production bundle. Fix in 2.11.0."
 
+# ── js-yaml new CVE (eslint/vite toolchain, dev-only) ────────────────────────
 [[IgnoredVulns]]
-id = "GHSA-jjmj-jmhj-qwj2"
-reason = "react-router-dom: only affects Framework Mode / manual SSR hydration. This app uses Declarative Mode with no SSR — explicitly not affected per advisory. v6→v7 migration tracked separately."
+id = "GHSA-2883-xcg3-v3hh"
+reason = "js-yaml: dev-only transitive dep (eslint/vite toolchain); not in the production bundle. Same package family as GHSA-52cp-r559-cp3m already suppressed."
+

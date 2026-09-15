@@ -85,3 +85,8 @@ The admin **Overview** → **Price jobs (background)** section lists throttle ke
 - **Stat id gaps**: if a mod cannot be mapped to a trade stat id, the search may be weaker; see [trade_deeplinks.md](trade_deeplinks.md).
 - **Low liquidity** thin markets may yield `None` or wide uncertainty even after relaxation.
 - **POE2Scout (tier B)**: a stable item-level HTTP contract must be agreed before turning on; the shipped adapter is a no-op when the base URL is empty.
+- **403 on datacenter IPs (tier C)**: GGG/Cloudflare blocks anonymous trade2 API calls from datacenter IP ranges (code 6 "Forbidden"). The trade2 API also explicitly rejects GGG OAuth Bearer tokens with `insufficient_scope` — it is not part of the OAuth program. This is a known limitation for PROD deployments on datacenter VMs. See [`docs/ggg_api_compliance.md`](ggg_api_compliance.md) for the full analysis and options.
+
+## Compliance
+
+The GGG PoE2 trade endpoints used for tier C (`/api/trade2/`) are not in GGG's official developer documentation. Their use is industry-wide but technically outside GGG's documented API policy. See [`docs/ggg_api_compliance.md`](ggg_api_compliance.md) for the complete legal analysis, risk table, and recommended next steps (including contacting GGG for clarification).

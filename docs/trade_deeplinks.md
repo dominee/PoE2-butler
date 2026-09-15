@@ -85,3 +85,13 @@ CI and local unit tests **must not** depend on live GGG responses:
 - **403 / rate limits**: Some networks or User-Agents may be rejected. The fallback URL keeps the feature usable.
 - **Stat coverage**: Mod lines only appear in the POST body when a trade stat id can be resolved (catalogue + bundled fallback). Unusual or new mods may still be missing until GGG's stats export includes them.
 - **Weight group (anonymous callers)**: GGG rejects `weight` stat groups from server-side requests due to query complexity limits. The app falls back to a min-floor `upgrade` search automatically. See *GGG weight-group complexity limit* above.
+
+## Compliance and legal status
+
+The `/api/trade2/` endpoints used here (**POST** search, **GET** list, **GET** fetch, **GET** stats) are **not documented** in GGG's official [developer reference](https://www.pathofexile.com/developer/docs/reference). GGG's developer docs explicitly state: *"It is against our Terms of Use (section 7i) to reverse-engineer endpoints outside of this documentation."*
+
+**In practice:** these endpoints are used by GGG's own trade website and by all major PoE trade tools; GGG has tolerated their use for years and has not enforced against legitimate, rate-limited tooling. GGG makes no guarantee of API availability and may restrict or remove access at any time.
+
+**OAuth Bearer tokens with trade2:** Confirmed 2026-09-15 — the trade2 API explicitly rejects GGG OAuth Bearer tokens with `{"error": "insufficient_scope"}`. It is not part of the OAuth program and uses `POESESSID` (browser session cookie) only. There is no authenticated server-side path via OAuth. This is a **known limitation** for server deployments on datacenter IPs — see [`docs/ggg_api_compliance.md`](ggg_api_compliance.md) §4 for options.
+
+See [`docs/ggg_api_compliance.md`](ggg_api_compliance.md) for the complete compliance analysis, risk table, and recommended next steps.
