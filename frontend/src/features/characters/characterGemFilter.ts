@@ -139,17 +139,16 @@ export function collectCharacterOtherInventory(
  *
  * | inventory_id      | label              |
  * |-------------------|--------------------|
- * | null / missing    | "From Weapon"      |
- * | SkillSlots        | "From Skill Tree"  |
  * | AscendancySkills  | "Ascendancy"       |
- * | DefaultAttackSkills | null (skip)      |
+ * | SkillSlots / DefaultAttackSkills / null | null (no annotation) |
+ *
+ * Note: "From Weapon" is intentionally removed. Weapon-granted gems go into
+ * the `equipped` bucket and are not walked by the gem filter. Gems with
+ * null inventory_id that DO appear here are invariably support gems nested
+ * inside a meta/spirit gem's socket — labelling them "From Weapon" is wrong.
  */
 export function gemSourceLabel(item: Item): string | null {
   const iid = item.inventory_id;
   if (iid === "AscendancySkills") return "Ascendancy";
-  if (iid === "DefaultAttackSkills") return null;
-  if (iid === "SkillSlots") return "From Skill Tree";
-  // null / missing inventory_id on a Gem rarity item = granted by equipment
-  if (item.rarity === "Gem" && !iid) return "From Weapon";
   return null;
 }

@@ -148,7 +148,10 @@ export function ItemDetailPane({
   const hasRollData = hasTypeRefRoll || hasGggRoll;
   const modPctsForScore = hasTypeRefRoll ? typeRefPcts : gggRoll.modPcts;
   const itemScore = hasRollData ? computeItemScore(modPctsForScore) : null;
-  const showModRollHints = item.rarity !== "Unique";
+  // Enable roll hints for all rarities. Unique items may have non-standard
+  // tier definitions but the inferred mod DB (tag_index) provides reasonable
+  // T1 comparisons; if no magnitude data is found the bars simply don't render.
+  const showModRollHints = true;
   const refIm = item.implicit_mod_range_hints;
   const refEx = item.explicit_mod_range_hints;
 

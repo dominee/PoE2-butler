@@ -614,20 +614,21 @@ def parse_item(raw: dict[str, Any]) -> Item:
         strip_item_mod_text(_decode_mod_entry(m)) for m in raw.get("explicitMods") or []
     ]
 
-    # For non-Unique items where GGG extended.mods is absent, infer ModDetail
-    # entries from plain mod text using the tag_index in mod_ranges.json.
+    # Infer ModDetail entries from plain mod text when GGG extended.mods is
+    # absent. Previously unique items were excluded here ("GGG magnitudes are
+    # a poor match"), but now that tag_index is populated the inference is
+    # reliable enough to power the stat-spread candle bars for all rarities.
     item_ilvl: int = int(raw.get("ilvl") or 0)
-    if rarity != "Unique":
-        if not implicit_mod_details and implicit_mods_list:
-            implicit_mod_details = [
-                _infer_mod_detail(m, item_ilvl) or ModDetail(name="")
-                for m in implicit_mods_list
-            ]
-        if not explicit_mod_details and explicit_mods_list:
-            explicit_mod_details = [
-                _infer_mod_detail(m, item_ilvl) or ModDetail(name="")
-                for m in explicit_mods_list
-            ]
+    if not implicit_mod_details and implicit_mods_list:
+        implicit_mod_details = [
+            _infer_mod_detail(m, item_ilvl) or ModDetail(name="")
+            for m in implicit_mods_list
+        ]
+    if not explicit_mod_details and explicit_mods_list:
+        explicit_mod_details = [
+            _infer_mod_detail(m, item_ilvl) or ModDetail(name="")
+            for m in explicit_mods_list
+        ]
     implicit_mod_range_hints = (
         _reference_range_columns([str(m) for m in implicit_mods_list], mod_range_hints)
         if mod_range_hints

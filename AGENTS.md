@@ -192,6 +192,7 @@ The file is committed to the repository and baked into the Docker image at build
 | `stat_hashes` | GGG magnitude `hash` → `{ name, tier, min, max }` (populated by `extract_mod_ranges.py` from sample data) |
 | `mod_names` | GGG display mod `name` → `{ group, tiers: [{tier, required_level, min, max}] }` (populated by `ingest_repoe_mods.py`) |
 | `mod_groups` | RePoE mod family `group` → sorted list of all tier dicts, T1-first (populated by `ingest_repoe_mods.py`) |
+| `tag_index` | GGG `implicit_tag` → sorted list of group names that carry it (populated by `ingest_repoe_mods.py`). **Required for candle bars on character items** — without it `find_group_for_mod` returns `None` and no bars render. |
 
 **Re-import trigger:** run `ingest_repoe_mods.py` after each PoE2 game patch (~quarterly) or whenever new mod tiers appear. Commit the result and redeploy — the build picks it up automatically. See `DEPLOY.md` §2.4 for the full procedure.
 

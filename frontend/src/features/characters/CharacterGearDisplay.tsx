@@ -88,19 +88,15 @@ export function CharacterGearDisplay({
         <div className="mt-2">
           <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
           <div className="grid grid-cols-2 gap-1.5">
-            {skillGems.map((gem) => {
-              const src = gemSourceLabel(gem);
-              return (
-                <div key={gem.id}>
-                  <ItemCard
-                    item={gem}
-                    selected={selectedItemId === gem.id}
-                    onClick={click}
-                  />
-                  {src && <GemSourceAnnotation source={src} />}
-                </div>
-              );
-            })}
+            {skillGems.map((gem) => (
+              <ItemCard
+                key={gem.id}
+                item={gem}
+                selected={selectedItemId === gem.id}
+                onClick={click}
+                sourceLabel={gemSourceLabel(gem)}
+              />
+            ))}
           </div>
         </div>
       )}

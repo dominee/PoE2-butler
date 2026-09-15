@@ -39,6 +39,8 @@ export interface ItemCardProps {
   currencyChaos?: CurrencyChaosPair | null;
   activityStatus?: ActivityStatus;
   className?: string;
+  /** Optional annotation shown inside the card below the type line (e.g. gem source). */
+  sourceLabel?: string | null;
 }
 
 const ACTIVITY_DOT: Record<NonNullable<ActivityStatus>, string> = {
@@ -56,6 +58,7 @@ export function ItemCard({
   currencyChaos,
   activityStatus,
   className,
+  sourceLabel,
 }: ItemCardProps) {
   const runeforged = isRuneforgedItem(item);
   const priceInflight = useIsItemPriceInflight(item.id);
@@ -139,6 +142,9 @@ export function ItemCard({
             </div>
           )}
           <div className="break-words text-xs text-parchment-100/80">{item.type_line}</div>
+          {sourceLabel && (
+            <div className="mt-0.5 text-[10px] italic text-ui-muted">{sourceLabel}</div>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] uppercase tracking-wide text-ui-muted">
           {gemLevel != null ? (
