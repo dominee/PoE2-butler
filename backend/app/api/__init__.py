@@ -11,6 +11,7 @@ from app.api.health import router as health_router
 from app.api.items import router as items_router
 from app.api.leagues import router as leagues_router
 from app.api.me import router as me_router
+from app.api.notifications import router as notifications_router
 from app.api.prefs import router as prefs_router
 from app.api.pricing import router as pricing_router
 from app.api.public_character import router as public_character_router
@@ -32,6 +33,7 @@ __all__ = [
     "items_router",
     "leagues_router",
     "me_router",
+    "notifications_router",
     "public_character_router",
     "public_item_router",
     "shares_router",
@@ -41,3 +43,4 @@ __all__ = [
     "stashes_router",
     "trade_router",
 ]
+

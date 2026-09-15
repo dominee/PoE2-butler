@@ -1,6 +1,15 @@
 import type { Item } from "@/api/types";
+import { gemSourceLabel } from "@/features/characters/characterGemFilter";
+import { GemSourceAnnotation } from "@/features/characters/CharacterGearDisplay";
 import { ItemExportSnapshot } from "@/features/items/ItemImageExport";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
+
+/** Compact source annotation for the detailed gear view. */
+function GemSourceNote({ item }: { item: Item }) {
+  const src = gemSourceLabel(item);
+  if (!src) return null;
+  return <GemSourceAnnotation source={src} />;
+}
 
 const GRID_TEMPLATE_AREAS = `
   "weapon helm offhand"
@@ -165,7 +174,10 @@ export function CharacterDetailedGearView({
           <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
           <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
             {gems.map((item) => (
-              <ItemExportSnapshot key={item.id} item={item} variant="compact" {...ITEM_CARD} />
+              <div key={item.id}>
+                <ItemExportSnapshot item={item} variant="compact" {...ITEM_CARD} />
+                <GemSourceNote item={item} />
+              </div>
             ))}
           </div>
         </div>

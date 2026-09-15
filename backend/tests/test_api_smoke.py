@@ -110,6 +110,13 @@ async def test_healthz_ok(app_stack) -> None:
     assert r.json()["status"] == "ok"
 
 
+async def test_notifications_public_no_auth(app_stack) -> None:
+    """GET /api/notifications is public (no auth required) and returns a list."""
+    _app, client, _mock = app_stack
+    r = await client.get("/api/notifications")
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+
 async def test_readyz_ok(app_stack) -> None:
     """Readiness probe: returns 200 and status=ready."""
     _app, client, _mock = app_stack

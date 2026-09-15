@@ -294,3 +294,24 @@ class UserApiKey(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="api_keys")
+
+
+class AppNotification(Base):
+    """Admin-managed persistent notification shown in the SPA bottom-right panel.
+
+    Operators create / toggle / delete these via the admin console.
+    The SPA polls ``GET /api/notifications`` (public, no auth) and shows
+    active, non-expired rows that the user has not yet dismissed.
+    """
+
+    __tablename__ = "app_notifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUIDType, primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(200))
+    message: Mapped[str] = mapped_column(String(2000))
+    # "info" | "warning" | "error"
+    notification_type: Mapped[str] = mapped_column(String(20), default="info")
+    active: Mapped[bool] = mapped_column(default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+

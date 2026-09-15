@@ -68,6 +68,11 @@ export function ItemCard({
     item.stack_size != null && item.max_stack_size != null
       ? `${item.stack_size}/${item.max_stack_size}`
       : null;
+  // For skill gems show gem Level (from properties) instead of ilvl.
+  const gemLevel =
+    item.rarity === "Gem"
+      ? (item.properties.find((p) => p.name.toLowerCase() === "level")?.value ?? null)
+      : null;
 
   return (
     <button
@@ -136,7 +141,27 @@ export function ItemCard({
           <div className="break-words text-xs text-parchment-100/80">{item.type_line}</div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] uppercase tracking-wide text-ui-muted">
-          {item.ilvl != null && <span>ilvl {item.ilvl}</span>}
+          {gemLevel != null ? (
+            <span className="text-rarity-gem">lv {gemLevel}</span>
+          ) : (
+            item.ilvl != null && <span>ilvl {item.ilvl}</span>
+          )}
+          {item.rarity === "Gem" && item.sockets.length > 0 && (
+            <span
+              className="flex flex-wrap justify-end gap-0.5"
+              title={`${item.sockets.length} socket${item.sockets.length > 1 ? "s" : ""}`}
+            >
+              {item.sockets.map((s, i) => (
+                <span
+                  key={i}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-ink-600 text-[8px] uppercase text-rarity-gem"
+                  title={s.type}
+                >
+                  {s.type.slice(0, 1)}
+                </span>
+              ))}
+            </span>
+          )}
           {stack && <span>{stack}</span>}
           {item.corrupted && <span className="text-red-400">corrupted</span>}
         </div>

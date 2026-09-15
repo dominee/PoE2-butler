@@ -31,7 +31,9 @@ import type {
   StashTab,
   ItemTextResponse,
   TradeSearchResponse,
+  AppNotification,
 } from "./types";
+
 
 export const shareViewPath = (shareId: string) => `/i/${encodeURIComponent(shareId)}`;
 export const characterShareViewPath = (shareId: string) =>
@@ -620,5 +622,18 @@ export function useRevokeApiKey() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["api-key"] });
     },
+  });
+}
+
+// ── Notifications (public) ────────────────────────────────────────────────────
+
+/** Poll active SPA notifications every 5 minutes. No auth required. */
+export function useNotifications() {
+  return useQuery<AppNotification[]>({
+    queryKey: ["notifications"],
+    queryFn: () => api.get<AppNotification[]>("/api/notifications"),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    retry: false,
   });
 }

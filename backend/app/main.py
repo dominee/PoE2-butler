@@ -21,6 +21,7 @@ from app.api import (
     items_router,
     leagues_router,
     me_router,
+    notifications_router,
     prefs_router,
     pricing_router,
     public_character_router,
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(prefs_router)
     app.include_router(stashes_router)
     app.include_router(pricing_router)
+    app.include_router(notifications_router)
 
     if settings.expose_docs:
         _patch_openapi(app)

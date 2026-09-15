@@ -134,3 +134,22 @@ export function collectCharacterOtherInventory(
       !item.is_charm,
   );
 }
+
+/** Source label for a skill gem, based on inventory_id.
+ *
+ * | inventory_id      | label              |
+ * |-------------------|--------------------|
+ * | null / missing    | "From Weapon"      |
+ * | SkillSlots        | "From Skill Tree"  |
+ * | AscendancySkills  | "Ascendancy"       |
+ * | DefaultAttackSkills | null (skip)      |
+ */
+export function gemSourceLabel(item: Item): string | null {
+  const iid = item.inventory_id;
+  if (iid === "AscendancySkills") return "Ascendancy";
+  if (iid === "DefaultAttackSkills") return null;
+  if (iid === "SkillSlots") return "From Skill Tree";
+  // null / missing inventory_id on a Gem rarity item = granted by equipment
+  if (item.rarity === "Gem" && !iid) return "From Weapon";
+  return null;
+}

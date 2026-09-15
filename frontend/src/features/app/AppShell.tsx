@@ -20,6 +20,7 @@ import type { Item } from "@/api/types";
 import { ActivityLog } from "@/features/activity/ActivityLog";
 import { AppFooter } from "@/features/app/AppFooter";
 import { HeaderCurrencyRates } from "@/features/app/HeaderCurrencyRates";
+import { NotificationToast } from "@/features/app/NotificationToast";
 import { CharacterListPanel } from "@/features/characters/CharacterListPanel";
 import { CharacterShareActions } from "@/features/characters/CharacterShareActions";
 import {
@@ -33,8 +34,10 @@ import {
   collectCharacterOtherInventory,
   collectCharacterSkillGemsForDisplay,
   collectCharacterSupportGemsForDisplay,
+  gemSourceLabel,
   isCharacterSkillGem,
 } from "@/features/characters/characterGemFilter";
+import { GemSourceAnnotation } from "@/features/characters/CharacterGearDisplay";
 import {
   collectCharacterGearPricingItems,
   computeGearEstimate,
@@ -611,15 +614,20 @@ export function AppShell() {
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {skillGemsForDisplay.map((gem) => (
-                        <ItemCard
-                          key={gem.id}
-                          item={gem}
-                          selected={selectedItem?.id === gem.id}
-                          onClick={setSelectedItem}
-                          {...itemCardPriceProps(gem)}
-                        />
-                      ))}
+                      {skillGemsForDisplay.map((gem) => {
+                        const src = gemSourceLabel(gem);
+                        return (
+                          <div key={gem.id}>
+                            <ItemCard
+                              item={gem}
+                              selected={selectedItem?.id === gem.id}
+                              onClick={setSelectedItem}
+                              {...itemCardPriceProps(gem)}
+                            />
+                            {src && <GemSourceAnnotation source={src} />}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -707,6 +715,7 @@ export function AppShell() {
         </main>
       )}
       <AppFooter className="border-t border-ink-800 bg-ink-900/60 py-2" />
+      <NotificationToast />
     </div>
     </PriceInflightProvider>
   );

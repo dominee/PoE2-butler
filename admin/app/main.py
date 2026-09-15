@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid as _uuid
 from pathlib import Path
 from typing import Annotated
 
@@ -10,6 +11,8 @@ from fastapi import Cookie, Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text as sa_text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from admin.app.audit import audit_action
 from admin.app.auth import AdminSession, AuthError, SessionManager
@@ -112,6 +115,12 @@ def _attach_csrf_cookie(response: Response, settings: AdminSettings) -> None:
         secure=settings.environment in ("prod", "uat"),
         max_age=settings.session_ttl_seconds,
     )
+
+
+def _get_admin_db_engine() -> AsyncEngine:
+    """Thin helper so notification routes can get the admin DB engine."""
+    from admin.app.db import get_engine  # noqa: PLC0415
+    return get_engine()
 
 
 def _register_routes(app: FastAPI) -> None:
@@ -433,6 +442,105 @@ def _register_routes(app: FastAPI) -> None:
             detail=f"cleared={n}",
         )
         return RedirectResponse(url=f"/admin/price-queue?notice=cleared&n={n}", status_code=303)
+
+    # ── Notifications ─────────────────────────────────────────────────────────
+
+    @app.get("/admin/notifications", response_class=HTMLResponse)
+    async def notifications_list(
+        request: Request,
+        session: AdminSession = Depends(_require_session),
+    ) -> HTMLResponse:
+        notice = request.query_params.get("notice")
+        engine = _get_admin_db_engine()
+        rows = []
+        async with engine.connect() as conn:
+            result = await conn.execute(
+                sa_text(
+                    "SELECT id, title, message, notification_type, active, "
+                    "created_at, expires_at FROM app_notifications ORDER BY created_at DESC"
+                )
+            )
+            rows = [dict(r._mapping) for r in result.fetchall()]
+        return TEMPLATES.TemplateResponse(
+            request,
+            "notifications.html",
+            {"session": session, "active": "notifications", "rows": rows, "notice": notice},
+        )
+
+    @app.post("/admin/notifications")
+    async def notifications_create(
+        request: Request,
+        title: Annotated[str, Form()],
+        message: Annotated[str, Form()],
+        notification_type: Annotated[str, Form()] = "info",
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        engine = _get_admin_db_engine()
+        async with engine.begin() as conn:
+            await conn.execute(
+                sa_text(
+                    "INSERT INTO app_notifications (id, title, message, notification_type, active)"
+                    " VALUES (:id, :title, :message, :ntype, true)"
+                ),
+                {
+                    "id": str(_uuid.uuid4()),
+                    "title": title[:200],
+                    "message": message[:2000],
+                    "ntype": notification_type,
+                },
+            )
+        audit_action(
+            actor=session.username,
+            action="notification_create",
+            detail=f"title={title[:50]}",
+        )
+        return RedirectResponse(url="/admin/notifications?notice=created", status_code=303)
+
+    @app.post("/admin/notifications/{notification_id}/toggle")
+    async def notifications_toggle(
+        request: Request,
+        notification_id: str,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        engine = _get_admin_db_engine()
+        async with engine.begin() as conn:
+            await conn.execute(
+                sa_text(
+                    "UPDATE app_notifications SET active = NOT active WHERE id = :id"
+                ),
+                {"id": notification_id},
+            )
+        audit_action(
+            actor=session.username,
+            action="notification_toggle",
+            detail=f"id={notification_id}",
+        )
+        return RedirectResponse(url="/admin/notifications?notice=toggled", status_code=303)
+
+    @app.post("/admin/notifications/{notification_id}/delete")
+    async def notifications_delete(
+        request: Request,
+        notification_id: str,
+        session: AdminSession = Depends(_require_session),
+        csrf_token: Annotated[str | None, Form()] = None,
+    ) -> RedirectResponse:
+        _verify_csrf(request, csrf_token)
+        engine = _get_admin_db_engine()
+        async with engine.begin() as conn:
+            await conn.execute(
+                sa_text("DELETE FROM app_notifications WHERE id = :id"),
+                {"id": notification_id},
+            )
+        audit_action(
+            actor=session.username,
+            action="notification_delete",
+            detail=f"id={notification_id}",
+        )
+        return RedirectResponse(url="/admin/notifications?notice=deleted", status_code=303)
 
     @app.get("/admin/upstream", response_class=HTMLResponse)
     async def upstream(

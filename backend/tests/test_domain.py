@@ -11,7 +11,7 @@ from app.domain.character import (
     parse_detail,
     parse_summaries,
 )
-from app.domain.item import _decode_mod_entry, parse_item
+from app.domain.item import ItemProperty, _decode_mod_entry, parse_item
 from app.domain.league import parse_leagues, pick_current_league
 
 # Allow importing mock-ggg helpers inside tests that need them.
@@ -1206,7 +1206,47 @@ def test_parse_item_dict_property_name_and_value() -> None:
     assert item.properties[0].value == "20"
 
 
-def test_parse_item_dict_flavour_text() -> None:
+def test_item_property_from_ggg_display_mode_3_single_value() -> None:
+    """displayMode 3 with one placeholder: name becomes the full interpolated string."""
+    raw = {"name": "Lasts {0} Seconds", "values": [["3", 0]], "displayMode": 3}
+    prop = ItemProperty.from_ggg(raw)
+    assert prop.name == "Lasts 3 Seconds"
+    assert prop.value is None
+
+
+def test_item_property_from_ggg_display_mode_3_multi_value() -> None:
+    """displayMode 3 with two placeholders: both substituted, value=None."""
+    raw = {
+        "name": "Consumes {0} of {1} Charges on use",
+        "values": [["30", 0], ["40", 0]],
+        "displayMode": 3,
+    }
+    prop = ItemProperty.from_ggg(raw)
+    assert prop.name == "Consumes 30 of 40 Charges on use"
+    assert prop.value is None
+
+
+def test_item_property_from_ggg_display_mode_3_dict_values() -> None:
+    """displayMode 3 works when values are dict-wrapped (JSON description format)."""
+    raw = {
+        "name": "Currently has {0} Charges",
+        "values": [[{"description": "80"}, 0]],
+        "displayMode": 3,
+    }
+    prop = ItemProperty.from_ggg(raw)
+    assert prop.name == "Currently has 80 Charges"
+    assert prop.value is None
+
+
+def test_item_property_from_ggg_standard_mode_unchanged() -> None:
+    """displayMode 0 (or absent) keeps name/value split as before."""
+    raw = {"name": "Level", "values": [["12", 0]], "displayMode": 0}
+    prop = ItemProperty.from_ggg(raw)
+    assert prop.name == "Level"
+    assert prop.value == "12"
+
+
+
     """flavourText list entries wrapped as dicts are decoded."""
     raw = {
         "id": "unique-1",

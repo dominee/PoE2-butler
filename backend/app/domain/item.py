@@ -238,6 +238,17 @@ class ItemProperty(BaseModel):
     def from_ggg(cls, raw: dict[str, Any]) -> ItemProperty:
         name = _strip_tags(_decode_mod_entry(raw.get("name", "")))
         values = raw.get("values") or []
+        display_mode = raw.get("displayMode", 0)
+
+        # displayMode 3: name is a template — "{0} Seconds", "Consumes {0} of {1} Charges".
+        # Substitute every {N} placeholder with the corresponding values[N][0].
+        if display_mode == 3 or (values and "{0}" in name):
+            for i, v in enumerate(values):
+                if isinstance(v, list) and v:
+                    name = name.replace(f"{{{i}}}", str(_decode_mod_entry(v[0])))
+            return cls(name=name, value=None)
+
+        # Standard: separate name and first value.
         value = None
         if values and isinstance(values[0], list) and values[0]:
             value = str(_decode_mod_entry(values[0][0]))

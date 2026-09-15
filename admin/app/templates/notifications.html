@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Notifications · Admin{% endblock %}
+{% block content %}
+<section>
+  <h2>App Notifications</h2>
+  <p class="muted" style="margin:0 0 1rem">
+    Create persistent messages shown to all SPA users in the bottom-right panel.
+    Active notifications are fetched by the SPA on load (every 5 min) and dismissed
+    per-user in localStorage. Toggle or delete to manage visibility.
+  </p>
+
+  {% if notice == "created" %}
+  <p class="notice-banner notice-ok">Notification created.</p>
+  {% elif notice == "toggled" %}
+  <p class="notice-banner notice-ok">Visibility toggled.</p>
+  {% elif notice == "deleted" %}
+  <p class="notice-banner notice-ok">Notification deleted.</p>
+  {% endif %}
+
+  <!-- Create form -->
+  <details open style="margin-bottom:1.5rem">
+    <summary style="cursor:pointer;font-weight:600;margin-bottom:.75rem">Create new notification</summary>
+    <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
+    <form method="post" action="/admin/notifications" style="max-width:640px">
+      <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+      <div style="margin-bottom:.75rem">
+        <label for="n-title" style="display:block;margin-bottom:.25rem">Title</label>
+        <input id="n-title" name="title" required maxlength="200" style="width:100%" placeholder="e.g. Pricing unavailable on hosted deployments" />
+      </div>
+      <div style="margin-bottom:.75rem">
+        <label for="n-msg" style="display:block;margin-bottom:.25rem">Message</label>
+        <textarea id="n-msg" name="message" required maxlength="2000" rows="3" style="width:100%" placeholder="Plain text shown to users. Keep it concise."></textarea>
+      </div>
+      <div style="margin-bottom:.75rem">
+        <label for="n-type" style="display:block;margin-bottom:.25rem">Type</label>
+        <select id="n-type" name="notification_type">
+          <option value="info">ℹ Info</option>
+          <option value="warning">⚠ Warning</option>
+          <option value="error">✖ Error</option>
+        </select>
+      </div>
+      <button type="submit">Create</button>
+    </form>
+  </details>
+
+  <!-- List -->
+  {% if rows %}
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Type</th>
+        <th>Active</th>
+        <th>Created</th>
+        <th>Expires</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          <strong>{{ row.title }}</strong><br />
+          <span class="muted" style="font-size:.85em">{{ row.message[:120] }}{% if row.message|length > 120 %}…{% endif %}</span>
+        </td>
+        <td><code>{{ row.notification_type }}</code></td>
+        <td>{% if row.active %}<span style="color:#4ade80">✔ active</span>{% else %}<span class="muted">inactive</span>{% endif %}</td>
+        <td class="muted" style="white-space:nowrap">{{ row.created_at.strftime('%Y-%m-%d %H:%M') if row.created_at else '—' }}</td>
+        <td class="muted" style="white-space:nowrap">{{ row.expires_at.strftime('%Y-%m-%d %H:%M') if row.expires_at else '—' }}</td>
+        <td style="white-space:nowrap">
+          <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
+          <form method="post" action="/admin/notifications/{{ row.id }}/toggle" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+            <button type="submit">{% if row.active %}Deactivate{% else %}Activate{% endif %}</button>
+          </form>
+          <!-- nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -->
+          <form method="post" action="/admin/notifications/{{ row.id }}/delete" class="inline-form"
+                onsubmit="return confirm('Delete this notification?')">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('poe2b_admin_csrf', '') }}" />
+            <button type="submit" class="danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No notifications yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

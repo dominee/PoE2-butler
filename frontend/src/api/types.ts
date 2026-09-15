@@ -385,3 +385,12 @@ export interface ApiKeyCreated extends ApiKeyStatus {
   /** The full secret key — shown once and never stored. Copy it immediately. */
   full_key: string;
 }
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  notification_type: "info" | "warning" | "error" | string;
+  created_at: string;
+}
+
