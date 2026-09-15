@@ -92,7 +92,7 @@ export function PublicCharacterPage() {
             equipped={collectPaperDollItems(character)}
             jewels={character.jewels}
             gems={skillGems}
-            supportGems={supportGems}
+            supportGems={supportGems.map((g) => g.item)}
           />
         )}
       </main>

@@ -7,6 +7,24 @@ import { itemIconDisplayUrl } from "./itemRarityFavicon";
 import { ModText } from "./ItemModPresentation";
 import { isRuneforgedItem, runeforgedBorderClass } from "./itemVisualStyles";
 
+// ── source label icons ──────────────────────────────────────────────────────
+
+function SourceLabelIcon({ label }: { label: string }) {
+  if (label === "Ascendancy")
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="inline h-3 w-3 shrink-0" fill="currentColor" aria-hidden>
+        <path d="M8 0l1.5 5h5.5l-4.5 3.3 1.7 5.2L8 10.5l-4.2 3 1.7-5.2L1 5h5.5z"/>
+      </svg>
+    );
+  if (label === "From Weapon")
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="inline h-3 w-3 shrink-0" fill="currentColor" aria-hidden>
+        <path d="M11.5 0L16 4.5l-1 1-1-1-7 7 .5.5-1.5 2.5L4 16l-1.5-1.5 1-2.5.5-.5-1-1 .5-.5 1 1 7-7-1-1zM2 12l1 1-.5 1.5L1 16l-.5-1.5L0 13l1.5-.5z"/>
+      </svg>
+    );
+  return null;
+}
+
 const RARITY_CLASSNAME: Record<ItemRarity, string> = {
   Normal: "text-rarity-normal border-ink-600",
   Magic: "text-rarity-magic border-rarity-magic/40",
@@ -143,7 +161,10 @@ export function ItemCard({
           )}
           <div className="break-words text-xs text-parchment-100/80">{item.type_line}</div>
           {sourceLabel && (
-            <div className="mt-0.5 text-[10px] italic text-ui-muted">{sourceLabel}</div>
+            <div className="mt-0.5 flex items-center gap-0.5 text-[10px] italic text-ui-muted">
+              <SourceLabelIcon label={sourceLabel} />
+              {sourceLabel}
+            </div>
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5 text-[10px] uppercase tracking-wide text-ui-muted">

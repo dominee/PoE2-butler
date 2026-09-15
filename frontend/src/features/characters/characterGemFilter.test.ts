@@ -165,7 +165,7 @@ describe("collectCharacterSkillGemsForDisplay", () => {
         gem({ id: "brut", type_line: "Brutality I", properties: [{ name: "Support", value: null }] }),
       ],
     };
-    expect(collectCharacterSkillGemsForDisplay(detail).map((g) => g.id)).toEqual(["g1", "inv1"]);
+    expect(collectCharacterSkillGemsForDisplay(detail).map((g) => g.item.id)).toEqual(["g1", "inv1"]);
   });
 });
 
@@ -178,7 +178,7 @@ describe("collectCharacterSupportGemsForDisplay", () => {
     });
     const skill = gem({ id: "g1", type_line: "Fireball" });
     const detail = { gems: [skill, lineage], inventory: [] };
-    expect(collectCharacterSupportGemsForDisplay(detail).map((g) => g.id)).toEqual(["lin1"]);
+    expect(collectCharacterSupportGemsForDisplay(detail).map((g) => g.item.id)).toEqual(["lin1"]);
   });
 });
 
@@ -224,7 +224,7 @@ describe("nested socketed_items (Her Declaration bug)", () => {
       socketed_items: [lineage],
     });
     const detail = { gems: [skill], inventory: [] };
-    const found = collectCharacterSupportGemsForDisplay(detail).map((g) => g.id);
+    const found = collectCharacterSupportGemsForDisplay(detail).map((g) => g.item.id);
     expect(found).toContain("her-declaration");
     expect(found).not.toContain("purity-of-ice");
   });
@@ -243,8 +243,8 @@ describe("nested socketed_items (Her Declaration bug)", () => {
       socketed_items: [genericSupport],
     });
     const detail = { gems: [skill], inventory: [] };
-    const skills = collectCharacterSkillGemsForDisplay(detail).map((g) => g.id);
-    const supports = collectCharacterSupportGemsForDisplay(detail).map((g) => g.id);
+    const skills = collectCharacterSkillGemsForDisplay(detail).map((g) => g.item.id);
+    const supports = collectCharacterSupportGemsForDisplay(detail).map((g) => g.item.id);
     expect(skills).toContain("lightning-bolt");
     expect(supports).not.toContain("magnified-area");
   });
@@ -263,7 +263,7 @@ describe("nested socketed_items (Her Declaration bug)", () => {
     });
     const detail = { gems: [skill], inventory: [lineage] };
     const found = collectCharacterSupportGemsForDisplay(detail);
-    expect(found.filter((g) => g.id === "her-declaration")).toHaveLength(1);
+    expect(found.filter((g) => g.item.id === "her-declaration")).toHaveLength(1);
   });
 
   it("finds a lineage gem in inventory skill socketed_items (skill in inventory, not gems)", () => {
@@ -284,10 +284,10 @@ describe("nested socketed_items (Her Declaration bug)", () => {
     });
     // skill is in inventory (not gems) — happens when inventoryId is null/missing
     const detail = { gems: [], inventory: [skill] };
-    const found = collectCharacterSupportGemsForDisplay(detail).map((g) => g.id);
+    const found = collectCharacterSupportGemsForDisplay(detail).map((g) => g.item.id);
     expect(found).toContain("her-declaration");
     expect(found).not.toContain("purity-of-ice");
-    const skillGems = collectCharacterSkillGemsForDisplay(detail).map((g) => g.id);
+    const skillGems = collectCharacterSkillGemsForDisplay(detail).map((g) => g.item.id);
     expect(skillGems).toContain("purity-of-ice");
   });
 });

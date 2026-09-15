@@ -88,13 +88,13 @@ export function CharacterGearDisplay({
         <div className="mt-2">
           <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
           <div className="grid grid-cols-2 gap-1.5">
-            {skillGems.map((gem) => (
+            {skillGems.map(({ item: gem, fromSocket }) => (
               <ItemCard
                 key={gem.id}
                 item={gem}
                 selected={selectedItemId === gem.id}
                 onClick={click}
-                sourceLabel={gemSourceLabel(gem)}
+                sourceLabel={gemSourceLabel(gem, fromSocket)}
               />
             ))}
           </div>
@@ -104,7 +104,7 @@ export function CharacterGearDisplay({
         <div className="mt-2">
           <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Support gems</h3>
           <div className="grid grid-cols-2 gap-1.5">
-            {supportGems.map((gem) => (
+            {supportGems.map(({ item: gem }) => (
               <ItemCard
                 key={gem.id}
                 item={gem}

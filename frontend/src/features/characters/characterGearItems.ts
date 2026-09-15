@@ -32,7 +32,7 @@ export function collectCharacterGearPricingItems(
   const uniqueCharms = (detail.equipped ?? []).filter(isUniqueCharm);
   for (const item of [
     ...collectPaperDollItems(detail),
-    ...filterCharacterGemsForPricing([...walkCharacterGemCandidates(detail)]),
+    ...filterCharacterGemsForPricing([...walkCharacterGemCandidates(detail)].map(([item]) => item)),
     ...(detail.jewels ?? []),
     ...uniqueCharms,
   ]) {

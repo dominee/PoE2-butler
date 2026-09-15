@@ -613,13 +613,13 @@ export function AppShell() {
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {skillGemsForDisplay.map((gem) => (
+                      {skillGemsForDisplay.map(({ item: gem, fromSocket }) => (
                         <ItemCard
                           key={gem.id}
                           item={gem}
                           selected={selectedItem?.id === gem.id}
                           onClick={setSelectedItem}
-                          sourceLabel={gemSourceLabel(gem)}
+                          sourceLabel={gemSourceLabel(gem, fromSocket)}
                           {...itemCardPriceProps(gem)}
                         />
                       ))}
@@ -630,7 +630,7 @@ export function AppShell() {
                   <div className="mt-2">
                     <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Support gems</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {supportGemsForDisplay.map((gem) => (
+                      {supportGemsForDisplay.map(({ item: gem }) => (
                         <ItemCard
                           key={gem.id}
                           item={gem}
@@ -663,8 +663,8 @@ export function AppShell() {
             {gearDetail && charLayout === "table" && (
               <CharacterTable
                 equipped={gearDetail.equipped.filter((i) => !i.is_charm && i.inventory_id !== "Charm")}
-                gems={skillGemsForDisplay}
-                supportGems={supportGemsForDisplay}
+                gems={skillGemsForDisplay.map((g) => g.item)}
+                supportGems={supportGemsForDisplay.map((g) => g.item)}
                 jewels={gearDetail.jewels}
                 charms={charmItems}
                 other={otherInventory}

@@ -1,12 +1,12 @@
 import type { Item } from "@/api/types";
-import { gemSourceLabel } from "@/features/characters/characterGemFilter";
+import { gemSourceLabel, type GemEntry } from "@/features/characters/characterGemFilter";
 import { GemSourceAnnotation } from "@/features/characters/CharacterGearDisplay";
 import { ItemExportSnapshot } from "@/features/items/ItemImageExport";
 import { PANE_SECTION_HEADING } from "@/features/items/ItemModPresentation";
 
 /** Compact source annotation for the detailed gear view. */
-function GemSourceNote({ item }: { item: Item }) {
-  const src = gemSourceLabel(item);
+function GemSourceNote({ entry }: { entry: GemEntry }) {
+  const src = gemSourceLabel(entry.item, entry.fromSocket);
   if (!src) return null;
   return <GemSourceAnnotation source={src} />;
 }
@@ -80,7 +80,7 @@ function DetailedSideColumn({
 export interface CharacterDetailedGearViewProps {
   equipped: Item[];
   jewels?: Item[];
-  gems?: Item[];
+  gems?: GemEntry[];
   supportGems?: Item[];
   /** ``doll`` = paper-doll slots (web). ``grid`` = compact multi-column (PNG export). */
   layout?: "doll" | "grid";
@@ -98,7 +98,7 @@ export function CharacterDetailedGearView({
     if (item.inventory_id) bySlot.set(item.inventory_id, item);
   }
 
-  const allItems = [...equipped, ...jewels, ...gems, ...supportGems];
+  const allItems = [...equipped, ...jewels, ...gems.map((g) => g.item), ...supportGems];
 
   if (layout === "grid") {
     return (
@@ -173,10 +173,10 @@ export function CharacterDetailedGearView({
         <div>
           <h3 className={`mb-1 ${PANE_SECTION_HEADING}`}>Skill gems</h3>
           <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
-            {gems.map((item) => (
-              <div key={item.id}>
-                <ItemExportSnapshot item={item} variant="compact" {...ITEM_CARD} />
-                <GemSourceNote item={item} />
+            {gems.map((entry) => (
+              <div key={entry.item.id}>
+                <ItemExportSnapshot item={entry.item} variant="compact" {...ITEM_CARD} />
+                <GemSourceNote entry={entry} />
               </div>
             ))}
           </div>

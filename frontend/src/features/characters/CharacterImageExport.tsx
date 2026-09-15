@@ -66,6 +66,8 @@ function CharacterExportSnapshot({
   const { summary } = detail;
   const skillGems = collectCharacterSkillGemsForDisplay(detail);
   const supportGems = collectCharacterSupportGemsForDisplay(detail);
+  const skillGemItems = skillGems.map((g) => g.item);
+  const supportGemItems = supportGems.map((g) => g.item);
   const dollItems = collectPaperDollItems(detail);
   const transparent = theme === "transparent";
   const epic = theme === "epic";
@@ -113,15 +115,15 @@ function CharacterExportSnapshot({
         <CharacterSimpleExportBody
           equipped={dollItems}
           jewels={detail.jewels}
-          gems={skillGems}
-          supportGems={supportGems}
+          gems={skillGemItems}
+          supportGems={supportGemItems}
         />
       ) : (
         <CharacterDetailedGearView
           equipped={dollItems}
           jewels={detail.jewels}
           gems={skillGems}
-          supportGems={supportGems}
+          supportGems={supportGemItems}
           layout="grid"
         />
       )}

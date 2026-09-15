@@ -74,48 +74,61 @@ export function filterCharacterGemsForPricing(gems: Item[]): Item[] {
  * lineage gems are reachable regardless of which bucket the parent skill ended up in.
  * Generic supports are still filtered by each predicate; this walker only broadens
  * the candidate set so lineage gems nested in skill socketed_items are reachable.
+ *
+ * Yields `[item, fromSocket]` where `fromSocket` is true for items that came from
+ * a parent gem's socketed_items (e.g. skill gems inside a meta/spirit gem's trigger
+ * slots).  This flag is used by `gemSourceLabel` to suppress the "From Weapon" label
+ * on gems that are merely socketed in another gem rather than granted by equipment.
  */
 export function* walkCharacterGemCandidates(
   detail: Pick<CharacterDetail, "gems" | "inventory">,
-): Generator<Item> {
+): Generator<[Item, boolean]> {
   for (const item of detail.gems ?? []) {
-    yield item;
+    yield [item, false];
     if (isCharacterSkillGem(item)) {
-      for (const nested of item.socketed_items ?? []) yield nested;
+      for (const nested of item.socketed_items ?? []) yield [nested, true];
     }
   }
   for (const item of detail.inventory ?? []) {
-    yield item;
+    yield [item, false];
     if (isCharacterSkillGem(item)) {
-      for (const nested of item.socketed_items ?? []) yield nested;
+      for (const nested of item.socketed_items ?? []) yield [nested, true];
     }
   }
+}
+
+/** A gem item together with context about where it was collected from. */
+export interface GemEntry {
+  item: Item;
+  /** True when the gem came from socketedItems of a parent skill gem (e.g. a skill
+   *  socketed into a meta/spirit gem's trigger slots). */
+  fromSocket: boolean;
 }
 
 function collectGemsFromBuckets(
   detail: Pick<CharacterDetail, "gems" | "inventory">,
   predicate: (item: Item) => boolean,
-): Item[] {
+): GemEntry[] {
   const seen = new Set<string>();
-  const out: Item[] = [];
-  for (const item of walkCharacterGemCandidates(detail)) {
+  const out: GemEntry[] = [];
+  for (const [item, fromSocket] of walkCharacterGemCandidates(detail)) {
     if (!predicate(item)) continue;
     if (seen.has(item.id)) continue;
     seen.add(item.id);
-    out.push(item);
+    out.push({ item, fromSocket });
   }
   return out;
 }
 
 export function collectCharacterSkillGemsForDisplay(
   detail: Pick<CharacterDetail, "gems" | "inventory">,
-): Item[] {
+): GemEntry[] {
   return collectGemsFromBuckets(detail, isDisplayedInSkillGemsSection);
 }
 
 export function collectCharacterSupportGemsForDisplay(
   detail: Pick<CharacterDetail, "gems" | "inventory">,
-): Item[] {
+): GemEntry[] {
   return collectGemsFromBuckets(detail, isDisplayedInSupportGemsSection);
 }
 
@@ -123,8 +136,8 @@ export function collectCharacterOtherInventory(
   detail: Pick<CharacterDetail, "inventory" | "gems">,
 ): Item[] {
   const displayedGemIds = new Set([
-    ...collectCharacterSkillGemsForDisplay(detail).map((i) => i.id),
-    ...collectCharacterSupportGemsForDisplay(detail).map((i) => i.id),
+    ...collectCharacterSkillGemsForDisplay(detail).map((g) => g.item.id),
+    ...collectCharacterSupportGemsForDisplay(detail).map((g) => g.item.id),
   ]);
   return (detail.inventory ?? []).filter(
     (item) =>
@@ -135,20 +148,21 @@ export function collectCharacterOtherInventory(
   );
 }
 
-/** Source label for a skill gem, based on inventory_id.
+/** Source label for a skill gem, based on inventory_id and whether it came from a socket.
  *
- * | inventory_id      | label              |
- * |-------------------|--------------------|
- * | AscendancySkills  | "Ascendancy"       |
- * | SkillSlots / DefaultAttackSkills / null | null (no annotation) |
- *
- * Note: "From Weapon" is intentionally removed. Weapon-granted gems go into
- * the `equipped` bucket and are not walked by the gem filter. Gems with
- * null inventory_id that DO appear here are invariably support gems nested
- * inside a meta/spirit gem's socket — labelling them "From Weapon" is wrong.
+ * | inventory_id / context          | label          |
+ * |---------------------------------|----------------|
+ * | AscendancySkills                | "Ascendancy"   |
+ * | null + fromSocket=true          | null (nested in meta/spirit gem socket) |
+ * | null + fromSocket=false (inv.)  | "From Weapon"  |
+ * | SkillSlots / DefaultAttackSkills / other | null  |
  */
-export function gemSourceLabel(item: Item): string | null {
+export function gemSourceLabel(item: Item, fromSocket = false): string | null {
   const iid = item.inventory_id;
   if (iid === "AscendancySkills") return "Ascendancy";
+  // Gems with no inventory_id that come DIRECTLY from the inventory bucket are
+  // granted by equipped weapons.  Those nested in a meta gem's socketedItems
+  // have fromSocket=true and must NOT be labelled "From Weapon".
+  if (item.rarity === "Gem" && !iid && !fromSocket) return "From Weapon";
   return null;
 }
